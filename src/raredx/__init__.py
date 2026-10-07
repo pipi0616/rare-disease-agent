@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from raredx!")
+"""raredx — rare-disease diagnosis agent."""
