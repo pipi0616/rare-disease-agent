@@ -1,0 +1,17 @@
+[project]
+name = "raredx"
+version = "0.1.0"
+description = "Rare-disease diagnosis agent: clinical findings in, ranked diseases and genes with cited evidence out"
+readme = "README.md"
+authors = [
+    { name = "pipi", email = "shaopeiye55@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+raredx = "raredx:main"
+
+[build-system]
+requires = ["uv_build>=0.12.3,<0.13.0"]
+build-backend = "uv_build"
