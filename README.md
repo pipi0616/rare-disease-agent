@@ -20,5 +20,6 @@ uv run raredx  # the CLI entry point
 ```
 src/raredx/   all application code — an installed package, no path hacks
 docs/         plan and design notes; start with docs/00_plan.md
+docs/notebook/ step-by-step engineering notes (Chinese): what each step did and why
 tests/        added in the next step
 ```
