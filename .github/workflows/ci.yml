@@ -26,7 +26,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10
+      # Exact version: this action publishes no moving major tag (no `v10`).
+      - uses: astral-sh/setup-uv@v10.2.0
         with:
           enable-cache: true
 
