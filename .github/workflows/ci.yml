@@ -1,0 +1,49 @@
+# Runs the same checks as the pre-commit hooks, on GitHub's machines, for
+# every pull request and every push to main. The hooks are a courtesy to the
+# developer; this is the gate. A change cannot merge unless this is green.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# The job only reads the repository; it never needs to write to it.
+permissions:
+  contents: read
+
+# A new push to the same branch cancels the run that is now out of date.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Exact version: this action publishes no moving major tag (no `v10`).
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+
+      # Same Python (.python-version) and same lockfile as a developer machine.
+      # --locked fails if uv.lock is out of date, so a dependency change cannot
+      # slip in without the lockfile being updated and reviewed.
+      - name: Install
+        run: uv sync --locked
+
+      - name: Lint and format
+        run: |
+          uv run ruff check
+          uv run ruff format --check
+
+      - name: Type check
+        run: uv run mypy src tests
+
+      - name: Test
+        run: uv run pytest

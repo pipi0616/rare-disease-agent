@@ -1,5 +1,7 @@
 # raredx — rare-disease diagnosis agent
 
+[![CI](https://github.com/pipi0616/rare-disease-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/pipi0616/rare-disease-agent/actions/workflows/ci.yml)
+
 An agent that takes a patient's clinical findings (free text or HPO terms,
 optionally with candidate variants), decides what to look up, and returns
 ranked candidate diseases and genes with cited evidence. Evaluated on public,

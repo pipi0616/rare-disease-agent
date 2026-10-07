@@ -27,3 +27,4 @@
 | [01](01_freeze_old_repo.ipynb) | 冻结旧仓库，两本记录本分开放 | 第 0 步 |
 | [02](02_skeleton.ipynb) | 新仓库骨架：git、uv、src 布局、第一次提交 | 第 1 步第 1 块 |
 | [03](03_checks.ipynb) | 代码体检：ruff、mypy、pytest、pre-commit，和一次真实的拒绝 | 第 1 步第 2 块 |
+| [04](04_github_ci_pr.ipynb) | GitHub 私有仓库、CI、第一个合并请求，和 CI 第一次红了怎么修 | 第 1 步第 3 块 |
