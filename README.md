@@ -15,11 +15,19 @@ uv sync        # create the environment from uv.lock
 uv run raredx  # the CLI entry point
 ```
 
+## Check
+
+```bash
+uv run pre-commit install --hook-type pre-commit --hook-type pre-push  # once per clone
+uv run pre-commit run --all-files   # ruff, mypy and the hygiene hooks, by hand
+uv run pytest                       # the test suite (also runs before every push)
+```
+
 ## Layout
 
 ```
-src/raredx/   all application code — an installed package, no path hacks
-docs/         plan and design notes; start with docs/00_plan.md
-docs/notebook/ step-by-step engineering notes (Chinese): what each step did and why
-tests/        added in the next step
+src/raredx/     all application code — an installed package, no path hacks
+tests/          pytest suite; one test per behaviour
+docs/           plan and design notes; start with docs/00_plan.md
+docs/notebook/  step-by-step engineering notebooks (Chinese): what each step did and why
 ```

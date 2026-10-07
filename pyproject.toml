@@ -15,3 +15,48 @@ raredx = "raredx:main"
 [build-system]
 requires = ["uv_build>=0.12.3,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.4.0",
+    "mypy>=2.4.0",
+    "nbconvert>=7.17.1",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "ruff>=0.16.10",
+]
+
+# ── ruff: formatting + lint ──────────────────────────────────────────
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+# The notebooks are teaching material with shell cells, not application code.
+extend-exclude = ["docs/notebook"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes: unused imports, undefined names
+    "I",       # import order
+    "UP",      # modern syntax for the pinned Python version
+    "B",       # likely bugs
+    "C4",      # comprehension idioms
+    "SIM",     # needless complexity
+]
+
+# ── mypy: static types. Strict from day one; the codebase is small enough. ──
+[tool.mypy]
+python_version = "3.12"
+files = ["src", "tests"]
+strict = true
+ignore_missing_imports = true
+
+# ── pytest ───────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -ra --strict-markers"
+markers = [
+    "llm: makes a billed model call",
+    "network: hits an external service",
+]
