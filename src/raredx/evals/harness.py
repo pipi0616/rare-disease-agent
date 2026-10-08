@@ -15,41 +15,22 @@ Re-scoring evaluates a run's recorded traces again with the current scorer. The
 system is not asked again — for a model, nothing is paid again.
 """
 
-import importlib.util
-import os
 import statistics
-import sys
 import time
 from pathlib import Path
 from typing import Any
 
-os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")  # mlflow prints a setup hint on import
-# evaluate() otherwise asks the system about the first case twice, to check it traces;
-# our predict function is traced explicitly (below), so the check is not needed.
-os.environ.setdefault("MLFLOW_GENAI_EVAL_SKIP_TRACE_VALIDATION", "True")
-# evaluate() asks from every worker thread at once whether litellm can be imported. It is
-# not installed here, and concurrent failed imports of one missing module deadlock CPython
-# 3.12's import locks (seen from about 40 cases: every worker stuck in _get_module_lock).
-# Recording up front that it is absent makes each check fail instantly, without the lock.
-if importlib.util.find_spec("litellm") is None:
-    sys.modules.setdefault("litellm", None)  # type: ignore[arg-type]
-# The local SQLite store is written to by ~20 threads during evaluate() (answers, scores,
-# trace export). With SQLAlchemy's default pool (5 + 10 overflow) some writes time out and
-# MLflow drops those records with only a warning; a larger pool makes them wait instead.
-os.environ.setdefault("MLFLOW_SQLALCHEMYSTORE_POOL_SIZE", "40")
-os.environ.setdefault("MLFLOW_SQLALCHEMYSTORE_MAX_OVERFLOW", "40")
+from mlflow import MlflowClient
+from mlflow.entities import Feedback, SpanType
+from mlflow.genai import datasets
+from mlflow.genai.datasets import EvaluationDataset
+from mlflow.genai.scorers import scorer
 
-import mlflow  # noqa: E402
-from mlflow import MlflowClient  # noqa: E402
-from mlflow.entities import Feedback, SpanType  # noqa: E402
-from mlflow.genai import datasets  # noqa: E402
-from mlflow.genai.datasets import EvaluationDataset  # noqa: E402
-from mlflow.genai.scorers import scorer  # noqa: E402
-
-from raredx.data.cases import Case  # noqa: E402
-from raredx.evals import scoring  # noqa: E402
-from raredx.evals.scoring import KS  # noqa: E402
-from raredx.evals.systems import Candidate, Question, System  # noqa: E402
+from raredx.data.cases import Case
+from raredx.evals import scoring
+from raredx.evals.scoring import KS
+from raredx.evals.systems import Candidate, Question, System
+from raredx.mlflow_setup import mlflow  # first: process-wide MLflow settings
 
 HEADLINE = ("disease_top1", "disease_top10", "gene_top10")
 

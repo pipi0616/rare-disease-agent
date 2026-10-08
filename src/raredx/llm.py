@@ -7,8 +7,6 @@ token counts, latency — is recorded as a span inside the trace of whatever
 question it was made for.
 """
 
-import os
-
 from openai import OpenAI
 
 from raredx.config import Settings
@@ -21,8 +19,7 @@ class MissingAPIKey(Exception):
 def client(settings: Settings) -> OpenAI:
     if settings.llm_api_key is None:
         raise MissingAPIKey("no model API key: put DEEPSEEK_API_KEY=... in .env (see .env.example)")
-    os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")
-    import mlflow  # imported here: only model runs need it, and it is slow to load
+    from raredx.mlflow_setup import mlflow  # imported here: only model runs need it
 
     mlflow.openai.autolog()
     return OpenAI(
