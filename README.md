@@ -8,8 +8,11 @@ ranked candidate diseases and genes with cited evidence. Evaluated on public,
 leakage-controlled case collections against classical, fixed-pipeline and
 single-call baselines.
 
-**Status:** two baselines and the first tool. On the 200-case dev set (top-10
-recall of the confirmed disease, 95% interval):
+**Status:** two baselines and two tools — `rank_diseases` (every OMIM disease
+ranked against the patient's phenotype) and `lookup_disease` (one disease's
+features and their frequencies, inheritance, onset, genes and sources, sized
+for a model to read). On the 200-case dev set (top-10 recall of the confirmed
+disease, 95% interval):
 
 | system | top-1 | top-10 |
 |---|---|---|
@@ -21,6 +24,9 @@ The phenotype tool scores 82.0% if a case's own source paper is left in its
 knowledge: HPO curated many disease annotations from the very papers these
 cases come from. Every evaluation therefore masks each case's paper from the
 knowledge the tools read; the 49.0% is the masked number.
+Masked, 41 of the 200 confirmed diseases have no phenotype left in HPO —
+mostly diseases known from that single paper — so phenotype ranking alone
+cannot pass about 80% here.
 
 ## Run
 

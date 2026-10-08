@@ -30,7 +30,7 @@ def mlflow_store(tmp_path_factory: pytest.TempPathFactory) -> None:
 
 @pytest.fixture(scope="session")
 def hpo() -> HPO:
-    """A miniature HPO release (tests/fixtures/hpo): 13 terms, 4 OMIM diseases.
+    """A miniature HPO release (tests/fixtures/hpo): 17 terms, 5 OMIM diseases.
 
     hpo3 holds one ontology per process, so every test shares this one, and no
     test may load the real release.

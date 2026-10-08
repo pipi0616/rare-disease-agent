@@ -62,6 +62,26 @@ name: Seizure
 is_a: HP:0000118 ! Phenotypic abnormality
 
 [Term]
+id: HP:0012823
+name: Clinical modifier
+is_a: HP:0000001 ! All
+
+[Term]
+id: HP:0031797
+name: Clinical course
+is_a: HP:0012823 ! Clinical modifier
+
+[Term]
+id: HP:0003674
+name: Onset
+is_a: HP:0031797 ! Clinical course
+
+[Term]
+id: HP:0003577
+name: Congenital onset
+is_a: HP:0003674 ! Onset
+
+[Term]
 id: HP:0099999
 name: obsolete Old hearing term
 is_obsolete: true
