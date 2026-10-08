@@ -183,7 +183,7 @@ class Harness:
             mlflow.log_metrics(wilson_metrics(summary))
         return str(run.info.run_id), summary
 
-    def _recorded(self, run_id: str) -> list[Any]:
+    def traces(self, run_id: str) -> list[Any]:
         """The traces a run recorded, once pending writes are flushed."""
         mlflow.flush_trace_async_logging()
         experiment_id = self.client.get_run(run_id).info.experiment_id
@@ -194,7 +194,7 @@ class Harness:
 
     def _check_complete(self, run_id: str, expected: int) -> None:
         """Refuse to score a run whose answers did not all reach MLflow."""
-        recorded = len(self._recorded(run_id))
+        recorded = len(self.traces(run_id))
         if recorded != expected:
             raise IncompleteRun(
                 f"only {recorded} of {expected} answers were recorded in MLflow; "
@@ -203,7 +203,7 @@ class Harness:
 
     def usage(self, run_id: str) -> dict[str, float]:
         """Tokens and time a run used, summed from its traces' model calls."""
-        traces = self._recorded(run_id)
+        traces = self.traces(run_id)
         tokens = [t.info.token_usage or {} for t in traces]
         durations = [t.info.execution_duration for t in traces if t.info.execution_duration]
         return {
@@ -227,7 +227,7 @@ class Harness:
                 f"the manifest changed since run {run_id}; scores would not compare"
             )
         self._use(params["manifest"])
-        traces = self._recorded(run_id)
+        traces = self.traces(run_id)
         if len(traces) != expected:
             raise IncompleteRun(f"run {run_id} recorded {len(traces)} of {expected} answers")
         n_gene = sum(any(a.name == "gene" for a in t.info.assessments) for t in traces)
