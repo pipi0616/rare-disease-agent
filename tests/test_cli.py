@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from raredx.cli import app
@@ -39,3 +40,14 @@ def test_heldout_needs_final(tmp_path: Path) -> None:
     )
     assert result.exit_code == 1
     assert "--final" in result.output
+
+
+def test_a_model_run_without_a_key_says_where_to_put_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from raredx.config import settings
+
+    monkeypatch.setattr(settings, "llm_api_key", None)
+    result = runner.invoke(app, ["llm", "check"])
+    assert result.exit_code == 1
+    assert "DEEPSEEK_API_KEY" in result.output

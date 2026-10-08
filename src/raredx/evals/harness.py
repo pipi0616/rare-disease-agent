@@ -17,7 +17,9 @@ system is not asked again — for a model, nothing is paid again.
 
 import importlib.util
 import os
+import statistics
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -191,7 +193,9 @@ class Harness:
 
         with mlflow.start_run(run_name=system.name) as run:
             mlflow.log_params(params)
+            started = time.monotonic()
             result = mlflow.genai.evaluate(data=data, predict_fn=predict, scorers=[diagnosis])
+            mlflow.log_metric("usage/wall_seconds", round(time.monotonic() - started, 1))
             self._check_complete(run.info.run_id, expected=len(cases))
             n_gene = sum(c.gene is not None for c in cases)
             summary = summary_of(result.metrics, len(cases), n_gene)
@@ -215,6 +219,22 @@ class Harness:
                 f"only {recorded} of {expected} answers were recorded in MLflow; "
                 "the run is marked failed and was not scored — run it again"
             )
+
+    def usage(self, run_id: str) -> dict[str, float]:
+        """Tokens and time a run used, summed from its traces' model calls."""
+        traces = self._recorded(run_id)
+        tokens = [t.info.token_usage or {} for t in traces]
+        durations = [t.info.execution_duration for t in traces if t.info.execution_duration]
+        return {
+            "usage/input_tokens": sum(u.get("input_tokens", 0) for u in tokens),
+            "usage/output_tokens": sum(u.get("output_tokens", 0) for u in tokens),
+            "usage/seconds_per_case": statistics.median(durations) / 1000 if durations else 0.0,
+        }
+
+    def log_metrics(self, run_id: str, metrics: dict[str, float]) -> None:
+        now = int(time.time() * 1000)
+        for key, value in metrics.items():
+            self.client.log_metric(run_id, key, value, timestamp=now)
 
     def rescore(
         self, run_id: str, manifest_sha256: str, expected: int
