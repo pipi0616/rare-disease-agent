@@ -24,8 +24,11 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 
 仓库里的 notebook 不带运行结果（提交时自动清掉），运行之后才有。
 
-（找不到 raredx 内核的话，在项目目录运行一次：
-`uv run python -m ipykernel install --user --name raredx --display-name "raredx (.venv)"`）
+**找不到 raredx 内核**：
+1. `Cmd + Shift + P` → `Reload Window`，让 VS Code 重新读一遍内核列表，再到 **Jupyter Kernel...** 里找
+2. 还没有：**Select Kernel** → **Python Environments...** → 选路径带 `rare-disease-agent/.venv` 的那个，效果一样
+3. 新电脑上第一次用：在项目目录运行一次
+   `uv run python -m ipykernel install --user --name raredx --display-name "raredx (.venv)"`
 
 ## 目录
 
