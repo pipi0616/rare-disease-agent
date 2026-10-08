@@ -24,7 +24,7 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 
 仓库里的 notebook 不带运行结果（提交时自动清掉），运行之后才有。
 
-评测记录存在 MLflow 里。在项目目录运行 `uv run mlflow ui --port 5050`，浏览器打开 http://127.0.0.1:5050 就能看（第 07 章第 5 步讲）。
+评测记录存在 MLflow 里。在项目目录运行 `uv run mlflow ui --port 5050`，浏览器打开 http://127.0.0.1:5050 就能看（第 08 章讲）。
 
 （找不到 raredx 内核的话，在项目目录运行一次：
 `uv run python -m ipykernel install --user --name raredx --display-name "raredx (.venv)"`）
@@ -41,3 +41,4 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [05](05_data.ipynb) | 准备考题：一万例真实病例 |
 | [06](06_eval_sets.ipynb) | 评测集：调参用哪份、最后考哪份、放在哪 |
 | [07](07_scoring.ipynb) | 判分：尺子怎么做，怎么知道尺子是准的 |
+| [08](08_mlflow_eval.ipynb) | 用 MLflow 原生的方式做评测：数据集、打分器、追踪 |

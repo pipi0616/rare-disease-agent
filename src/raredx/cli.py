@@ -1,6 +1,7 @@
 """The `raredx` command line. Thin: every command calls into the package and prints."""
 
 import statistics
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, NoReturn
 
@@ -10,11 +11,12 @@ from raredx.config import settings
 from raredx.data import cases as case_store
 from raredx.data import phenopackets, sources
 from raredx.data.cases import Case
-from raredx.evals import runs, scoring, splits
+from raredx.evals import scoring, splits
+from raredx.evals.provenance import code_version
 from raredx.evals.systems import Oracle, Popularity, System
 
 if TYPE_CHECKING:
-    from raredx.evals.tracking import Tracker
+    from raredx.evals.harness import Harness
 
 app = typer.Typer(help="raredx — rare-disease diagnosis agent.", no_args_is_help=True)
 data_app = typer.Typer(help="Datasets: fetch, build and inspect.", no_args_is_help=True)
@@ -154,10 +156,10 @@ def _system(name: str, cases: list[Case], evals_dir: Path) -> System:
     _fail(f"unknown system {name!r}: choose oracle or popularity")
 
 
-def _tracker() -> "Tracker":
-    from raredx.evals.tracking import Tracker  # imported here: mlflow is slow to load
+def _harness() -> "Harness":
+    from raredx.evals.harness import Harness  # imported here: mlflow is slow to load
 
-    return Tracker(settings.mlflow_tracking_uri, settings.mlflow_artifact_root)
+    return Harness(settings.mlflow_tracking_uri, settings.mlflow_artifact_root)
 
 
 def _manifest(evals_dir: Path, split: str) -> Path:
@@ -175,34 +177,30 @@ def run_system(
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
-    """Run a system on a manifest, score the answers, and record the run in MLflow."""
+    """Evaluate a system on a manifest with MLflow; the run and every answer are recorded."""
     if split == "heldout" and not final:
         _fail("heldout is the final exam: run it once, with --final, when the design is frozen")
     out_dir, cases = _processed(data_dir, evals_dir)
     manifest = _manifest(evals_dir, split)
     by_id = {c.id: c for c in cases}
-    case_ids = [case_id for case_id, _ in splits.read(manifest)]
+    selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
     chosen = _system(system, cases, evals_dir)
-
-    records = runs.execute(chosen, [by_id[i] for i in case_ids])
-    summary, per_case = runs.score(records, case_ids, by_id)
     build = case_store.read_build_info(out_dir)
+    manifest_sha256 = sources.sha256_of(manifest)
     params = {
         "system": chosen.name,
         "manifest": split,
-        "manifest_sha256": sources.sha256_of(manifest),
+        "manifest_sha256": manifest_sha256,
         "dataset": f"{build['source']} {build['version']}",
         "dataset_sha256": build["raw_sha256"],
-        "code": runs.code_version(),
+        "code": code_version(),
     }
-    run_id = _tracker().log(
-        manifest=split,
-        run_name=chosen.name,
-        params=params,
-        summary=summary,
-        records=records,
-        per_case=per_case,
-    )
+    from raredx.evals.harness import IncompleteRun
+
+    try:
+        run_id, summary = _harness().evaluate(chosen, split, manifest_sha256, selected, params)
+    except IncompleteRun as e:
+        _fail(str(e))
     typer.echo(scoring.render(summary, f"{chosen.name} · {split}"))
     typer.echo(f"recorded in MLflow: experiment eval/{split}, run {run_id}")
 
@@ -210,27 +208,19 @@ def run_system(
 @eval_app.command("score")
 def score_run(
     run_id: Annotated[str, typer.Argument(help="An MLflow run id, from `raredx eval runs`.")],
-    data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
-    """Score a recorded run again from its saved answers, as a new run. Nothing is re-asked."""
-    tracker = _tracker()
-    params, records = tracker.load(run_id)
+    """Score a recorded run again from its traces, as a new run. Nothing is re-asked."""
+    harness = _harness()
+    params = dict(harness.client.get_run(run_id).data.params)
     manifest = _manifest(evals_dir, params["manifest"])
-    if sources.sha256_of(manifest) != params["manifest_sha256"]:
-        _fail(f"{manifest} changed since run {run_id}; its scores would not be comparable")
-    _, cases = _processed(data_dir, evals_dir)
-    case_ids = [case_id for case_id, _ in splits.read(manifest)]
-    summary, per_case = runs.score(records, case_ids, {c.id: c for c in cases})
-    new_params = {**params, "code": runs.code_version(), "rescored_from": run_id}
-    new_id = tracker.log(
-        manifest=params["manifest"],
-        run_name=f"{params['system']} (rescored)",
-        params=new_params,
-        summary=summary,
-        records=records,
-        per_case=per_case,
-    )
+    from raredx.evals.harness import IncompleteRun, ManifestMismatch
+
+    expected = len(splits.read(manifest))
+    try:
+        new_id, summary, _ = harness.rescore(run_id, sources.sha256_of(manifest), expected)
+    except (ManifestMismatch, IncompleteRun) as e:
+        _fail(str(e))
     typer.echo(scoring.render(summary, f"{params['system']} · {params['manifest']} · rescored"))
     typer.echo(f"recorded in MLflow: experiment eval/{params['manifest']}, run {new_id}")
 
@@ -240,7 +230,7 @@ def list_runs(
     split: Annotated[str, typer.Option(help="Manifest whose runs to list.")] = "dev-200",
 ) -> None:
     """List the recorded runs on a manifest, newest first."""
-    rows = _tracker().runs(split)
+    rows = _harness().runs(split)
     if not rows:
         typer.echo(f"no runs recorded on {split} yet")
         return
@@ -251,6 +241,7 @@ def list_runs(
     header = ("started", "run", "disease@1", "disease@10", "gene@10", "code", "run id")
     typer.echo("{:<17} {:<24} {:>9} {:>10} {:>8}  {:<14} {}".format(*header))
     for r in rows:
+        started = datetime.fromtimestamp(r["start_time"] / 1000).strftime("%Y-%m-%d %H:%M")
         scores = [pct(r["disease_top1"]), pct(r["disease_top10"]), pct(r["gene_top10"])]
-        cells = [r["started"], r["name"], *scores, r["code"], r["run_id"]]
+        cells = [started, r["name"], *scores, r["code"], r["run_id"]]
         typer.echo("{:<17} {:<24} {:>9} {:>10} {:>8}  {:<14} {}".format(*cells))

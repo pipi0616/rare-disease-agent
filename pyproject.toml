@@ -69,4 +69,7 @@ markers = [
 filterwarnings = [
     # Raised inside mlflow's SQLite store by its SQLAlchemy usage; not ours to fix.
     "ignore:The ``noload`` loader strategy:DeprecationWarning",
+    # Raised inside mlflow's dataset digest by its pandas usage; not ours to fix.
+    "ignore:Starting with pandas version 4.0:DeprecationWarning",
+    "ignore:Starting with pandas version 4.0:FutureWarning",
 ]
