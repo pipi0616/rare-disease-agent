@@ -17,6 +17,10 @@ build/
 /data/
 /runs/
 
+# MLflow's local store: run records and their files. Never in git.
+/mlflow.db
+/mlruns/
+
 # Third-party checkouts (DeepRare, ...) are fetched, not vendored.
 third_party/
 

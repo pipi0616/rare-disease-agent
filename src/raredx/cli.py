@@ -2,7 +2,7 @@
 
 import statistics
 from pathlib import Path
-from typing import Annotated, NoReturn
+from typing import TYPE_CHECKING, Annotated, NoReturn
 
 import typer
 
@@ -12,6 +12,9 @@ from raredx.data import phenopackets, sources
 from raredx.data.cases import Case
 from raredx.evals import runs, scoring, splits
 from raredx.evals.systems import Oracle, Popularity, System
+
+if TYPE_CHECKING:
+    from raredx.evals.tracking import Tracker
 
 app = typer.Typer(help="raredx — rare-disease diagnosis agent.", no_args_is_help=True)
 data_app = typer.Typer(help="Datasets: fetch, build and inspect.", no_args_is_help=True)
@@ -27,7 +30,6 @@ DataDir = Annotated[
 EvalsDir = Annotated[
     Path, typer.Option(help="Registry and manifests. Default: RAREDX_EVALS_DIR or ./evals.")
 ]
-RunsDir = Annotated[Path, typer.Option(help="Run folders. Default: RAREDX_RUNS_DIR or ./runs.")]
 
 
 def _fail(message: str) -> NoReturn:
@@ -152,6 +154,19 @@ def _system(name: str, cases: list[Case], evals_dir: Path) -> System:
     _fail(f"unknown system {name!r}: choose oracle or popularity")
 
 
+def _tracker() -> "Tracker":
+    from raredx.evals.tracking import Tracker  # imported here: mlflow is slow to load
+
+    return Tracker(settings.mlflow_tracking_uri, settings.mlflow_artifact_root)
+
+
+def _manifest(evals_dir: Path, split: str) -> Path:
+    manifest = evals_dir / "splits" / f"{split}.tsv"
+    if not manifest.exists():
+        _fail(f"{manifest} not found")
+    return manifest
+
+
 @eval_app.command("run")
 def run_system(
     system: Annotated[str, typer.Option(help="oracle | popularity")],
@@ -159,36 +174,83 @@ def run_system(
     final: Annotated[bool, typer.Option(help="Required for heldout: the final run.")] = False,
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
-    runs_dir: RunsDir = settings.runs_dir,
 ) -> None:
-    """Run a system on a manifest, save its answers in runs/, and score them."""
+    """Run a system on a manifest, score the answers, and record the run in MLflow."""
     if split == "heldout" and not final:
         _fail("heldout is the final exam: run it once, with --final, when the design is frozen")
     out_dir, cases = _processed(data_dir, evals_dir)
-    manifest = evals_dir / "splits" / f"{split}.tsv"
-    if not manifest.exists():
-        _fail(f"{manifest} not found")
+    manifest = _manifest(evals_dir, split)
     by_id = {c.id: c for c in cases}
-    selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
+    case_ids = [case_id for case_id, _ in splits.read(manifest)]
     chosen = _system(system, cases, evals_dir)
-    run_dir = runs.start(runs_dir, chosen.name, manifest, case_store.read_build_info(out_dir))
-    runs.execute(chosen, selected, run_dir)
-    summary = runs.score(run_dir, by_id)
+
+    records = runs.execute(chosen, [by_id[i] for i in case_ids])
+    summary, per_case = runs.score(records, case_ids, by_id)
+    build = case_store.read_build_info(out_dir)
+    params = {
+        "system": chosen.name,
+        "manifest": split,
+        "manifest_sha256": sources.sha256_of(manifest),
+        "dataset": f"{build['source']} {build['version']}",
+        "dataset_sha256": build["raw_sha256"],
+        "code": runs.code_version(),
+    }
+    run_id = _tracker().log(
+        manifest=split,
+        run_name=chosen.name,
+        params=params,
+        summary=summary,
+        records=records,
+        per_case=per_case,
+    )
     typer.echo(scoring.render(summary, f"{chosen.name} · {split}"))
-    typer.echo(f"saved  {run_dir}")
+    typer.echo(f"recorded in MLflow: experiment eval/{split}, run {run_id}")
 
 
 @eval_app.command("score")
 def score_run(
-    run_dir: Annotated[Path, typer.Argument(help="A folder under runs/.")],
+    run_id: Annotated[str, typer.Argument(help="An MLflow run id, from `raredx eval runs`.")],
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
-    """Score a saved run again, without running the system."""
+    """Score a recorded run again from its saved answers, as a new run. Nothing is re-asked."""
+    tracker = _tracker()
+    params, records = tracker.load(run_id)
+    manifest = _manifest(evals_dir, params["manifest"])
+    if sources.sha256_of(manifest) != params["manifest_sha256"]:
+        _fail(f"{manifest} changed since run {run_id}; its scores would not be comparable")
     _, cases = _processed(data_dir, evals_dir)
-    try:
-        summary = runs.score(run_dir, {c.id: c for c in cases})
-    except ValueError as e:
-        _fail(str(e))
-    meta = runs.read_meta(run_dir)
-    typer.echo(scoring.render(summary, f"{meta['system']} · {Path(meta['manifest']).stem}"))
+    case_ids = [case_id for case_id, _ in splits.read(manifest)]
+    summary, per_case = runs.score(records, case_ids, {c.id: c for c in cases})
+    new_params = {**params, "code": runs.code_version(), "rescored_from": run_id}
+    new_id = tracker.log(
+        manifest=params["manifest"],
+        run_name=f"{params['system']} (rescored)",
+        params=new_params,
+        summary=summary,
+        records=records,
+        per_case=per_case,
+    )
+    typer.echo(scoring.render(summary, f"{params['system']} · {params['manifest']} · rescored"))
+    typer.echo(f"recorded in MLflow: experiment eval/{params['manifest']}, run {new_id}")
+
+
+@eval_app.command("runs")
+def list_runs(
+    split: Annotated[str, typer.Option(help="Manifest whose runs to list.")] = "dev-200",
+) -> None:
+    """List the recorded runs on a manifest, newest first."""
+    rows = _tracker().runs(split)
+    if not rows:
+        typer.echo(f"no runs recorded on {split} yet")
+        return
+
+    def pct(value: float | None) -> str:
+        return "" if value is None else f"{value * 100:.1f}%"
+
+    header = ("started", "run", "disease@1", "disease@10", "gene@10", "code", "run id")
+    typer.echo("{:<17} {:<24} {:>9} {:>10} {:>8}  {:<14} {}".format(*header))
+    for r in rows:
+        scores = [pct(r["disease_top1"]), pct(r["disease_top10"]), pct(r["gene_top10"])]
+        cells = [r["started"], r["name"], *scores, r["code"], r["run_id"]]
+        typer.echo("{:<17} {:<24} {:>9} {:>10} {:>8}  {:<14} {}".format(*cells))
