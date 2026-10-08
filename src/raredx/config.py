@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     data_dir: Path = Path("data")
     # Dataset registry and frozen manifests. In git: they define what is evaluated.
     evals_dir: Path = Path("evals")
+    # One folder per evaluation run. Not in git.
+    runs_dir: Path = Path("runs")
 
 
 settings = Settings()

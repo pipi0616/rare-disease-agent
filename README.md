@@ -8,7 +8,7 @@ ranked candidate diseases and genes with cited evidence. Evaluated on public,
 leakage-controlled case collections against classical, fixed-pipeline and
 single-call baselines.
 
-**Status:** evaluation sets frozen. No model is called yet.
+**Status:** eval harness calibrated (oracle 100%, popularity floor 9% top-10). No model is called yet.
 
 ## Run
 
@@ -18,7 +18,14 @@ uv run raredx data fetch   # download the pinned release into data/raw, verify i
 uv run raredx data build   # parse it into data/processed: one case per line
 uv run raredx data stats   # 10,374 published cases, 780 OMIM diseases, 699 genes
 uv run raredx eval check   # the frozen manifests keep every rule
+uv run raredx eval run --system popularity --split dev-200   # run, save to runs/, score
+uv run raredx eval score runs/<folder>                       # re-score without re-running
 ```
+
+Scoring rules are fixed in `src/raredx/evals/scoring.py`: a disease counts when
+its OMIM number matches, a gene when its symbol matches; a case with no answer
+is a miss that stays in the denominator; every top-k rate carries a 95% Wilson
+interval. Systems only ever see a `Question` (the phenotype), never the answer.
 
 Data never enters git: `data/` is ignored and the commands above recreate it
 byte-for-byte. What *is* in git is the definition of what gets evaluated:
@@ -47,7 +54,7 @@ src/raredx/     all application code — an installed package, no path hacks
   cli.py          the `raredx` command; thin
   config.py       settings from RAREDX_* environment variables / .env
   data/           datasets: registry, fetch, verify, parse, processed layer
-  evals/          evaluation manifests (and, next, the scorer)
+  evals/          manifests, systems, scoring and run folders
 evals/          dataset registry and frozen manifests — what gets evaluated
 tests/          pytest suite; one test per behaviour, no network, no real data
 docs/           plan and design notes; start with docs/00_plan.md

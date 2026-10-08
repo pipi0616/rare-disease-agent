@@ -10,11 +10,12 @@ from raredx.config import settings
 from raredx.data import cases as case_store
 from raredx.data import phenopackets, sources
 from raredx.data.cases import Case
-from raredx.evals import splits
+from raredx.evals import runs, scoring, splits
+from raredx.evals.systems import Oracle, Popularity, System
 
 app = typer.Typer(help="raredx — rare-disease diagnosis agent.", no_args_is_help=True)
 data_app = typer.Typer(help="Datasets: fetch, build and inspect.", no_args_is_help=True)
-eval_app = typer.Typer(help="Evaluation sets: create, freeze and check.", no_args_is_help=True)
+eval_app = typer.Typer(help="Evaluation: manifests, runs and scores.", no_args_is_help=True)
 app.add_typer(data_app, name="data")
 app.add_typer(eval_app, name="eval")
 
@@ -26,6 +27,7 @@ DataDir = Annotated[
 EvalsDir = Annotated[
     Path, typer.Option(help="Registry and manifests. Default: RAREDX_EVALS_DIR or ./evals.")
 ]
+RunsDir = Annotated[Path, typer.Option(help="Run folders. Default: RAREDX_RUNS_DIR or ./runs.")]
 
 
 def _fail(message: str) -> NoReturn:
@@ -138,3 +140,55 @@ def check(
     if problems:
         raise typer.Exit(1)
     typer.echo(f"ok  {folder}: {', '.join(splits.NAMES)} pass every rule")
+
+
+def _system(name: str, cases: list[Case], evals_dir: Path) -> System:
+    if name == "oracle":
+        return Oracle.from_cases(cases)
+    if name == "popularity":
+        dev_papers = {pmid for _, pmid in splits.read(evals_dir / "splits" / "dev-200.tsv")}
+        pool = [c for c in cases if c.split == "design" and c.pmid not in dev_papers]
+        return Popularity.from_cases(pool)
+    _fail(f"unknown system {name!r}: choose oracle or popularity")
+
+
+@eval_app.command("run")
+def run_system(
+    system: Annotated[str, typer.Option(help="oracle | popularity")],
+    split: Annotated[str, typer.Option(help="Manifest to run on.")] = "dev-200",
+    final: Annotated[bool, typer.Option(help="Required for heldout: the final run.")] = False,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+    runs_dir: RunsDir = settings.runs_dir,
+) -> None:
+    """Run a system on a manifest, save its answers in runs/, and score them."""
+    if split == "heldout" and not final:
+        _fail("heldout is the final exam: run it once, with --final, when the design is frozen")
+    out_dir, cases = _processed(data_dir, evals_dir)
+    manifest = evals_dir / "splits" / f"{split}.tsv"
+    if not manifest.exists():
+        _fail(f"{manifest} not found")
+    by_id = {c.id: c for c in cases}
+    selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
+    chosen = _system(system, cases, evals_dir)
+    run_dir = runs.start(runs_dir, chosen.name, manifest, case_store.read_build_info(out_dir))
+    runs.execute(chosen, selected, run_dir)
+    summary = runs.score(run_dir, by_id)
+    typer.echo(scoring.render(summary, f"{chosen.name} · {split}"))
+    typer.echo(f"saved  {run_dir}")
+
+
+@eval_app.command("score")
+def score_run(
+    run_dir: Annotated[Path, typer.Argument(help="A folder under runs/.")],
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Score a saved run again, without running the system."""
+    _, cases = _processed(data_dir, evals_dir)
+    try:
+        summary = runs.score(run_dir, {c.id: c for c in cases})
+    except ValueError as e:
+        _fail(str(e))
+    meta = runs.read_meta(run_dir)
+    typer.echo(scoring.render(summary, f"{meta['system']} · {Path(meta['manifest']).stem}"))
