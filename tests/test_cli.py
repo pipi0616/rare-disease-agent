@@ -30,3 +30,12 @@ def test_build_says_to_fetch_first_when_the_download_is_missing(tmp_path: Path) 
     )
     assert result.exit_code == 1
     assert "raredx data fetch" in result.output
+
+
+def test_heldout_needs_final(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["eval", "run", "--system", "oracle", "--split", "heldout", "--data-dir", str(tmp_path)],
+    )
+    assert result.exit_code == 1
+    assert "--final" in result.output
