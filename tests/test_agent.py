@@ -10,9 +10,10 @@ from typing import Any
 
 import pytest
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.outputs import ChatResult
 
-from raredx.agent import MAX_MODEL_CALLS, Agent, NoFinalAnswer, as_langchain_tool
+from raredx.agent import LAST_TURN, MAX_MODEL_CALLS, Agent, NoFinalAnswer, as_langchain_tool
 from raredx.data.cases import Case
 from raredx.evals.systems import question_of
 from raredx.knowledge import masking
@@ -20,14 +21,19 @@ from raredx.knowledge.hpo import HPO
 from raredx.tools.rank_diseases import RankDiseases
 
 OFFERED: list[list[str]] = []  # the tools offered to the model, call by call
+RECEIVED: list[list[BaseMessage]] = []  # the messages it was sent, call by call
 
 
 class ScriptedModel(GenericFakeChatModel):
-    """A fake chat model that plays the given moves, noting which tools it was offered."""
+    """A fake chat model that plays the given moves, noting what it was offered and sent."""
 
     def bind_tools(self, tools: Any, **kwargs: Any) -> "ScriptedModel":
         OFFERED.append([t.name for t in tools])
         return self
+
+    def _generate(self, messages: list[BaseMessage], *args: Any, **kwargs: Any) -> ChatResult:
+        RECEIVED.append(list(messages))
+        return super()._generate(messages, *args, **kwargs)
 
 
 _ids = itertools.count()
@@ -90,6 +96,7 @@ def test_an_unknown_disease_comes_back_to_the_model_as_a_message(hpo: HPO, case:
 
 def test_on_its_last_turn_the_model_is_offered_only_the_final_answer(hpo: HPO, case: Case) -> None:
     OFFERED.clear()
+    RECEIVED.clear()
     investigating = [
         call("rank_diseases", hpo_ids=case.hpo_ids) for _ in range(MAX_MODEL_CALLS - 1)
     ]
@@ -105,6 +112,8 @@ def test_on_its_last_turn_the_model_is_offered_only_the_final_answer(hpo: HPO, c
         "FinalAnswer",
     ]
     assert OFFERED[-1] == ["FinalAnswer"]
+    assert RECEIVED[-1][-1].content == LAST_TURN  # and it is told so
+    assert all(m.content != LAST_TURN for m in RECEIVED[-2])  # only on the last turn
 
 
 def test_a_model_that_still_does_not_answer_stops_at_the_limit_and_fails(
@@ -134,4 +143,4 @@ def test_the_tools_reach_the_model_with_their_own_schemas(hpo: HPO) -> None:
     assert arguments["hpo_ids"]["items"]["pattern"] == r"^HP:\d{7}$"
     params = agent(hpo, iter([])).params()
     assert params["tools"] == "rank_diseases, check_match, lookup_disease, find_disease"
-    assert (params["prompt_version"], params["max_model_calls"]) == ("agent-v2", MAX_MODEL_CALLS)
+    assert (params["prompt_version"], params["max_model_calls"]) == ("agent-v3", MAX_MODEL_CALLS)

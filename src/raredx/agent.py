@@ -7,11 +7,12 @@ a reason. Unlike the fixed pipeline it can check a disease the ranking did not
 propose: one it thinks of, found by name.
 
 Bounds, all LangChain middleware:
-- at most MAX_MODEL_CALLS model calls per case, and on the last one the model is
-  offered only the final answer, so it must give one (a wrap_model_call
-  middleware of ours; without it, the first runs investigated until they ran
-  out). ModelCallLimitMiddleware stops a model that still does not answer; the
-  case then fails, and scores as a miss;
+- at most MAX_MODEL_CALLS model calls per case. On the last one the model is
+  offered only the final answer and told its budget is spent (a wrap_model_call
+  middleware of ours): the first runs investigated until they ran out, and a
+  model offered one tool may still call the others it saw earlier.
+  ModelCallLimitMiddleware stops a model that still does not answer; the case
+  then fails, and scores as a miss;
 - an error the model can fix — an unknown disease id, arguments that break a
   tool's schema — comes back to it as a message, so it can retry
   (ToolErrorMiddleware); anything else fails the case;
@@ -50,7 +51,7 @@ from raredx.tools.ids import UnknownDisease
 from raredx.tools.lookup_disease import LookupDisease
 from raredx.tools.rank_diseases import RankDiseases
 
-PROMPT_VERSION = "agent-v2"
+PROMPT_VERSION = "agent-v3"
 MAX_MODEL_CALLS = 8
 
 SYSTEM_PROMPT = f"""\
@@ -77,6 +78,12 @@ Your budget is {MAX_MODEL_CALLS} turns, and the last one is for your answer. A f
 rounds are usually enough: rank, check the leading candidates (several calls at \
 once), check any you suspect, then answer. When you have enough, give your final \
 answer: up to 10 OMIM diseases, most likely first, each with a one-sentence reason."""
+
+
+LAST_TURN = (
+    "Your budget is spent: this is your last turn. Give your final answer now, with the "
+    "FinalAnswer tool, from the evidence you have."
+)
 
 
 class Diagnosis(BaseModel):
@@ -115,10 +122,11 @@ def as_langchain_tool(tool: Any) -> BaseTool:
 def _answer_on_the_last_turn(
     request: ModelRequest, handler: Callable[[ModelRequest], ModelResponse]
 ) -> ModelResponse:
-    """On the last model call the budget allows, offer only the final-answer tool."""
+    """On the last model call the budget allows, offer only the final-answer tool and say
+    so. The reminder goes into this one request only, not into the conversation."""
     turns_taken = sum(isinstance(m, AIMessage) for m in request.messages)
     if turns_taken >= MAX_MODEL_CALLS - 1:
-        request = request.override(tools=[])
+        request = request.override(tools=[], messages=[*request.messages, HumanMessage(LAST_TURN)])
     return handler(request)
 
 
