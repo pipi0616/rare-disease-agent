@@ -23,6 +23,8 @@ data_app = typer.Typer(help="Datasets: fetch, build and inspect.", no_args_is_he
 eval_app = typer.Typer(help="Evaluation: manifests, runs and scores.", no_args_is_help=True)
 app.add_typer(data_app, name="data")
 app.add_typer(eval_app, name="eval")
+llm_app = typer.Typer(help="The model endpoint.", no_args_is_help=True)
+app.add_typer(llm_app, name="llm")
 
 DATASET = "phenopacket-store"
 
@@ -153,7 +155,16 @@ def _system(name: str, cases: list[Case], evals_dir: Path) -> System:
         dev_papers = {pmid for _, pmid in splits.read(evals_dir / "splits" / "dev-200.tsv")}
         pool = [c for c in cases if c.split == "design" and c.pmid not in dev_papers]
         return Popularity.from_cases(pool)
-    _fail(f"unknown system {name!r}: choose oracle or popularity")
+    if name in ("llm-direct", "llm-direct-thinking"):
+        from raredx import llm
+        from raredx.baselines.llm_direct import LLMDirect
+
+        try:
+            client = llm.client(settings)
+        except llm.MissingAPIKey as e:
+            _fail(str(e))
+        return LLMDirect(client, settings.llm_model, thinking=name == "llm-direct-thinking")
+    _fail(f"unknown system {name!r}: choose oracle, popularity, llm-direct or llm-direct-thinking")
 
 
 def _harness() -> "Harness":
@@ -171,7 +182,9 @@ def _manifest(evals_dir: Path, split: str) -> Path:
 
 @eval_app.command("run")
 def run_system(
-    system: Annotated[str, typer.Option(help="oracle | popularity")],
+    system: Annotated[
+        str, typer.Option(help="oracle | popularity | llm-direct | llm-direct-thinking")
+    ],
     split: Annotated[str, typer.Option(help="Manifest to run on.")] = "dev-200",
     final: Annotated[bool, typer.Option(help="Required for heldout: the final run.")] = False,
     data_dir: DataDir = settings.data_dir,
@@ -195,13 +208,32 @@ def run_system(
         "dataset_sha256": build["raw_sha256"],
         "code": code_version(),
     }
+    system_params = getattr(chosen, "params", None)
+    if callable(system_params):  # e.g. the model, thinking mode and prompt version
+        params.update(system_params())
     from raredx.evals.harness import IncompleteRun
 
+    harness = _harness()
     try:
-        run_id, summary = _harness().evaluate(chosen, split, manifest_sha256, selected, params)
+        run_id, summary = harness.evaluate(chosen, split, manifest_sha256, selected, params)
     except IncompleteRun as e:
         _fail(str(e))
+    usage = harness.usage(run_id)
+    tokens_in, tokens_out = usage["usage/input_tokens"], usage["usage/output_tokens"]
+    if tokens_in or tokens_out:
+        cost = (tokens_in * settings.llm_price_input + tokens_out * settings.llm_price_output) / 1e6
+        usage["usage/cost_usd_estimate"] = round(cost, 4)
+        harness.log_metrics(run_id, usage)
     typer.echo(scoring.render(summary, f"{chosen.name} · {split}"))
+    if summary.n_answered < summary.n_cases:
+        missing = summary.n_cases - summary.n_answered
+        typer.echo(f"note: {missing} cases got no answer; their traces in MLflow show why")
+    if tokens_in or tokens_out:
+        typer.echo(
+            f"usage: {tokens_in:,.0f} input + {tokens_out:,.0f} output tokens, "
+            f"about ${usage['usage/cost_usd_estimate']:.2f} at peak price; "
+            f"{usage['usage/seconds_per_case']:.1f} s per case"
+        )
     typer.echo(f"recorded in MLflow: experiment eval/{split}, run {run_id}")
 
 
@@ -245,3 +277,22 @@ def list_runs(
         scores = [pct(r["disease_top1"]), pct(r["disease_top10"]), pct(r["gene_top10"])]
         cells = [started, r["name"], *scores, r["code"], r["run_id"]]
         typer.echo("{:<17} {:<24} {:>9} {:>10} {:>8}  {:<14} {}".format(*cells))
+
+
+# ── llm ─────────────────────────────────────────────────────────────
+
+
+@llm_app.command("check")
+def llm_check() -> None:
+    """Check the API key and the endpoint, and list its models. Costs nothing."""
+    from raredx import llm
+
+    try:
+        client = llm.client(settings)
+    except llm.MissingAPIKey as e:
+        _fail(str(e))
+    models = sorted(m.id for m in client.models.list())
+    typer.echo(f"endpoint  {settings.llm_base_url}  (key found in .env)")
+    typer.echo(f"models    {', '.join(models)}")
+    marker = "available" if settings.llm_model in models else "NOT AVAILABLE"
+    typer.echo(f"using     {settings.llm_model}  ({marker})")

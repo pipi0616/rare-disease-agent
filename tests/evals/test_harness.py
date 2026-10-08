@@ -105,7 +105,7 @@ def test_a_run_with_lost_records_is_refused(
     harness: h.Harness, cases: list[Case], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """If MLflow keeps fewer answers than cases asked, report an error, not a number."""
-    monkeypatch.setattr(h.Harness, "_recorded", lambda self, run_id: [])
+    monkeypatch.setattr(h.Harness, "traces", lambda self, run_id: [])
     params = {"system": "oracle", "manifest": "toy", "manifest_sha256": "sha-1"}
     with pytest.raises(h.IncompleteRun, match="only 0 of 3"):
         harness.evaluate(Oracle.from_cases(cases), "toy", "sha-1", cases, params)

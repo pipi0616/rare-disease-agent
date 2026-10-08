@@ -8,7 +8,10 @@ ranked candidate diseases and genes with cited evidence. Evaluated on public,
 leakage-controlled case collections against classical, fixed-pipeline and
 single-call baselines.
 
-**Status:** eval harness calibrated (oracle 100%, popularity floor 9% top-10). No model is called yet.
+**Status:** first model baseline. On the 200-case dev set, a single call to
+`deepseek-flash` (no tools) finds the confirmed disease in its top 10 for
+28.0% of patients [22.2–34.6], against a 9.0% floor that ignores the
+phenotype; top-1 is 14.5%. The agent has to beat this.
 
 ## Run
 
@@ -18,7 +21,8 @@ uv run raredx data fetch   # download the pinned release into data/raw, verify i
 uv run raredx data build   # parse it into data/processed: one case per line
 uv run raredx data stats   # 10,374 published cases, 780 OMIM diseases, 699 genes
 uv run raredx eval check   # the frozen manifests keep every rule
-uv run raredx eval run --system popularity --split dev-200   # run, score, record in MLflow
+uv run raredx llm check    # model key and endpoint; costs nothing
+uv run raredx eval run --system llm-direct --split ci-20     # run, score, record in MLflow
 uv run raredx eval runs --split dev-200                      # every recorded run on dev-200
 uv run raredx eval score <run id>                            # re-score recorded traces, no re-run
 uv run mlflow ui --port 5050                                 # browse runs at http://127.0.0.1:5050
@@ -52,6 +56,16 @@ and `evals/splits/` (frozen case-ID manifests):
 | `ci-20` | 20 of dev-200 | the regression check in CI |
 | `heldout` | 4,360 | the final run, once |
 
+## Model
+
+Any OpenAI-compatible endpoint, through the official OpenAI SDK: DeepSeek by
+default (`DEEPSEEK_API_KEY` in a git-ignored `.env`; see `.env.example`), or a
+self-hosted vLLM server by setting `RAREDX_LLM_BASE_URL` and
+`RAREDX_LLM_MODEL`. `mlflow.openai.autolog()` records every model call inside
+the question's trace, and each run logs tokens, seconds per case and a cost
+estimate. MLflow telemetry is switched off, so nothing is reported off the
+machine (`src/raredx/mlflow_setup.py`).
+
 ## Check
 
 ```bash
@@ -68,6 +82,9 @@ src/raredx/     all application code — an installed package, no path hacks
   config.py       settings from RAREDX_* environment variables / .env
   data/           datasets: registry, fetch, verify, parse, processed layer
   evals/          manifests, systems, scoring rules, MLflow evaluation harness
+  baselines/      systems the agent must beat: the single-call LLM baseline
+  llm.py          the model client (OpenAI SDK, MLflow autologging)
+  mlflow_setup.py process-wide MLflow settings, applied before mlflow loads
 evals/          dataset registry and frozen manifests — what gets evaluated
 tests/          pytest suite; one test per behaviour, no network, no real data
 docs/           plan and design notes; start with docs/00_plan.md
