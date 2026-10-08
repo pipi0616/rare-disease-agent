@@ -67,3 +67,15 @@ def test_the_phenotype_baseline_says_to_fetch_hpo_first(tmp_path: Path) -> None:
 
     with pytest.raises(typer.Exit):
         _system("phenotype-rank", [], EVALS, tmp_path)
+
+
+def test_compare_names_the_problem_when_a_run_does_not_exist(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from raredx.config import settings
+
+    monkeypatch.setattr(settings, "mlflow_tracking_uri", f"sqlite:///{tmp_path / 'mlflow.db'}")
+    monkeypatch.setattr(settings, "mlflow_artifact_root", tmp_path / "mlruns")
+    result = runner.invoke(app, ["eval", "compare", "no-such-run", "nor-this-one"])
+    assert result.exit_code == 1
+    assert "raredx eval runs" in result.output

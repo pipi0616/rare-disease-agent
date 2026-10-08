@@ -87,6 +87,20 @@ def wilson(hits: int, n: int, z: float = 1.96) -> tuple[float, float]:
     return (max(0.0, centre - half), min(1.0, centre + half))
 
 
+def sign_test(wins: int, losses: int) -> float:
+    """Two-sided exact sign test for a paired comparison on the same cases.
+
+    Only the cases where the two systems disagree count: if neither were better,
+    each would win half of them. The p-value is the chance of a split at least
+    this lopsided under that coin toss.
+    """
+    n = wins + losses
+    if n == 0:
+        return 1.0
+    tail = sum(math.comb(n, i) for i in range(min(wins, losses) + 1)) / 2.0**n
+    return min(1.0, 2 * tail)
+
+
 class Rate(BaseModel):
     hits: int
     n: int

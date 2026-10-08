@@ -18,7 +18,8 @@ set (recall of the confirmed disease, 95% interval on top-10):
 
 | system | top-1 | top-10 |
 |---|---|---|
-| rank, then check: T2's top 30 reordered by findings explained (no model) | **30.5%** | **54.5%** [47.6–61.3] |
+| fixed pipeline: the tools' top 10 with their evidence, ranked by one model call | **35.5%** [29.2–42.3] | 54.5% [47.6–61.3] |
+| rank, then check: T2's top 30 reordered by findings explained (no model) | 30.5% | 54.5% [47.6–61.3] |
 | phenotype similarity alone (tool T2, no model) | 19.0% | 49.0% [42.2–55.9] |
 | a single call to `deepseek-flash`, no tools | 14.5% | 28.0% [22.2–34.6] |
 | floor: the same diseases for every patient | 0.5% | 9.0% |
@@ -30,6 +31,10 @@ knowledge the tools read; the 49.0% is the masked number.
 Masked, 41 of the 200 confirmed diseases have no phenotype left in HPO —
 mostly diseases known from that single paper — so phenotype ranking alone
 cannot pass about 80% here.
+
+The fixed pipeline's gain at first place is paired, not just a higher rate:
+on the same 200 cases it was right where rank-then-check was wrong 11 times,
+and the reverse once (sign test p = 0.006), for about $0.27 a run.
 
 ## Run
 
@@ -43,6 +48,7 @@ uv run raredx llm check    # model key and endpoint; costs nothing
 uv run raredx eval run --system rank-then-check --split dev-200  # run, score, record in MLflow
 uv run raredx eval run --system llm-direct --split ci-20     # the model baseline (billed)
 uv run raredx eval runs --split dev-200                      # every recorded run on dev-200
+uv run raredx eval compare <run id> <run id>                 # two runs, question by question
 uv run raredx eval score <run id>                            # re-score recorded traces, no re-run
 uv run mlflow ui --port 5050                                 # browse runs at http://127.0.0.1:5050
 ```
@@ -125,7 +131,8 @@ src/raredx/     all application code — an installed package, no path hacks
   evals/          manifests, systems, scoring rules, MLflow evaluation harness
   knowledge/      reference knowledge the tools read (HPO), and source masking
   tools/          the agent's tools: typed, described, tested alone, traced
-  baselines/      systems the agent must beat: similarity, rank-then-check, one LLM call
+  baselines/      systems the agent must beat: similarity, rank-then-check, the fixed
+                  pipeline, one LLM call
   llm.py          the model client (OpenAI SDK, MLflow autologging)
   mcp_server.py   the tools over MCP, for any host or agent framework
   mlflow_setup.py process-wide MLflow settings, applied before mlflow loads

@@ -348,6 +348,38 @@ def score_run(
     typer.echo(f"recorded in MLflow: experiment eval/{params['manifest']}, run {new_id}")
 
 
+@eval_app.command("compare")
+def compare_runs(
+    run_a: Annotated[str, typer.Argument(help="An MLflow run id, from `raredx eval runs`.")],
+    run_b: Annotated[str, typer.Argument(help="Another run on the same manifest.")],
+    k: Annotated[int, typer.Option(help="Compare on top-k: 1, 3, 5 or 10.")] = 1,
+) -> None:
+    """Compare two runs question by question: which cases each got that the other missed."""
+    if k not in scoring.KS:
+        _fail(f"k must be one of {', '.join(map(str, scoring.KS))}")
+    from mlflow.exceptions import MlflowException
+
+    harness = _harness()
+    try:
+        a, b = harness.client.get_run(run_a), harness.client.get_run(run_b)
+    except MlflowException:
+        _fail("no such run — copy run ids from `raredx eval runs`")
+    if a.data.params.get("manifest_sha256") != b.data.params.get("manifest_sha256"):
+        _fail("the two runs were not made on the same manifest; there is nothing to pair")
+    hits_a, hits_b = harness.hits(run_a, k), harness.hits(run_b, k)
+    if set(hits_a) != set(hits_b):
+        _fail("the two runs recorded different cases")
+    name_a, name_b = a.info.run_name, b.info.run_name
+    only_a = sum(hits_a[c] and not hits_b[c] for c in hits_a)
+    only_b = sum(hits_b[c] and not hits_a[c] for c in hits_a)
+    both = sum(hits_a[c] and hits_b[c] for c in hits_a)
+    typer.echo(f"{a.data.params['manifest']} · top-{k} · {len(hits_a)} cases, paired")
+    typer.echo(f"  only {name_a} ({run_a[:8]}) right: {only_a:>4}")
+    typer.echo(f"  only {name_b} ({run_b[:8]}) right: {only_b:>4}")
+    typer.echo(f"  both right: {both}   neither: {len(hits_a) - both - only_a - only_b}")
+    typer.echo(f"  sign test, two-sided: p = {scoring.sign_test(only_a, only_b):.3f}")
+
+
 @eval_app.command("runs")
 def list_runs(
     split: Annotated[str, typer.Option(help="Manifest whose runs to list.")] = "dev-200",

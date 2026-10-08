@@ -216,6 +216,16 @@ class Harness:
                 "the run is marked failed and was not scored — run it again"
             )
 
+    def hits(self, run_id: str, k: int) -> dict[str, bool]:
+        """Per case: whether the run had the confirmed disease in its top k — the
+        scorer's verdict as recorded on each trace."""
+        verdicts = {}
+        for trace in self.traces(run_id):
+            case_id = trace.data.spans[0].inputs["question"]["case_id"]
+            found = [a.value for a in trace.info.assessments if a.name == f"disease_top{k}"]
+            verdicts[case_id] = bool(found[-1]) if found else False
+        return verdicts
+
     def usage(self, run_id: str) -> dict[str, float]:
         """Tokens and time a run used, summed from its traces' model calls."""
         traces = self.traces(run_id)

@@ -145,3 +145,11 @@ def test_masking_can_be_turned_off_to_measure_a_leak(harness: h.Harness, cases: 
     assert set(peeker.masked.values()) == {frozenset()}
     run = harness.client.get_run(run_id)
     assert run.info.run_name == "peeker (unmasked)" and run.data.params["knowledge_mask"] == "none"
+
+
+def test_each_cases_verdict_can_be_read_back_for_a_paired_comparison(
+    harness: h.Harness, cases: list[Case]
+) -> None:
+    params = {"system": "flaky", "manifest": "toy", "manifest_sha256": "sha-1"}
+    run_id, _ = harness.evaluate(Flaky(), "toy", "sha-1", cases, params)
+    assert harness.hits(run_id, 1) == {"1": True, "2": False, "3": False}
