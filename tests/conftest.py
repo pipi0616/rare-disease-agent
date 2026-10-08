@@ -1,11 +1,41 @@
 """Shared test helpers."""
 
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from raredx.data.cases import Case
+from raredx.knowledge.hpo import HPO, load
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+@pytest.fixture(autouse=True, scope="session")
+def mlflow_store(tmp_path_factory: pytest.TempPathFactory) -> None:
+    """Whatever a test traces goes to a throwaway store, never the project's.
+
+    MLflow's defaults are mlflow.db and mlruns/ in the working directory: the
+    real ones, when the tests run from the project root. Tests that build their
+    own store (the harness tests) point MLflow elsewhere again.
+    """
+    import mlflow  # here, not at the top: raredx must be imported first (mlflow_setup)
+
+    root = tmp_path_factory.mktemp("mlflow")
+    mlflow.set_tracking_uri(f"sqlite:///{root / 'mlflow.db'}")
+    experiment_id = mlflow.create_experiment("tests", artifact_location=root.as_uri())
+    mlflow.set_experiment(experiment_id=experiment_id)
+
+
+@pytest.fixture(scope="session")
+def hpo() -> HPO:
+    """A miniature HPO release (tests/fixtures/hpo): 13 terms, 4 OMIM diseases.
+
+    hpo3 holds one ontology per process, so every test shares this one, and no
+    test may load the real release.
+    """
+    return load(FIXTURES / "hpo")
 
 
 @pytest.fixture

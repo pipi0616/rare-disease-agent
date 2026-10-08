@@ -57,28 +57,36 @@ def _processed(data_dir: Path, evals_dir: Path) -> tuple[Path, list[Case]]:
 
 @data_app.command()
 def fetch(
+    names: Annotated[
+        list[str] | None, typer.Argument(help="Sources to fetch, as named in the registry.")
+    ] = None,
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
     force: bool = False,
 ) -> None:
-    """Download the dataset into data/raw and verify its checksum."""
-    source = _source(evals_dir)
-    path = sources.fetch(source, data_dir, force=force)
-    typer.echo(f"ok  {path}  ({source.name} {source.version}, sha256 verified)")
+    """Download registered sources (default: all) into data/raw and verify every checksum."""
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    unknown = sorted(set(names or []) - set(registry))
+    if unknown:
+        _fail(f"not in the registry: {', '.join(unknown)} (registered: {', '.join(registry)})")
+    for name in names or registry:
+        source = registry[name]
+        for path in sources.fetch(source, data_dir, force=force):
+            typer.echo(f"ok  {path}  ({source.name} {source.version}, sha256 verified)")
 
 
 @data_app.command()
 def build(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir) -> None:
     """Parse the raw download into data/processed: one case per line."""
     source = _source(evals_dir)
-    raw = sources.raw_path(source, data_dir)
+    raw = sources.raw_dir(source, data_dir) / phenopackets.ARCHIVE
     if not raw.exists():
         _fail(f"{raw} missing — run `raredx data fetch` first")
     cases, skipped = phenopackets.load(raw)
     info = {
         "source": source.name,
         "version": source.version,
-        "raw_sha256": source.sha256,
+        "raw_sha256": source.files[phenopackets.ARCHIVE],
         "cases": len(cases),
         "skipped": dict(skipped),
     }
@@ -148,13 +156,38 @@ def check(
     typer.echo(f"ok  {folder}: {', '.join(splits.NAMES)} pass every rule")
 
 
-def _system(name: str, cases: list[Case], evals_dir: Path) -> System:
+SYSTEMS = ("oracle", "popularity", "phenotype-rank", "llm-direct", "llm-direct-thinking")
+
+
+def _system(
+    name: str,
+    cases: list[Case],
+    evals_dir: Path,
+    data_dir: Path,
+    similarity: str | None = None,
+) -> System:
     if name == "oracle":
         return Oracle.from_cases(cases)
     if name == "popularity":
         dev_papers = {pmid for _, pmid in splits.read(evals_dir / "splits" / "dev-200.tsv")}
         pool = [c for c in cases if c.split == "design" and c.pmid not in dev_papers]
         return Popularity.from_cases(pool)
+    if name == "phenotype-rank":
+        from raredx.baselines.phenotype_rank import PhenotypeRank
+        from raredx.knowledge import hpo
+        from raredx.tools.rank_diseases import RankDiseases
+
+        folder = sources.raw_dir(sources.load_sources(evals_dir / "datasets.toml")["hpo"], data_dir)
+        if not (folder / "hp.obo").exists():
+            _fail(f"{folder} has no HPO release — run `raredx data fetch hpo` first")
+        try:
+            knowledge = hpo.load(folder)
+            if similarity is None:
+                return PhenotypeRank(RankDiseases(knowledge))
+            method, _, combine = similarity.partition("/")
+            return PhenotypeRank(RankDiseases(knowledge, method, combine))
+        except ValueError as e:
+            _fail(str(e))
     if name in ("llm-direct", "llm-direct-thinking"):
         from raredx import llm
         from raredx.baselines.llm_direct import LLMDirect
@@ -164,7 +197,7 @@ def _system(name: str, cases: list[Case], evals_dir: Path) -> System:
         except llm.MissingAPIKey as e:
             _fail(str(e))
         return LLMDirect(client, settings.llm_model, thinking=name == "llm-direct-thinking")
-    _fail(f"unknown system {name!r}: choose oracle, popularity, llm-direct or llm-direct-thinking")
+    _fail(f"unknown system {name!r}: choose {', '.join(SYSTEMS)}")
 
 
 def _harness() -> "Harness":
@@ -182,11 +215,17 @@ def _manifest(evals_dir: Path, split: str) -> Path:
 
 @eval_app.command("run")
 def run_system(
-    system: Annotated[
-        str, typer.Option(help="oracle | popularity | llm-direct | llm-direct-thinking")
-    ],
+    system: Annotated[str, typer.Option(help=" | ".join(SYSTEMS))],
     split: Annotated[str, typer.Option(help="Manifest to run on.")] = "dev-200",
     final: Annotated[bool, typer.Option(help="Required for heldout: the final run.")] = False,
+    similarity: Annotated[
+        str | None,
+        typer.Option(help="phenotype-rank only: hpo3 method/combination, e.g. lin/funSimAvg."),
+    ] = None,
+    mask_source_paper: Annotated[
+        bool,
+        typer.Option(help="Hide each case's source paper from the knowledge tools read."),
+    ] = True,
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
@@ -197,7 +236,7 @@ def run_system(
     manifest = _manifest(evals_dir, split)
     by_id = {c.id: c for c in cases}
     selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
-    chosen = _system(system, cases, evals_dir)
+    chosen = _system(system, cases, evals_dir, data_dir, similarity)
     build = case_store.read_build_info(out_dir)
     manifest_sha256 = sources.sha256_of(manifest)
     params = {
@@ -215,7 +254,9 @@ def run_system(
 
     harness = _harness()
     try:
-        run_id, summary = harness.evaluate(chosen, split, manifest_sha256, selected, params)
+        run_id, summary = harness.evaluate(
+            chosen, split, manifest_sha256, selected, params, mask_source_papers=mask_source_paper
+        )
     except IncompleteRun as e:
         _fail(str(e))
     usage = harness.usage(run_id)
@@ -224,7 +265,8 @@ def run_system(
         cost = (tokens_in * settings.llm_price_input + tokens_out * settings.llm_price_output) / 1e6
         usage["usage/cost_usd_estimate"] = round(cost, 4)
         harness.log_metrics(run_id, usage)
-    typer.echo(scoring.render(summary, f"{chosen.name} · {split}"))
+    unmasked = "" if mask_source_paper else " · unmasked"
+    typer.echo(scoring.render(summary, f"{chosen.name} · {split}{unmasked}"))
     if summary.n_answered < summary.n_cases:
         missing = summary.n_cases - summary.n_answered
         typer.echo(f"note: {missing} cases got no answer; their traces in MLflow show why")
@@ -271,12 +313,14 @@ def list_runs(
         return "" if value is None else f"{value * 100:.1f}%"
 
     header = ("started", "run", "disease@1", "disease@10", "gene@10", "code", "run id")
-    typer.echo("{:<17} {:<24} {:>9} {:>10} {:>8}  {:<14} {}".format(*header))
+    width = max(len(header[1]), *(len(r["name"]) for r in rows))
+    line = "{:<17} {:<{w}} {:>9} {:>10} {:>8}  {:<14} {}"
+    typer.echo(line.format(*header, w=width))
     for r in rows:
         started = datetime.fromtimestamp(r["start_time"] / 1000).strftime("%Y-%m-%d %H:%M")
         scores = [pct(r["disease_top1"]), pct(r["disease_top10"]), pct(r["gene_top10"])]
         cells = [started, r["name"], *scores, r["code"], r["run_id"]]
-        typer.echo("{:<17} {:<24} {:>9} {:>10} {:>8}  {:<14} {}".format(*cells))
+        typer.echo(line.format(*cells, w=width))
 
 
 # ── llm ─────────────────────────────────────────────────────────────

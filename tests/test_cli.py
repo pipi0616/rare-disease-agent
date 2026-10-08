@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 from raredx.cli import app
@@ -51,3 +52,18 @@ def test_a_model_run_without_a_key_says_where_to_put_it(
     result = runner.invoke(app, ["llm", "check"])
     assert result.exit_code == 1
     assert "DEEPSEEK_API_KEY" in result.output
+
+
+def test_fetch_names_the_registered_sources_when_asked_for_another(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app, ["data", "fetch", "rarebench", "--data-dir", str(tmp_path), "--evals-dir", str(EVALS)]
+    )
+    assert result.exit_code == 1
+    assert "phenopacket-store, hpo" in result.output
+
+
+def test_the_phenotype_baseline_says_to_fetch_hpo_first(tmp_path: Path) -> None:
+    from raredx.cli import _system
+
+    with pytest.raises(typer.Exit):
+        _system("phenotype-rank", [], EVALS, tmp_path)

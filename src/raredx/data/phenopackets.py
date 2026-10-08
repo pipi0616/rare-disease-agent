@@ -2,15 +2,15 @@
 
 Each phenopacket is one patient from one published report: the HPO terms the
 authors observed, the OMIM disease the case was solved as, the causal gene and
-variants, and the PMID of the report. Phenotype and diagnosis were recorded
-independently of the gene-to-phenotype annotations a tool would use to match
-them, which is what makes these cases usable as a benchmark.
+variants, and the PMID of the report.
 
 Two caveats travel with the data. They are solved cases, so recall measured
 here is an upper bound on recall in an undiagnosed clinic. And every case names
-its source paper, so anything that reads the literature must be stopped from
-reading that paper; the split below and the leakage controls in the eval layer
-exist for that.
+its source paper, and that paper is often among the sources HPO curated the
+disease's annotations from — the very knowledge a phenotype tool matches
+against. Anything that reads the literature or those annotations must be
+stopped from reading the case's own paper; the split below and the masking in
+raredx.knowledge exist for that.
 
 Source and pinned release: the `phenopacket-store` entry in evals/datasets.toml.
 """
@@ -23,6 +23,8 @@ from pathlib import Path
 from typing import Any
 
 from raredx.data.cases import Case, Split, Variant
+
+ARCHIVE = "all_phenopackets.zip"  # the release file this parser reads
 
 # ── the design / held-out split, decided by code, not by memory ─────
 #

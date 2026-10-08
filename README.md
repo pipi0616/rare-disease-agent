@@ -8,21 +8,31 @@ ranked candidate diseases and genes with cited evidence. Evaluated on public,
 leakage-controlled case collections against classical, fixed-pipeline and
 single-call baselines.
 
-**Status:** first model baseline. On the 200-case dev set, a single call to
-`deepseek-flash` (no tools) finds the confirmed disease in its top 10 for
-28.0% of patients [22.2–34.6], against a 9.0% floor that ignores the
-phenotype; top-1 is 14.5%. The agent has to beat this.
+**Status:** two baselines and the first tool. On the 200-case dev set (top-10
+recall of the confirmed disease, 95% interval):
+
+| system | top-1 | top-10 |
+|---|---|---|
+| phenotype similarity alone (tool T2, no model) | 19.0% | **49.0%** [42.2–55.9] |
+| a single call to `deepseek-flash`, no tools | 14.5% | 28.0% [22.2–34.6] |
+| floor: the same diseases for every patient | 0.5% | 9.0% |
+
+The phenotype tool scores 82.0% if a case's own source paper is left in its
+knowledge: HPO curated many disease annotations from the very papers these
+cases come from. Every evaluation therefore masks each case's paper from the
+knowledge the tools read; the 49.0% is the masked number.
 
 ## Run
 
 ```bash
 uv sync                    # create the environment from uv.lock
-uv run raredx data fetch   # download the pinned release into data/raw, verify its sha256
+uv run raredx data fetch   # download every pinned source into data/raw, verify each sha256
 uv run raredx data build   # parse it into data/processed: one case per line
 uv run raredx data stats   # 10,374 published cases, 780 OMIM diseases, 699 genes
 uv run raredx eval check   # the frozen manifests keep every rule
 uv run raredx llm check    # model key and endpoint; costs nothing
-uv run raredx eval run --system llm-direct --split ci-20     # run, score, record in MLflow
+uv run raredx eval run --system phenotype-rank --split dev-200  # run, score, record in MLflow
+uv run raredx eval run --system llm-direct --split ci-20     # the model baseline (billed)
 uv run raredx eval runs --split dev-200                      # every recorded run on dev-200
 uv run raredx eval score <run id>                            # re-score recorded traces, no re-run
 uv run mlflow ui --port 5050                                 # browse runs at http://127.0.0.1:5050
@@ -31,7 +41,9 @@ uv run mlflow ui --port 5050                                 # browse runs at ht
 Scoring rules are fixed in `src/raredx/evals/scoring.py`: a disease counts when
 its OMIM number matches, a gene when its symbol matches; a case with no answer
 is a miss that stays in the denominator; every top-k rate carries a 95% Wilson
-interval. Systems only ever see a `Question` (the phenotype), never the answer.
+interval. Systems only ever see a `Question` (the phenotype), never the answer,
+and while a system works on a case, the case's source paper is masked from the
+knowledge its tools read (`src/raredx/knowledge/masking.py`).
 
 Evaluation runs on MLflow's native GenAI evaluation (`src/raredx/evals/harness.py`):
 each frozen manifest is registered as an MLflow evaluation dataset, the scoring
@@ -46,7 +58,8 @@ team setup needs.
 
 Data never enters git: `data/` is ignored and the commands above recreate it
 byte-for-byte. What *is* in git is the definition of what gets evaluated:
-`evals/datasets.toml` (every source, its version, URL, checksum and licence)
+`evals/datasets.toml` (every source — the cases and the HPO release the tools
+read — with its version, URL, per-file checksums and licence)
 and `evals/splits/` (frozen case-ID manifests):
 
 | manifest | cases | used for |
@@ -82,7 +95,9 @@ src/raredx/     all application code — an installed package, no path hacks
   config.py       settings from RAREDX_* environment variables / .env
   data/           datasets: registry, fetch, verify, parse, processed layer
   evals/          manifests, systems, scoring rules, MLflow evaluation harness
-  baselines/      systems the agent must beat: the single-call LLM baseline
+  knowledge/      reference knowledge the tools read (HPO), and source masking
+  tools/          the agent's tools: typed, described, tested alone, traced
+  baselines/      systems the agent must beat: phenotype similarity, a single LLM call
   llm.py          the model client (OpenAI SDK, MLflow autologging)
   mlflow_setup.py process-wide MLflow settings, applied before mlflow loads
 evals/          dataset registry and frozen manifests — what gets evaluated

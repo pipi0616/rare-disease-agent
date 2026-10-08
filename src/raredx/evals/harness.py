@@ -5,6 +5,8 @@
               the confirmed diagnosis. The manifest in git stays the definition.
     evaluate  mlflow.genai.evaluate asks the system about every record, in parallel.
               Each answer is a trace; a failure is an ERROR trace and scores as a miss.
+    mask      while the system works on a case, the case's source paper is hidden from
+              the knowledge its tools read, so no tool reads the answer.
     scorer    a code check (@scorer) applying the rules in scoring.py: top-k hits for
               disease and gene, gene checks only where the case has a causal gene.
     run       one MLflow run per evaluation in the experiment eval/<manifest>: params say
@@ -31,6 +33,7 @@ from raredx.data.cases import Case
 from raredx.evals import scoring
 from raredx.evals.scoring import KS
 from raredx.evals.systems import Candidate, Question, System
+from raredx.knowledge import masking
 
 HEADLINE = ("disease_top1", "disease_top10", "gene_top10")
 
@@ -161,19 +164,31 @@ class Harness:
         manifest_sha256: str,
         cases: list[Case],
         params: dict[str, Any],
+        *,
+        mask_source_papers: bool = True,
     ) -> tuple[str, scoring.Summary]:
-        """Run the system on the manifest and record it; returns the MLflow run id and Summary."""
+        """Run the system on the manifest and record it; returns the MLflow run id and Summary.
+
+        While the system works on a case, the case's source paper is masked from the
+        knowledge its tools read (raredx.knowledge.masking). Turning that off measures
+        how much a score owed to reading the answer; such runs are named "(unmasked)".
+        """
         data = self.dataset(manifest, manifest_sha256, cases)
+        papers = {c.id: c.pmid for c in cases}
 
         # The root span of every trace: one per question. Anything the system calls
         # inside — a model, a tool — appears as a child span.
         @mlflow.trace(name=system.name, span_type=SpanType.CHAIN)
         def predict(question: dict[str, Any]) -> dict[str, Any]:
-            answer = system.predict(Question.model_validate(question))
+            q = Question.model_validate(question)
+            with masking.masked([papers[q.case_id]] if mask_source_papers else []):
+                answer = system.predict(q)
             return {"candidates": [c.model_dump() for c in answer]}
 
-        with mlflow.start_run(run_name=system.name) as run:
-            mlflow.log_params(params)
+        run_name = system.name if mask_source_papers else f"{system.name} (unmasked)"
+        mask = "case source paper" if mask_source_papers else "none"
+        with mlflow.start_run(run_name=run_name) as run:
+            mlflow.log_params({**params, "knowledge_mask": mask})
             started = time.monotonic()
             result = mlflow.genai.evaluate(data=data, predict_fn=predict, scorers=[diagnosis])
             mlflow.log_metric("usage/wall_seconds", round(time.monotonic() - started, 1))

@@ -14,6 +14,7 @@ from mlflow.entities import Feedback
 from raredx.data.cases import Case
 from raredx.evals import harness as h
 from raredx.evals.systems import Candidate, Oracle, Question
+from raredx.knowledge import masking
 
 
 @pytest.fixture
@@ -111,3 +112,36 @@ def test_a_run_with_lost_records_is_refused(
         harness.evaluate(Oracle.from_cases(cases), "toy", "sha-1", cases, params)
     [failed] = harness.runs("toy")
     assert harness.client.get_run(failed["run_id"]).info.status == "FAILED"
+
+
+class Peeker:
+    """Notes what is masked from the tools' knowledge while it answers each case."""
+
+    name = "peeker"
+
+    def __init__(self) -> None:
+        self.masked: dict[str, frozenset[str]] = {}
+
+    def predict(self, question: Question) -> list[Candidate]:
+        self.masked[question.case_id] = masking.current()
+        return [Candidate(disease_name="Perrault syndrome 7", disease_id="OMIM:621101")]
+
+
+def test_each_case_is_answered_with_its_own_source_paper_masked(
+    harness: h.Harness, cases: list[Case]
+) -> None:
+    peeker = Peeker()
+    params = {"system": "peeker", "manifest": "toy", "manifest_sha256": "sha-1"}
+    run_id, _ = harness.evaluate(peeker, "toy", "sha-1", cases, params)
+    assert peeker.masked == {c.id: {c.pmid} for c in cases}
+    assert masking.current() == frozenset()  # and nothing afterwards
+    assert harness.client.get_run(run_id).data.params["knowledge_mask"] == "case source paper"
+
+
+def test_masking_can_be_turned_off_to_measure_a_leak(harness: h.Harness, cases: list[Case]) -> None:
+    peeker = Peeker()
+    params = {"system": "peeker", "manifest": "toy", "manifest_sha256": "sha-1"}
+    run_id, _ = harness.evaluate(peeker, "toy", "sha-1", cases, params, mask_source_papers=False)
+    assert set(peeker.masked.values()) == {frozenset()}
+    run = harness.client.get_run(run_id)
+    assert run.info.run_name == "peeker (unmasked)" and run.data.params["knowledge_mask"] == "none"

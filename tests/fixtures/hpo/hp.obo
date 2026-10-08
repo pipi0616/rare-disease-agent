@@ -1,0 +1,68 @@
+format-version: 1.2
+data-version: hp/releases/2099-01-01
+ontology: hp
+
+[Term]
+id: HP:0000001
+name: All
+
+[Term]
+id: HP:0000118
+name: Phenotypic abnormality
+is_a: HP:0000001 ! All
+
+[Term]
+id: HP:0000005
+name: Mode of inheritance
+is_a: HP:0000001 ! All
+
+[Term]
+id: HP:0000007
+name: Autosomal recessive inheritance
+is_a: HP:0000005 ! Mode of inheritance
+
+[Term]
+id: HP:0000598
+name: Abnormality of the ear
+is_a: HP:0000118 ! Phenotypic abnormality
+
+[Term]
+id: HP:0000365
+name: Hearing impairment
+is_a: HP:0000598 ! Abnormality of the ear
+
+[Term]
+id: HP:0000407
+name: Sensorineural hearing impairment
+is_a: HP:0000365 ! Hearing impairment
+
+[Term]
+id: HP:0000478
+name: Abnormality of the eye
+is_a: HP:0000118 ! Phenotypic abnormality
+
+[Term]
+id: HP:0000510
+name: Rod-cone dystrophy
+is_a: HP:0000478 ! Abnormality of the eye
+
+[Term]
+id: HP:0000080
+name: Abnormality of reproductive system physiology
+is_a: HP:0000118 ! Phenotypic abnormality
+
+[Term]
+id: HP:0000786
+name: Primary amenorrhea
+is_a: HP:0000080 ! Abnormality of reproductive system physiology
+
+[Term]
+id: HP:0001250
+name: Seizure
+is_a: HP:0000118 ! Phenotypic abnormality
+
+[Term]
+id: HP:0099999
+name: obsolete Old hearing term
+is_obsolete: true
+replaced_by: HP:0000407
