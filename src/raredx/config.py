@@ -17,8 +17,10 @@ class Settings(BaseSettings):
     data_dir: Path = Path("data")
     # Dataset registry and frozen manifests. In git: they define what is evaluated.
     evals_dir: Path = Path("evals")
-    # One folder per evaluation run. Not in git.
-    runs_dir: Path = Path("runs")
+    # MLflow: where evaluation runs are recorded. Local SQLite by default; point it at a
+    # shared MLflow server (RAREDX_MLFLOW_TRACKING_URI) and nothing else changes.
+    mlflow_tracking_uri: str = "sqlite:///mlflow.db"
+    mlflow_artifact_root: Path = Path("mlruns")
 
 
 settings = Settings()

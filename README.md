@@ -18,14 +18,22 @@ uv run raredx data fetch   # download the pinned release into data/raw, verify i
 uv run raredx data build   # parse it into data/processed: one case per line
 uv run raredx data stats   # 10,374 published cases, 780 OMIM diseases, 699 genes
 uv run raredx eval check   # the frozen manifests keep every rule
-uv run raredx eval run --system popularity --split dev-200   # run, save to runs/, score
-uv run raredx eval score runs/<folder>                       # re-score without re-running
+uv run raredx eval run --system popularity --split dev-200   # run, score, record in MLflow
+uv run raredx eval runs --split dev-200                      # every recorded run on dev-200
+uv run raredx eval score <run id>                            # re-score saved answers, no re-run
+uv run mlflow ui --port 5050                                 # browse runs at http://127.0.0.1:5050
 ```
 
 Scoring rules are fixed in `src/raredx/evals/scoring.py`: a disease counts when
 its OMIM number matches, a gene when its symbol matches; a case with no answer
 is a miss that stays in the denominator; every top-k rate carries a 95% Wilson
 interval. Systems only ever see a `Question` (the phenotype), never the answer.
+
+Every run is recorded in MLflow (local SQLite `mlflow.db` + `mlruns/`, both
+ignored by git): params say what ran — system, manifest checksum, dataset
+version, code commit — metrics hold the scores, artifacts keep the answers.
+Pointing `RAREDX_MLFLOW_TRACKING_URI` at a shared tracking server is the only
+change a team setup needs.
 
 Data never enters git: `data/` is ignored and the commands above recreate it
 byte-for-byte. What *is* in git is the definition of what gets evaluated:
@@ -54,7 +62,7 @@ src/raredx/     all application code — an installed package, no path hacks
   cli.py          the `raredx` command; thin
   config.py       settings from RAREDX_* environment variables / .env
   data/           datasets: registry, fetch, verify, parse, processed layer
-  evals/          manifests, systems, scoring and run folders
+  evals/          manifests, systems, scoring, MLflow tracking
 evals/          dataset registry and frozen manifests — what gets evaluated
 tests/          pytest suite; one test per behaviour, no network, no real data
 docs/           plan and design notes; start with docs/00_plan.md

@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28.1",
+    "mlflow>=3.17.0",
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
     "typer>=0.27.3",
@@ -64,4 +65,8 @@ addopts = "-q -ra --strict-markers"
 markers = [
     "llm: makes a billed model call",
     "network: hits an external service",
+]
+filterwarnings = [
+    # Raised inside mlflow's SQLite store by its SQLAlchemy usage; not ours to fix.
+    "ignore:The ``noload`` loader strategy:DeprecationWarning",
 ]
