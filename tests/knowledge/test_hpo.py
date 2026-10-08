@@ -98,7 +98,8 @@ def test_a_term_is_named_and_an_obsolete_one_replaced(hpo: HPO) -> None:
         (["25%"], Frequency(0.25, "25%")),
         (["", "1/2"], Frequency(0.5, "1/2")),
         ([""], Frequency(None, None)),
-        (["0/3"], Frequency(None, None)),
+        (["0/3", "0/2"], Frequency(0.0, "0/5")),  # looked for in five patients, none had it
+        (["0/3", ""], Frequency(None, None)),  # another source says it occurs, not how often
     ],
 )
 def test_a_frequency_is_read_from_however_it_was_written(
@@ -118,3 +119,28 @@ def test_several_frequency_terms_average() -> None:
 )
 def test_absent_means_looked_for_and_not_found(written: str, is_absent: bool) -> None:
     assert absent(written) is is_absent
+
+
+def test_a_diseases_features_gather_every_line_about_each(hpo: HPO) -> None:
+    found = {f.term: f for f in hpo.features("OMIM:690005")}
+    assert set(found) == {"HP:0000407", "HP:0000510", "HP:0001250", "HP:0000786"}
+    assert found["HP:0000407"].frequency == Frequency(0.5, "4/8")
+    assert found["HP:0000407"].sources == {"PMID:1005", "PMID:1006"}
+    assert found["HP:0000786"].absent and found["HP:0000786"].frequency == Frequency(0.0, "0/4")
+    assert not found["HP:0001250"].absent
+
+
+@pytest.mark.parametrize(
+    ("finding", "feature", "relation"),
+    [
+        ("HP:0000407", "HP:0000407", "same"),
+        ("HP:0008619", "HP:0000407", "more specific"),  # bilateral SNHL is a kind of SNHL
+        ("HP:0008619", "HP:0000365", "more specific"),  # ...and of hearing impairment
+        ("HP:0000365", "HP:0000407", "less specific"),
+        ("HP:0000407", "HP:0001250", None),
+    ],
+)
+def test_how_a_finding_stands_to_a_feature(
+    hpo: HPO, finding: str, feature: str, relation: str | None
+) -> None:
+    assert hpo.relation(finding, feature) == relation

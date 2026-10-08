@@ -6,7 +6,14 @@ already coded in HPO terms.
 """
 
 from raredx.evals.systems import Candidate, Question
-from raredx.tools.rank_diseases import COMBINE, METHOD, RankDiseases
+from raredx.tools.rank_diseases import COMBINE, METHOD, Match, RankDiseases
+
+
+def candidate(match: Match) -> Candidate:
+    """A ranked disease as an answer. A candidate names one gene; for a disease with
+    several, it names none."""
+    gene = match.genes[0] if len(match.genes) == 1 else None
+    return Candidate(disease_name=match.disease_name, disease_id=match.disease_id, gene=gene)
 
 
 class PhenotypeRank:
@@ -26,13 +33,4 @@ class PhenotypeRank:
         }
 
     def predict(self, question: Question) -> list[Candidate]:
-        ranking = self.tool(question.hpo_ids, top_k=10)
-        return [
-            Candidate(
-                disease_name=m.disease_name,
-                disease_id=m.disease_id,
-                # A candidate names one gene; for a disease with several, it names none.
-                gene=m.genes[0] if len(m.genes) == 1 else None,
-            )
-            for m in ranking.matches
-        ]
+        return [candidate(m) for m in self.tool(question.hpo_ids, top_k=10).matches]

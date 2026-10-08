@@ -18,16 +18,11 @@ from typing import Annotated
 
 import mlflow
 from mlflow.entities import SpanType
-from pydantic import BaseModel, Field, StringConstraints, validate_call
+from pydantic import BaseModel, Field, validate_call
 
 from raredx.knowledge import masking
-from raredx.knowledge.hpo import HPO, absent, frequency
-
-OmimId = Annotated[str, StringConstraints(pattern=r"^OMIM:\d{6}$")]
-
-
-class UnknownDisease(LookupError):
-    """The id is well formed, but this HPO release has no such disease."""
+from raredx.knowledge.hpo import HPO
+from raredx.tools.ids import OmimId, require_disease
 
 
 class Feature(BaseModel):
@@ -79,32 +74,21 @@ class LookupDisease:
 
         Use it to check a candidate from rank_diseases against the patient.
         """
-        if disease_id not in self.hpo.names:
-            raise UnknownDisease(
-                f"{disease_id} is not a disease in HPO {self.hpo.release}; "
-                "use an id that rank_diseases returned"
-            )
+        require_disease(self.hpo, disease_id)
         masked = masking.current()
-        by_term: dict[str, list[str]] = {}  # feature -> its frequencies as written
-        cited: dict[str, set[str]] = {}
-        sources: set[str] = set()
-        for line in self.hpo.lines(disease_id, "P", masked):
-            by_term.setdefault(line.term, []).append(line.frequency)
-            cited.setdefault(line.term, set()).update(line.refs)
-            sources |= line.refs
-        features: list[tuple[float | None, float, Feature]] = []
-        for term, written in by_term.items():
-            if all(absent(w) for w in written):
-                continue  # looked for, never found: not a feature of the disease
-            hpo_id, label, information = self.hpo.term(term)
-            freq = frequency(written)
-            feature = Feature(
-                hpo_id=hpo_id, label=label, frequency=freq.text, sources=sorted(cited[term])
+        found = self.hpo.features(disease_id, masked)
+        seen = [f for f in found if not f.absent]  # absent everywhere: not a feature of it
+        seen.sort(
+            key=lambda f: (
+                f.frequency.fraction is None,
+                -(f.frequency.fraction or 0.0),
+                -f.information,
+                f.term,
             )
-            features.append((freq.fraction, information, feature))
-        features.sort(key=lambda f: (f[0] is None, -(f[0] or 0.0), -f[1], f[2].hpo_id))
+        )
         inheritance = self.hpo.lines(disease_id, "I", masked)
         course = self.hpo.lines(disease_id, "C", masked)
+        sources = {ref for f in found for ref in f.sources}
         for line in (*inheritance, *course):
             sources |= line.refs
         return DiseaseProfile(
@@ -113,8 +97,16 @@ class LookupDisease:
             genes=list(self.hpo.genes.get(disease_id, ())),
             inheritance=sorted({self.hpo.term(line.term)[1] for line in inheritance}),
             onset_and_course=sorted({self.hpo.term(line.term)[1] for line in course}),
-            features=[f for _, _, f in features[:max_features]],
-            n_features=len(features),
+            features=[
+                Feature(
+                    hpo_id=f.term,
+                    label=f.label,
+                    frequency=f.frequency.text,
+                    sources=sorted(f.sources),
+                )
+                for f in seen[:max_features]
+            ],
+            n_features=len(seen),
             sources=sorted(sources),
             hpo_release=self.hpo.release,
         )

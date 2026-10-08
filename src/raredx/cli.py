@@ -17,6 +17,7 @@ from raredx.evals.systems import Oracle, Popularity, System
 
 if TYPE_CHECKING:
     from raredx.evals.harness import Harness
+    from raredx.tools.rank_diseases import RankDiseases
 
 app = typer.Typer(help="raredx — rare-disease diagnosis agent.", no_args_is_help=True)
 data_app = typer.Typer(help="Datasets: fetch, build and inspect.", no_args_is_help=True)
@@ -156,7 +157,32 @@ def check(
     typer.echo(f"ok  {folder}: {', '.join(splits.NAMES)} pass every rule")
 
 
-SYSTEMS = ("oracle", "popularity", "phenotype-rank", "llm-direct", "llm-direct-thinking")
+SYSTEMS = (
+    "oracle",
+    "popularity",
+    "phenotype-rank",
+    "rank-then-check",
+    "llm-direct",
+    "llm-direct-thinking",
+)
+
+
+def _ranker(evals_dir: Path, data_dir: Path, similarity: str | None) -> "RankDiseases":
+    """Tool T2 on the pinned HPO release, with the default similarity unless one is given."""
+    from raredx.knowledge import hpo
+    from raredx.tools.rank_diseases import RankDiseases
+
+    folder = sources.raw_dir(sources.load_sources(evals_dir / "datasets.toml")["hpo"], data_dir)
+    if not (folder / "hp.obo").exists():
+        _fail(f"{folder} has no HPO release — run `raredx data fetch hpo` first")
+    try:
+        knowledge = hpo.load(folder)
+        if similarity is None:
+            return RankDiseases(knowledge)
+        method, _, combine = similarity.partition("/")
+        return RankDiseases(knowledge, method, combine)
+    except ValueError as e:
+        _fail(str(e))
 
 
 def _system(
@@ -174,20 +200,14 @@ def _system(
         return Popularity.from_cases(pool)
     if name == "phenotype-rank":
         from raredx.baselines.phenotype_rank import PhenotypeRank
-        from raredx.knowledge import hpo
-        from raredx.tools.rank_diseases import RankDiseases
 
-        folder = sources.raw_dir(sources.load_sources(evals_dir / "datasets.toml")["hpo"], data_dir)
-        if not (folder / "hp.obo").exists():
-            _fail(f"{folder} has no HPO release — run `raredx data fetch hpo` first")
-        try:
-            knowledge = hpo.load(folder)
-            if similarity is None:
-                return PhenotypeRank(RankDiseases(knowledge))
-            method, _, combine = similarity.partition("/")
-            return PhenotypeRank(RankDiseases(knowledge, method, combine))
-        except ValueError as e:
-            _fail(str(e))
+        return PhenotypeRank(_ranker(evals_dir, data_dir, similarity))
+    if name == "rank-then-check":
+        from raredx.baselines.rank_then_check import RankThenCheck
+        from raredx.tools.check_match import CheckMatch
+
+        ranker = _ranker(evals_dir, data_dir, similarity)
+        return RankThenCheck(ranker, CheckMatch(ranker.hpo))
     if name in ("llm-direct", "llm-direct-thinking"):
         from raredx import llm
         from raredx.baselines.llm_direct import LLMDirect
@@ -220,7 +240,7 @@ def run_system(
     final: Annotated[bool, typer.Option(help="Required for heldout: the final run.")] = False,
     similarity: Annotated[
         str | None,
-        typer.Option(help="phenotype-rank only: hpo3 method/combination, e.g. lin/funSimAvg."),
+        typer.Option(help="The phenotype systems: hpo3 method/combination, e.g. lin/funSimAvg."),
     ] = None,
     mask_source_paper: Annotated[
         bool,

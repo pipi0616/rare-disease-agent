@@ -21,12 +21,12 @@ from typing import Annotated
 
 import mlflow
 from mlflow.entities import SpanType
-from pydantic import BaseModel, Field, StringConstraints, validate_call
+from pydantic import BaseModel, Field, validate_call
 
 from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
+from raredx.tools.ids import HpoId
 
-HpoId = Annotated[str, StringConstraints(pattern=r"^HP:\d{7}$")]
 # hpo3's term similarity measures, and its ways of combining them into a set similarity.
 METHODS = ("resnik", "lin", "jc", "jc2", "rel", "ic", "graphic", "dist")
 COMBINES = ("funSimAvg", "funSimMax", "BMA")

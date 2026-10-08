@@ -27,12 +27,14 @@ import re
 from collections import defaultdict
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, NamedTuple
+from typing import Any, Literal, NamedTuple
 
 from pyhpo import BasicHPOSet, Ontology
 
 ANNOTATIONS = "phenotype.hpoa"
 GENES = "genes_to_disease.txt"
+
+Relation = Literal["same", "more specific", "less specific"]
 
 
 class WrongRelease(Exception):
@@ -100,7 +102,8 @@ def frequency(written: list[str]) -> Frequency:
 
     Counts are pooled across sources when some source counted patients who had
     it (2/2 and 0/3 make 2/5). Otherwise percentages and frequency terms are
-    used, averaged if there are several. Otherwise the frequency is unknown.
+    used, averaged if there are several. When every source looked and found
+    none, the frequency is zero (0/5). Otherwise it is unknown.
     """
     counts = [(int(m[1]), int(m[2])) for w in written if (m := _COUNT.fullmatch(w.strip()))]
     counts = [(n, of) for n, of in counts if of > 0]
@@ -113,12 +116,16 @@ def frequency(written: list[str]) -> Frequency:
             others.append((float(m[1]) / 100, f"{float(m[1]):g}%"))
         elif w in FREQUENCY_TERMS:
             others.append(FREQUENCY_TERMS[w])
-    others = [o for o in others if o[0] > 0]
-    if len(others) == 1:
-        return Frequency(*others[0])
-    if others:
-        mean = sum(f for f, _ in others) / len(others)
+    present = [o for o in others if o[0] > 0]
+    if len(present) == 1:
+        return Frequency(*present[0])
+    if present:
+        mean = sum(f for f, _ in present) / len(present)
         return Frequency(mean, f"about {mean:.0%}")
+    if written and all(absent(w) for w in written):
+        if counts:
+            return Frequency(0.0, f"0/{sum(of for _, of in counts)}")
+        return Frequency(0.0, others[0][1] if others else written[0].strip())
     return Frequency(None, None)
 
 
@@ -132,6 +139,17 @@ class Line(NamedTuple):
     term: str
     refs: frozenset[str]  # the sources it was curated from
     frequency: str  # as written
+
+
+class Feature(NamedTuple):
+    """One phenotypic feature of a disease, gathered from every line about it."""
+
+    term: str  # as it stands in this release (an obsolete term's replacement)
+    label: str
+    information: float  # information content across OMIM diseases: rarer is higher
+    frequency: Frequency
+    sources: frozenset[str]
+    absent: bool  # every source looked for it and found none
 
 
 def _rows(path: Path) -> Iterator[dict[str, str]]:
@@ -243,3 +261,41 @@ class HPO:
         if term.is_obsolete and term.replaced_by:
             term = Ontology.get_hpo_object(term.replaced_by)
         return str(term.id), str(term.name), float(term.information_content["omim"])
+
+    def features(self, disease: str, masked: frozenset[str] = frozenset()) -> list[Feature]:
+        """The disease's phenotypic features, each gathered from all its lines: those
+        some source saw, and those every source looked for and found absent."""
+        written: dict[str, list[str]] = {}
+        cited: dict[str, set[str]] = {}
+        for line in self.lines(disease, "P", masked):
+            term = self.term(line.term)[0]
+            written.setdefault(term, []).append(line.frequency)
+            cited.setdefault(term, set()).update(line.refs)
+        features = []
+        for term, frequencies in written.items():
+            _, label, information = self.term(term)
+            features.append(
+                Feature(
+                    term=term,
+                    label=label,
+                    information=information,
+                    frequency=frequency(frequencies),
+                    sources=frozenset(cited[term]),
+                    absent=all(absent(w) for w in frequencies),
+                )
+            )
+        return features
+
+    def relation(self, finding: str, feature: str) -> Relation | None:
+        """How a patient's finding stands to a disease's feature in the ontology:
+        "same"; "more specific" when the finding is a kind of the feature
+        (Bilateral sensorineural hearing impairment, of Hearing impairment);
+        "less specific" the other way round; None when neither is a kind of the other."""
+        if finding == feature:
+            return "same"
+        a, b = Ontology.get_hpo_object(finding), Ontology.get_hpo_object(feature)
+        if a.child_of(b):
+            return "more specific"
+        if a.parent_of(b):
+            return "less specific"
+        return None

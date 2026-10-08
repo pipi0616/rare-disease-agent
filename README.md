@@ -8,15 +8,18 @@ ranked candidate diseases and genes with cited evidence. Evaluated on public,
 leakage-controlled case collections against classical, fixed-pipeline and
 single-call baselines.
 
-**Status:** two baselines and two tools — `rank_diseases` (every OMIM disease
-ranked against the patient's phenotype) and `lookup_disease` (one disease's
-features and their frequencies, inheritance, onset, genes and sources, sized
-for a model to read). On the 200-case dev set (top-10 recall of the confirmed
-disease, 95% interval):
+**Status:** three tools and the baselines the agent must beat. The tools:
+`rank_diseases` (every OMIM disease ranked against the patient's phenotype),
+`lookup_disease` (one disease's features with their frequencies, inheritance,
+onset, genes and sources, sized for a model to read) and `check_match` (the
+patient's findings against one disease: explained, unexplained, contradicted,
+and the disease's frequent features the patient lacks). On the 200-case dev
+set (recall of the confirmed disease, 95% interval on top-10):
 
 | system | top-1 | top-10 |
 |---|---|---|
-| phenotype similarity alone (tool T2, no model) | 19.0% | **49.0%** [42.2–55.9] |
+| rank, then check: T2's top 30 reordered by findings explained (no model) | **30.5%** | **54.5%** [47.6–61.3] |
+| phenotype similarity alone (tool T2, no model) | 19.0% | 49.0% [42.2–55.9] |
 | a single call to `deepseek-flash`, no tools | 14.5% | 28.0% [22.2–34.6] |
 | floor: the same diseases for every patient | 0.5% | 9.0% |
 
@@ -37,7 +40,7 @@ uv run raredx data build   # parse it into data/processed: one case per line
 uv run raredx data stats   # 10,374 published cases, 780 OMIM diseases, 699 genes
 uv run raredx eval check   # the frozen manifests keep every rule
 uv run raredx llm check    # model key and endpoint; costs nothing
-uv run raredx eval run --system phenotype-rank --split dev-200  # run, score, record in MLflow
+uv run raredx eval run --system rank-then-check --split dev-200  # run, score, record in MLflow
 uv run raredx eval run --system llm-direct --split ci-20     # the model baseline (billed)
 uv run raredx eval runs --split dev-200                      # every recorded run on dev-200
 uv run raredx eval score <run id>                            # re-score recorded traces, no re-run
@@ -103,7 +106,7 @@ src/raredx/     all application code — an installed package, no path hacks
   evals/          manifests, systems, scoring rules, MLflow evaluation harness
   knowledge/      reference knowledge the tools read (HPO), and source masking
   tools/          the agent's tools: typed, described, tested alone, traced
-  baselines/      systems the agent must beat: phenotype similarity, a single LLM call
+  baselines/      systems the agent must beat: similarity, rank-then-check, one LLM call
   llm.py          the model client (OpenAI SDK, MLflow autologging)
   mlflow_setup.py process-wide MLflow settings, applied before mlflow loads
 evals/          dataset registry and frozen manifests — what gets evaluated

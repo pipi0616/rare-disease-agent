@@ -6,7 +6,8 @@ from pydantic import ValidationError
 
 from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
-from raredx.tools.lookup_disease import DiseaseProfile, LookupDisease, UnknownDisease
+from raredx.tools.ids import UnknownDisease
+from raredx.tools.lookup_disease import DiseaseProfile, LookupDisease
 
 
 @pytest.fixture

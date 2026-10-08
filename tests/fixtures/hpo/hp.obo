@@ -37,6 +37,11 @@ name: Sensorineural hearing impairment
 is_a: HP:0000365 ! Hearing impairment
 
 [Term]
+id: HP:0008619
+name: Bilateral sensorineural hearing impairment
+is_a: HP:0000407 ! Sensorineural hearing impairment
+
+[Term]
 id: HP:0000478
 name: Abnormality of the eye
 is_a: HP:0000118 ! Phenotypic abnormality
