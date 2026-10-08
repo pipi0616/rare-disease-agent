@@ -76,6 +76,7 @@ class MatchReport(BaseModel):
 
 class CheckMatch:
     name = "check_match"
+    title = "Check a disease against the patient"
 
     def __init__(self, hpo: HPO) -> None:
         self.hpo = hpo

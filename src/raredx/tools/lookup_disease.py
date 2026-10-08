@@ -54,6 +54,7 @@ class DiseaseProfile(BaseModel):
 
 class LookupDisease:
     name = "lookup_disease"
+    title = "Look up a disease"
 
     def __init__(self, hpo: HPO) -> None:
         self.hpo = hpo

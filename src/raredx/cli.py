@@ -17,6 +17,7 @@ from raredx.evals.systems import Oracle, Popularity, System
 
 if TYPE_CHECKING:
     from raredx.evals.harness import Harness
+    from raredx.knowledge.hpo import HPO
     from raredx.tools.rank_diseases import RankDiseases
 
 app = typer.Typer(help="raredx — rare-disease diagnosis agent.", no_args_is_help=True)
@@ -167,16 +168,22 @@ SYSTEMS = (
 )
 
 
-def _ranker(evals_dir: Path, data_dir: Path, similarity: str | None) -> "RankDiseases":
-    """Tool T2 on the pinned HPO release, with the default similarity unless one is given."""
+def _knowledge(evals_dir: Path, data_dir: Path) -> "HPO":
+    """The pinned HPO release, loaded; a clear message if it was never fetched."""
     from raredx.knowledge import hpo
-    from raredx.tools.rank_diseases import RankDiseases
 
     folder = sources.raw_dir(sources.load_sources(evals_dir / "datasets.toml")["hpo"], data_dir)
     if not (folder / "hp.obo").exists():
         _fail(f"{folder} has no HPO release — run `raredx data fetch hpo` first")
+    return hpo.load(folder)
+
+
+def _ranker(evals_dir: Path, data_dir: Path, similarity: str | None) -> "RankDiseases":
+    """Tool T2 on the pinned HPO release, with the default similarity unless one is given."""
+    from raredx.tools.rank_diseases import RankDiseases
+
+    knowledge = _knowledge(evals_dir, data_dir)
     try:
-        knowledge = hpo.load(folder)
         if similarity is None:
             return RankDiseases(knowledge)
         method, _, combine = similarity.partition("/")
@@ -341,6 +348,38 @@ def list_runs(
         scores = [pct(r["disease_top1"]), pct(r["disease_top10"]), pct(r["gene_top10"])]
         cells = [started, r["name"], *scores, r["code"], r["run_id"]]
         typer.echo(line.format(*cells, w=width))
+
+
+# ── mcp ─────────────────────────────────────────────────────────────
+
+
+@app.command("mcp")
+def serve_mcp(
+    transport: Annotated[
+        str,
+        typer.Option(
+            help="stdio: for a host that launches this command. "
+            "streamable-http: to serve the tools at a URL."
+        ),
+    ] = "stdio",
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Serve the tools over MCP, for Claude Code, Claude Desktop or an agent to call."""
+    if transport not in ("stdio", "streamable-http"):
+        _fail(f"unknown transport {transport!r}: choose stdio or streamable-http")
+    import logging
+
+    import mlflow
+
+    from raredx.mcp_server import build
+
+    knowledge = _knowledge(evals_dir, data_dir)
+    # A host shows the server's stderr as its log; keep MLflow's routine INFO lines out.
+    logging.getLogger("mlflow").setLevel(logging.WARNING)
+    mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+    mlflow.set_experiment("mcp-server")  # every call a host makes is traced here
+    build(knowledge).run(transport="streamable-http" if transport == "streamable-http" else "stdio")
 
 
 # ── llm ─────────────────────────────────────────────────────────────

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "raredx": {
+      "command": "uv",
+      "args": ["run", "raredx", "mcp"]
+    }
+  }
+}

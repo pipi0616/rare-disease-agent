@@ -78,6 +78,25 @@ and `evals/splits/` (frozen case-ID manifests):
 | `ci-20` | 20 of dev-200 | the regression check in CI |
 | `heldout` | 4,360 | the final run, once |
 
+## Tools over MCP
+
+The three tools are served over the Model Context Protocol, the standard way AI
+applications call tools (`src/raredx/mcp_server.py`, the official MCP Python SDK):
+
+```bash
+uv run raredx mcp                              # stdio: a host launches this command
+uv run raredx mcp --transport streamable-http  # or serve the tools at a URL
+```
+
+Claude Code picks the server up from `.mcp.json` when it is opened in this
+folder (it asks before running it). Any other host — Claude Desktop, an IDE, a
+LangGraph agent — takes the same launch command:
+`uv run --directory /absolute/path/to/rare-disease-agent raredx mcp`.
+The schemas a model sees are generated from the tools' signatures and
+docstrings; an unknown disease id comes back as a tool error the model can act
+on; every tool is marked read-only. Calls are traced in the MLflow experiment
+`mcp-server`.
+
 ## Model
 
 Any OpenAI-compatible endpoint, through the official OpenAI SDK: DeepSeek by
@@ -108,6 +127,7 @@ src/raredx/     all application code — an installed package, no path hacks
   tools/          the agent's tools: typed, described, tested alone, traced
   baselines/      systems the agent must beat: similarity, rank-then-check, one LLM call
   llm.py          the model client (OpenAI SDK, MLflow autologging)
+  mcp_server.py   the tools over MCP, for any host or agent framework
   mlflow_setup.py process-wide MLflow settings, applied before mlflow loads
 evals/          dataset registry and frozen manifests — what gets evaluated
 tests/          pytest suite; one test per behaviour, no network, no real data

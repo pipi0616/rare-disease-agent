@@ -50,6 +50,7 @@ class Ranking(BaseModel):
 
 class RankDiseases:
     name = "rank_diseases"
+    title = "Rank diseases by phenotype"
 
     def __init__(self, hpo: HPO, method: str = METHOD, combine: str = COMBINE) -> None:
         if method not in METHODS or combine not in COMBINES:
