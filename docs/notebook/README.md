@@ -47,3 +47,4 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [11](11_disease_lookup.ipynb) | 第二个工具：查一个病的资料（工具的回答怎么写给模型看） |
 | [12](12_match_check.ipynb) | 第三个工具：逐条核对，再重新排序（先粗筛、再精排） |
 | [13](13_mcp_server.ipynb) | 把三个工具做成标准接口（MCP）：任何 AI 应用都能接上 |
+| [14](14_fixed_pipeline.ipynb) | 固定流程：工具查完，交给大模型判断（逐题比：真进步还是运气） |
