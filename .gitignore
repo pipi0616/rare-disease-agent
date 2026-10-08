@@ -14,8 +14,8 @@ build/
 .mypy_cache/
 
 # Data and run outputs never enter the repo; fetch scripts recreate them.
-data/
-runs/
+/data/
+/runs/
 
 # Third-party checkouts (DeepRare, ...) are fetched, not vendored.
 third_party/
