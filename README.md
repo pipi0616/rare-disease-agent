@@ -8,17 +8,19 @@ ranked candidate diseases and genes with cited evidence. Evaluated on public,
 leakage-controlled case collections against classical, fixed-pipeline and
 single-call baselines.
 
-**Status:** three tools and the baselines the agent must beat. The tools:
+**Status:** the first agent, four tools, and the baselines it is measured against. Tools:
 `rank_diseases` (every OMIM disease ranked against the patient's phenotype),
 `lookup_disease` (one disease's features with their frequencies, inheritance,
-onset, genes and sources, sized for a model to read) and `check_match` (the
+onset, genes and sources, sized for a model to read), `check_match` (the
 patient's findings against one disease: explained, unexplained, contradicted,
-and the disease's frequent features the patient lacks). On the 200-case dev
-set (recall of the confirmed disease, 95% interval on top-10):
+and the disease's frequent features the patient lacks) and `find_disease` (a
+disease's OMIM id from its name). On the 200-case dev set (recall of the
+confirmed disease, 95% intervals):
 
 | system | top-1 | top-10 |
 |---|---|---|
-| fixed pipeline: the tools' top 10 with their evidence, ranked by one model call | **35.5%** [29.2–42.3] | 54.5% [47.6–61.3] |
+| agent: the model calls the four tools as it decides, up to 8 turns | **39.0%** [32.5–45.9] | 54.0% [47.1–60.8] |
+| fixed pipeline: the tools' top 10 with their evidence, ranked by one model call | 35.5% [29.2–42.3] | 54.5% [47.6–61.3] |
 | rank, then check: T2's top 30 reordered by findings explained (no model) | 30.5% | 54.5% [47.6–61.3] |
 | phenotype similarity alone (tool T2, no model) | 19.0% | 49.0% [42.2–55.9] |
 | a single call to `deepseek-flash`, no tools | 14.5% | 28.0% [22.2–34.6] |
@@ -35,6 +37,11 @@ cannot pass about 80% here.
 The fixed pipeline's gain at first place is paired, not just a higher rate:
 on the same 200 cases it was right where rank-then-check was wrong 11 times,
 and the reverse once (sign test p = 0.006), for about $0.27 a run.
+The agent's lead over the fixed pipeline is not established yet: paired at
+first place it is 14 cases to 7 (p = 0.19), and at top-10 10 to 11. Its ten
+top-10 wins are all diseases the ranking never showed it — ones it thought
+of, found by name and checked — while it often listed fewer than ten
+answers. It costs about $1.17 a run at peak price ($0.58 off-peak).
 
 ## Run
 
@@ -134,6 +141,7 @@ src/raredx/     all application code — an installed package, no path hacks
   baselines/      systems the agent must beat: similarity, rank-then-check, the fixed
                   pipeline, one LLM call
   llm.py          the model client (OpenAI SDK, MLflow autologging)
+  agent.py        the agent: LangChain's create_agent over the tools, with its bounds
   mcp_server.py   the tools over MCP, for any host or agent framework
   mlflow_setup.py process-wide MLflow settings, applied before mlflow loads
 evals/          dataset registry and frozen manifests — what gets evaluated
