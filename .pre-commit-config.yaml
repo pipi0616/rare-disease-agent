@@ -25,6 +25,13 @@ repos:
         args: [--fix]
       - id: ruff-format
 
+  # Notebooks are committed without outputs: outputs carry local paths and
+  # data, and re-running a cell should not show up as a change.
+  - repo: https://github.com/kynan/nbstripout
+    rev: 0.9.1
+    hooks:
+      - id: nbstripout
+
   # mypy and pytest run from the project environment so they see the real
   # dependencies; the mirrors-mypy hook would run in an empty one.
   - repo: local
