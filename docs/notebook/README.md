@@ -43,3 +43,4 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [07](07_scoring.ipynb) | 判分：尺子怎么做，怎么知道尺子是准的 |
 | [08](08_mlflow_eval.ipynb) | 用 MLflow 原生的方式做评测：数据集、打分器、追踪 |
 | [09](09_llm_baseline.ipynb) | 第一个基线：大模型直接猜 |
+| [10](10_phenotype_tool.ipynb) | 第一个工具：按症状给所有罕见病排序（和一次数据泄漏） |
