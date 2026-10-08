@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -60,3 +61,23 @@ def make_case() -> Callable[..., Case]:
         return Case.model_validate(values)
 
     return factory
+
+
+class FakeLLM:
+    """Stands in for OpenAI(): returns the replies given, in turn; records every request."""
+
+    def __init__(self, *replies: str) -> None:
+        self.replies = list(replies)
+        self.requests: list[dict[str, Any]] = []
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
+
+    def _create(self, **request: Any) -> Any:
+        self.requests.append(request)
+        message = SimpleNamespace(content=self.replies.pop(0))
+        return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+
+
+@pytest.fixture
+def fake_llm() -> type[FakeLLM]:
+    """A model client that costs nothing: FakeLLM(reply, ...)."""
+    return FakeLLM

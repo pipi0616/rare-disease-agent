@@ -17,8 +17,9 @@ from typing import Any
 
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
 
+from raredx import llm
 from raredx.evals.systems import Candidate, Question
 
 PROMPT_VERSION = "direct-v1"
@@ -57,7 +58,7 @@ def parse(content: str | None) -> list[Candidate]:
 
 
 class LLMDirect:
-    """One chat-completions call per patient, with one repair attempt if the format is wrong."""
+    """One chat-completions call per patient (llm.ask_json: one repair attempt)."""
 
     def __init__(self, client: OpenAI, model: str, *, thinking: bool) -> None:
         self.client = client
@@ -68,36 +69,9 @@ class LLMDirect:
     def params(self) -> dict[str, Any]:
         return {"model": self.model, "thinking": self.thinking, "prompt_version": PROMPT_VERSION}
 
-    def _ask(self, messages: list[ChatCompletionMessageParam]) -> str | None:
-        options: dict[str, Any] = {
-            "response_format": {"type": "json_object"},
-            "extra_body": {"thinking": {"type": "enabled" if self.thinking else "disabled"}},
-        }
-        if not self.thinking:  # temperature has no effect in thinking mode
-            options["temperature"] = 0.0
-        response = self.client.chat.completions.create(
-            model=self.model, messages=messages, **options
-        )
-        content: str | None = response.choices[0].message.content
-        return content
-
     def predict(self, question: Question) -> list[Candidate]:
         messages: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt(question)},
         ]
-        content = self._ask(messages)
-        try:
-            return parse(content)
-        except (ValueError, ValidationError) as first_error:
-            # One repair attempt: show the model what was wrong. A second failure is
-            # raised, recorded in the trace and scored as a miss.
-            messages += [
-                {"role": "assistant", "content": content or ""},
-                {
-                    "role": "user",
-                    "content": f"That reply was not in the required format ({first_error}). "
-                    "Reply again with only the json object.",
-                },
-            ]
-            return parse(self._ask(messages))
+        return llm.ask_json(self.client, self.model, messages, parse, thinking=self.thinking)

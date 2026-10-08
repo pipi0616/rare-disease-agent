@@ -13,8 +13,8 @@ has to clear.
 
 from raredx.baselines.phenotype_rank import candidate
 from raredx.evals.systems import Candidate, Question
-from raredx.tools.check_match import CheckMatch
-from raredx.tools.rank_diseases import RankDiseases
+from raredx.tools.check_match import CheckMatch, MatchReport
+from raredx.tools.rank_diseases import Match, RankDiseases
 
 POOL = 30
 
@@ -35,8 +35,12 @@ class RankThenCheck:
             "order": "findings explained, then similarity",
         }
 
-    def predict(self, question: Question) -> list[Candidate]:
+    def ordered(self, question: Question) -> list[tuple[Match, MatchReport]]:
+        """The whole pool, reordered: each candidate with its match report."""
         pool = self.rank(question.hpo_ids, top_k=self.pool).matches
-        explained = [len(self.check(question.hpo_ids, m.disease_id).explained) for m in pool]
-        order = sorted(range(len(pool)), key=lambda i: (-explained[i], i))
-        return [candidate(pool[i]) for i in order[:10]]
+        reports = [self.check(question.hpo_ids, m.disease_id) for m in pool]
+        order = sorted(range(len(pool)), key=lambda i: (-len(reports[i].explained), i))
+        return [(pool[i], reports[i]) for i in order]
+
+    def predict(self, question: Question) -> list[Candidate]:
+        return [candidate(match) for match, _ in self.ordered(question)[:10]]

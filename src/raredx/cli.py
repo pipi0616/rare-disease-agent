@@ -16,6 +16,8 @@ from raredx.evals.provenance import code_version
 from raredx.evals.systems import Oracle, Popularity, System
 
 if TYPE_CHECKING:
+    from openai import OpenAI
+
     from raredx.evals.harness import Harness
     from raredx.knowledge.hpo import HPO
     from raredx.tools.rank_diseases import RankDiseases
@@ -163,6 +165,7 @@ SYSTEMS = (
     "popularity",
     "phenotype-rank",
     "rank-then-check",
+    "fixed-pipeline",
     "llm-direct",
     "llm-direct-thinking",
 )
@@ -192,6 +195,15 @@ def _ranker(evals_dir: Path, data_dir: Path, similarity: str | None) -> "RankDis
         _fail(str(e))
 
 
+def _model_client() -> "OpenAI":
+    from raredx import llm
+
+    try:
+        return llm.client(settings)
+    except llm.MissingAPIKey as e:
+        _fail(str(e))
+
+
 def _system(
     name: str,
     cases: list[Case],
@@ -215,15 +227,25 @@ def _system(
 
         ranker = _ranker(evals_dir, data_dir, similarity)
         return RankThenCheck(ranker, CheckMatch(ranker.hpo))
+    if name == "fixed-pipeline":
+        from raredx.baselines.fixed_pipeline import FixedPipeline
+        from raredx.tools.check_match import CheckMatch
+        from raredx.tools.lookup_disease import LookupDisease
+
+        ranker = _ranker(evals_dir, data_dir, similarity)
+        return FixedPipeline(
+            _model_client(),
+            settings.llm_model,
+            ranker,
+            CheckMatch(ranker.hpo),
+            LookupDisease(ranker.hpo),
+        )
     if name in ("llm-direct", "llm-direct-thinking"):
-        from raredx import llm
         from raredx.baselines.llm_direct import LLMDirect
 
-        try:
-            client = llm.client(settings)
-        except llm.MissingAPIKey as e:
-            _fail(str(e))
-        return LLMDirect(client, settings.llm_model, thinking=name == "llm-direct-thinking")
+        return LLMDirect(
+            _model_client(), settings.llm_model, thinking=name == "llm-direct-thinking"
+        )
     _fail(f"unknown system {name!r}: choose {', '.join(SYSTEMS)}")
 
 

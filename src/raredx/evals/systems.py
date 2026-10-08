@@ -30,6 +30,7 @@ class Candidate(BaseModel):
     disease_name: str
     disease_id: str | None = None  # OMIM number; how the scorer recognises the disease
     gene: str | None = None
+    reason: str | None = None  # why the system ranks it here, when the system says
 
 
 class System(Protocol):
