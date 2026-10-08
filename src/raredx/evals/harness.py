@@ -233,6 +233,7 @@ class Harness:
         durations = [t.info.execution_duration for t in traces if t.info.execution_duration]
         return {
             "usage/input_tokens": sum(u.get("input_tokens", 0) for u in tokens),
+            "usage/cached_input_tokens": sum(u.get("cache_read_input_tokens", 0) for u in tokens),
             "usage/output_tokens": sum(u.get("output_tokens", 0) for u in tokens),
             "usage/seconds_per_case": statistics.median(durations) / 1000 if durations else 0.0,
         }

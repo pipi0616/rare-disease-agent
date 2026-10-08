@@ -6,9 +6,12 @@ until it gives its final answer: up to ten OMIM diseases, best first, each with
 a reason. Unlike the fixed pipeline it can check a disease the ranking did not
 propose: one it thinks of, found by name.
 
-Bounds, all standard LangChain middleware:
-- at most MAX_MODEL_CALLS model calls per case; a case that runs out before
-  answering fails, and scores as a miss (ModelCallLimitMiddleware);
+Bounds, all LangChain middleware:
+- at most MAX_MODEL_CALLS model calls per case, and on the last one the model is
+  offered only the final answer, so it must give one (a wrap_model_call
+  middleware of ours; without it, the first runs investigated until they ran
+  out). ModelCallLimitMiddleware stops a model that still does not answer; the
+  case then fails, and scores as a miss;
 - an error the model can fix — an unknown disease id, arguments that break a
   tool's schema — comes back to it as a message, so it can retry
   (ToolErrorMiddleware); anything else fails the case;
@@ -20,13 +23,20 @@ it reaches the fixed pipeline's. The prompt is versioned like the baselines'.
 
 import functools
 import inspect
+from collections.abc import Callable
 from typing import Any
 
 from langchain.agents import create_agent
-from langchain.agents.middleware import ModelCallLimitMiddleware, ToolErrorMiddleware
+from langchain.agents.middleware import (
+    ModelCallLimitMiddleware,
+    ModelRequest,
+    ModelResponse,
+    ToolErrorMiddleware,
+    wrap_model_call,
+)
 from langchain.agents.structured_output import ToolStrategy
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import BaseModel, Field, ValidationError
 
@@ -40,10 +50,10 @@ from raredx.tools.ids import UnknownDisease
 from raredx.tools.lookup_disease import LookupDisease
 from raredx.tools.rank_diseases import RankDiseases
 
-PROMPT_VERSION = "agent-v1"
-MAX_MODEL_CALLS = 12
+PROMPT_VERSION = "agent-v2"
+MAX_MODEL_CALLS = 8
 
-SYSTEM_PROMPT = """\
+SYSTEM_PROMPT = f"""\
 You are a clinical geneticist. Your task is to diagnose a patient with a suspected \
 rare Mendelian disease from their phenotype, given as Human Phenotype Ontology (HPO) \
 terms.
@@ -63,8 +73,10 @@ explain the patient's findings, above all the specific ones; findings recorded a
 and missing hallmark features count against it; inheritance and onset should fit. You \
 may name a disease the tools know little about if you have good reason.
 
-When you have enough, give your final answer: up to 10 OMIM diseases, most likely \
-first, each with a one-sentence reason."""
+Your budget is {MAX_MODEL_CALLS} turns, and the last one is for your answer. A few \
+rounds are usually enough: rank, check the leading candidates (several calls at \
+once), check any you suspect, then answer. When you have enough, give your final \
+answer: up to 10 OMIM diseases, most likely first, each with a one-sentence reason."""
 
 
 class Diagnosis(BaseModel):
@@ -99,6 +111,17 @@ def as_langchain_tool(tool: Any) -> BaseTool:
     )
 
 
+@wrap_model_call
+def _answer_on_the_last_turn(
+    request: ModelRequest, handler: Callable[[ModelRequest], ModelResponse]
+) -> ModelResponse:
+    """On the last model call the budget allows, offer only the final-answer tool."""
+    turns_taken = sum(isinstance(m, AIMessage) for m in request.messages)
+    if turns_taken >= MAX_MODEL_CALLS - 1:
+        request = request.override(tools=[])
+    return handler(request)
+
+
 def _error_for_model(error: Exception, request: Any) -> str | None:
     """A message for errors the model can fix; anything else fails the case."""
     if isinstance(error, UnknownDisease | ValidationError):
@@ -121,6 +144,7 @@ class Agent:
         self.tool_names = [t.name for t in tools]
         middleware: list[Any] = [  # each is typed for its own state; the agent combines them
             ModelCallLimitMiddleware(run_limit=MAX_MODEL_CALLS, exit_behavior="end"),
+            _answer_on_the_last_turn,
             ToolErrorMiddleware(_error_for_model),
         ]
         self.graph = create_agent(
@@ -144,8 +168,9 @@ class Agent:
     def predict(self, question: Question) -> list[Candidate]:
         result = self.graph.invoke(
             {"messages": [HumanMessage(user_prompt(question))]},
-            # Each model call and each round of tool calls is a graph step.
-            {"recursion_limit": 4 * MAX_MODEL_CALLS},
+            # A backstop only: each turn is several graph steps (middleware hooks, the
+            # model, the tools); the model-call limit is what bounds a run.
+            {"recursion_limit": 10 * MAX_MODEL_CALLS},
         )
         answer = result.get("structured_response")
         if not isinstance(answer, FinalAnswer):

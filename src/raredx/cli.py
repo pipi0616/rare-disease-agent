@@ -321,8 +321,13 @@ def run_system(
         _fail(str(e))
     usage = harness.usage(run_id)
     tokens_in, tokens_out = usage["usage/input_tokens"], usage["usage/output_tokens"]
+    cached = usage["usage/cached_input_tokens"]
     if tokens_in or tokens_out:
-        cost = (tokens_in * settings.llm_price_input + tokens_out * settings.llm_price_output) / 1e6
+        cost = (
+            (tokens_in - cached) * settings.llm_price_input
+            + cached * settings.llm_price_cached_input
+            + tokens_out * settings.llm_price_output
+        ) / 1e6
         usage["usage/cost_usd_estimate"] = round(cost, 4)
         harness.log_metrics(run_id, usage)
     unmasked = "" if mask_source_paper else " · unmasked"
@@ -332,8 +337,8 @@ def run_system(
         typer.echo(f"note: {missing} cases got no answer; their traces in MLflow show why")
     if tokens_in or tokens_out:
         typer.echo(
-            f"usage: {tokens_in:,.0f} input + {tokens_out:,.0f} output tokens, "
-            f"about ${usage['usage/cost_usd_estimate']:.2f} at peak price; "
+            f"usage: {tokens_in:,.0f} input ({cached:,.0f} cached) + {tokens_out:,.0f} output "
+            f"tokens, about ${usage['usage/cost_usd_estimate']:.2f} at peak price; "
             f"{usage['usage/seconds_per_case']:.1f} s per case"
         )
     typer.echo(f"recorded in MLflow: experiment eval/{split}, run {run_id}")

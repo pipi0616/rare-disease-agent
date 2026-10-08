@@ -19,18 +19,24 @@ from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
 from raredx.tools.rank_diseases import RankDiseases
 
+OFFERED: list[list[str]] = []  # the tools offered to the model, call by call
+
 
 class ScriptedModel(GenericFakeChatModel):
-    """A fake chat model that plays the given moves; tools are bound but not needed."""
+    """A fake chat model that plays the given moves, noting which tools it was offered."""
 
     def bind_tools(self, tools: Any, **kwargs: Any) -> "ScriptedModel":
+        OFFERED.append([t.name for t in tools])
         return self
 
 
+_ids = itertools.count()
+
+
 def call(tool: str, **args: Any) -> AIMessage:
-    return AIMessage(
-        content="", tool_calls=[{"name": tool, "args": args, "id": tool, "type": "tool_call"}]
-    )
+    """One move: a new message each time, with its own tool-call id, as a real model sends."""
+    tool_call = {"name": tool, "args": args, "id": f"{tool}-{next(_ids)}", "type": "tool_call"}
+    return AIMessage(content="", tool_calls=[tool_call])
 
 
 def answer(*diagnoses: tuple[str, str, str]) -> AIMessage:
@@ -82,8 +88,29 @@ def test_an_unknown_disease_comes_back_to_the_model_as_a_message(hpo: HPO, case:
     assert result["structured_response"].diagnoses[0].disease_id == "OMIM:690001"
 
 
-def test_an_agent_that_never_answers_stops_at_the_limit_and_fails(hpo: HPO, case: Case) -> None:
-    endless = itertools.repeat(call("rank_diseases", hpo_ids=case.hpo_ids))
+def test_on_its_last_turn_the_model_is_offered_only_the_final_answer(hpo: HPO, case: Case) -> None:
+    OFFERED.clear()
+    investigating = [
+        call("rank_diseases", hpo_ids=case.hpo_ids) for _ in range(MAX_MODEL_CALLS - 1)
+    ]
+    final = answer(("OMIM:690001", "Hearing-ovarian syndrome", "fits"))
+    answers = agent(hpo, iter([*investigating, final])).predict(question_of(case))
+    assert [c.disease_id for c in answers] == ["OMIM:690001"]
+    assert len(OFFERED) == MAX_MODEL_CALLS
+    assert OFFERED[0] == [
+        "rank_diseases",
+        "check_match",
+        "lookup_disease",
+        "find_disease",
+        "FinalAnswer",
+    ]
+    assert OFFERED[-1] == ["FinalAnswer"]
+
+
+def test_a_model_that_still_does_not_answer_stops_at_the_limit_and_fails(
+    hpo: HPO, case: Case
+) -> None:
+    endless = (call("rank_diseases", hpo_ids=case.hpo_ids) for _ in itertools.count())
     with pytest.raises(NoFinalAnswer, match=f"{MAX_MODEL_CALLS} model calls"):
         agent(hpo, endless).predict(question_of(case))
 
@@ -107,4 +134,4 @@ def test_the_tools_reach_the_model_with_their_own_schemas(hpo: HPO) -> None:
     assert arguments["hpo_ids"]["items"]["pattern"] == r"^HP:\d{7}$"
     params = agent(hpo, iter([])).params()
     assert params["tools"] == "rank_diseases, check_match, lookup_disease, find_disease"
-    assert (params["prompt_version"], params["max_model_calls"]) == ("agent-v1", MAX_MODEL_CALLS)
+    assert (params["prompt_version"], params["max_model_calls"]) == ("agent-v2", MAX_MODEL_CALLS)

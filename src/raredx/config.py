@@ -32,8 +32,10 @@ class Settings(BaseSettings):
         default=None, validation_alias=AliasChoices("RAREDX_LLM_API_KEY", "DEEPSEEK_API_KEY")
     )
     # USD per million tokens, for each run's cost estimate: deepseek-flash at its peak
-    # rate (api-docs.deepseek.com, 2026-10). Off-peak is half; cache hits cost less.
+    # rate (api-docs.deepseek.com, 2026-10); off-peak is half. Input the provider has
+    # cached — a prefix it saw recently, such as an agent's earlier turns — costs 1/50.
     llm_price_input: float = 0.30
+    llm_price_cached_input: float = 0.006
     llm_price_output: float = 1.20
 
 
