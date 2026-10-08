@@ -36,9 +36,10 @@ def text(result: Any) -> str:
 
 
 @pytest.mark.anyio
-async def test_a_host_finds_three_read_only_tools_described_for_a_model(client: Client) -> None:
+async def test_a_host_finds_four_read_only_tools_described_for_a_model(client: Client) -> None:
     tools = {t.name: t for t in (await client.list_tools()).tools}
-    assert set(tools) == {"rank_diseases", "lookup_disease", "check_match"}
+    assert set(tools) == {"rank_diseases", "lookup_disease", "check_match", "find_disease"}
+    assert all(t.annotations and t.annotations.read_only_hint for t in tools.values())
     rank = tools["rank_diseases"]
     assert rank.title == "Rank diseases by phenotype"
     assert (rank.description or "").startswith("Rank every OMIM disease")

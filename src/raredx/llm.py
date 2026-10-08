@@ -8,13 +8,16 @@ question it was made for.
 """
 
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 from pydantic import ValidationError
 
 from raredx.config import Settings
+
+if TYPE_CHECKING:
+    from langchain_core.language_models import BaseChatModel
 
 
 class MissingAPIKey(Exception):
@@ -32,6 +35,29 @@ def client(settings: Settings) -> OpenAI:
         api_key=settings.llm_api_key.get_secret_value(),
         timeout=180,
         max_retries=2,  # the SDK retries timeouts, rate limits and 5xx with backoff
+    )
+
+
+def chat_model(settings: Settings) -> "BaseChatModel":
+    """The same endpoint as a LangChain chat model, for agents.
+
+    Reasoning mode off and temperature 0, as for the single-call baseline. MLflow's
+    LangChain autologging traces each model call and tool call of an agent run.
+    """
+    if settings.llm_api_key is None:
+        raise MissingAPIKey("no model API key: put DEEPSEEK_API_KEY=... in .env (see .env.example)")
+    import mlflow
+    from langchain_openai import ChatOpenAI
+
+    mlflow.langchain.autolog()
+    return ChatOpenAI(
+        model=settings.llm_model,
+        base_url=settings.llm_base_url,
+        api_key=settings.llm_api_key,
+        temperature=0.0,
+        timeout=180,
+        max_retries=2,
+        extra_body={"thinking": {"type": "disabled"}},
     )
 
 

@@ -27,6 +27,7 @@ from mcp.types import ToolAnnotations
 
 from raredx.knowledge.hpo import HPO
 from raredx.tools.check_match import CheckMatch
+from raredx.tools.find_disease import FindDisease
 from raredx.tools.ids import UnknownDisease
 from raredx.tools.lookup_disease import LookupDisease
 from raredx.tools.rank_diseases import RankDiseases
@@ -34,8 +35,8 @@ from raredx.tools.rank_diseases import RankDiseases
 INSTRUCTIONS = """\
 Tools for diagnosing rare diseases from a patient's phenotype, coded as HPO terms
 (Human Phenotype Ontology). Start with rank_diseases on the patient's terms, then
-weigh candidates with check_match and read them with lookup_disease. Answers cite
-the sources they rest on."""
+weigh candidates with check_match and read them with lookup_disease; find_disease
+gives the id of a disease known by name. Answers cite the sources they rest on."""
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 
@@ -43,7 +44,7 @@ READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 def build(hpo: HPO) -> MCPServer:
     """The MCP server over one HPO release."""
     server = MCPServer("raredx", instructions=INSTRUCTIONS)
-    for tool in (RankDiseases(hpo), LookupDisease(hpo), CheckMatch(hpo)):
+    for tool in (RankDiseases(hpo), LookupDisease(hpo), CheckMatch(hpo), FindDisease(hpo)):
         server.add_tool(
             _as_mcp_tool(tool.__call__, tool.name),
             name=tool.name,
