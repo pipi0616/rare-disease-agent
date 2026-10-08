@@ -1,0 +1,257 @@
+"""The evaluation harness, built on MLflow's native GenAI evaluation.
+
+    dataset   each frozen manifest is registered as an MLflow evaluation dataset named
+              after it and tagged with its sha256: inputs hold the question, expectations
+              the confirmed diagnosis. The manifest in git stays the definition.
+    evaluate  mlflow.genai.evaluate asks the system about every record, in parallel.
+              Each answer is a trace; a failure is an ERROR trace and scores as a miss.
+    scorer    a code check (@scorer) applying the rules in scoring.py: top-k hits for
+              disease and gene, gene checks only where the case has a causal gene.
+    run       one MLflow run per evaluation in the experiment eval/<manifest>: params say
+              what ran, metrics hold MLflow's means plus our Wilson bounds, and the traces
+              keep every question and answer.
+
+Re-scoring evaluates a run's recorded traces again with the current scorer. The
+system is not asked again — for a model, nothing is paid again.
+"""
+
+import importlib.util
+import os
+import sys
+from pathlib import Path
+from typing import Any
+
+os.environ.setdefault("MLFLOW_DISABLE_AGENT_HINT", "1")  # mlflow prints a setup hint on import
+# evaluate() otherwise asks the system about the first case twice, to check it traces;
+# our predict function is traced explicitly (below), so the check is not needed.
+os.environ.setdefault("MLFLOW_GENAI_EVAL_SKIP_TRACE_VALIDATION", "True")
+# evaluate() asks from every worker thread at once whether litellm can be imported. It is
+# not installed here, and concurrent failed imports of one missing module deadlock CPython
+# 3.12's import locks (seen from about 40 cases: every worker stuck in _get_module_lock).
+# Recording up front that it is absent makes each check fail instantly, without the lock.
+if importlib.util.find_spec("litellm") is None:
+    sys.modules.setdefault("litellm", None)  # type: ignore[arg-type]
+# The local SQLite store is written to by ~20 threads during evaluate() (answers, scores,
+# trace export). With SQLAlchemy's default pool (5 + 10 overflow) some writes time out and
+# MLflow drops those records with only a warning; a larger pool makes them wait instead.
+os.environ.setdefault("MLFLOW_SQLALCHEMYSTORE_POOL_SIZE", "40")
+os.environ.setdefault("MLFLOW_SQLALCHEMYSTORE_MAX_OVERFLOW", "40")
+
+import mlflow  # noqa: E402
+from mlflow import MlflowClient  # noqa: E402
+from mlflow.entities import Feedback, SpanType  # noqa: E402
+from mlflow.genai import datasets  # noqa: E402
+from mlflow.genai.datasets import EvaluationDataset  # noqa: E402
+from mlflow.genai.scorers import scorer  # noqa: E402
+
+from raredx.data.cases import Case  # noqa: E402
+from raredx.evals import scoring  # noqa: E402
+from raredx.evals.scoring import KS  # noqa: E402
+from raredx.evals.systems import Candidate, Question, System  # noqa: E402
+
+HEADLINE = ("disease_top1", "disease_top10", "gene_top10")
+
+
+class ManifestMismatch(Exception):
+    pass
+
+
+class IncompleteRun(Exception):
+    """Fewer answers were recorded than cases asked: the run is not scored."""
+
+
+def experiment_name(manifest: str) -> str:
+    return f"eval/{manifest}"
+
+
+# ── data ────────────────────────────────────────────────────────────
+
+
+def record_of(case: Case) -> dict[str, Any]:
+    """One evaluation record: what the system sees, and what the scorer checks against."""
+    question = Question(
+        case_id=case.id, hpo_ids=case.hpo_ids, hpo_labels=case.hpo_labels, sex=case.sex
+    )
+    expectations: dict[str, str] = {
+        "disease_id": case.disease_id,
+        "disease_label": case.disease_label,
+    }
+    if case.gene:  # MLflow expectations cannot be empty; gene-less cases simply have none
+        expectations["gene"] = case.gene
+    return {"inputs": {"question": question.model_dump()}, "expectations": expectations}
+
+
+# ── the scorer ──────────────────────────────────────────────────────
+
+
+def candidates_of(outputs: Any) -> list[Candidate]:
+    """The ranked answer inside a system's output; nothing if the system failed."""
+    if not isinstance(outputs, dict):
+        return []
+    return [Candidate.model_validate(c) for c in outputs.get("candidates", [])]
+
+
+@scorer
+def diagnosis(outputs: Any, expectations: dict[str, Any]) -> list[Feedback]:
+    """Code check: is the confirmed disease (and gene) among the top k candidates?"""
+    candidates = candidates_of(outputs)
+    disease_rank, gene_rank = scoring.ranks(
+        candidates, expectations["disease_id"], expectations.get("gene")
+    )
+    feedback = [Feedback(name="answered", value=bool(candidates))]
+    feedback += [Feedback(name=f"disease_top{k}", value=scoring.found(disease_rank, k)) for k in KS]
+    if expectations.get("gene"):
+        feedback += [Feedback(name=f"gene_top{k}", value=scoring.found(gene_rank, k)) for k in KS]
+    return feedback
+
+
+def summary_of(metrics: dict[str, float], n_cases: int, n_gene: int) -> scoring.Summary:
+    """Our Summary — counts and Wilson intervals — from evaluate()'s per-check means.
+
+    The means come from the scorer's results in memory; the counts follow from the
+    number of cases asked, so nothing depends on reading records back.
+    """
+
+    def count(name: str, n: int) -> int:
+        return round(metrics.get(f"{name}/mean", 0.0) * n)
+
+    return scoring.summary_from_counts(
+        {k: count(f"disease_top{k}", n_cases) for k in KS},
+        n_cases,
+        {k: count(f"gene_top{k}", n_gene) for k in KS},
+        n_gene,
+        count("answered", n_cases),
+    )
+
+
+def wilson_metrics(summary: scoring.Summary) -> dict[str, float]:
+    values: dict[str, float] = {"n_cases": summary.n_cases, "n_answered": summary.n_answered}
+    for target, rates in (("disease", summary.disease), ("gene", summary.gene)):
+        for k in KS:
+            values[f"{target}_top{k}/low"] = rates[k].low
+            values[f"{target}_top{k}/high"] = rates[k].high
+    return values
+
+
+# ── the harness ─────────────────────────────────────────────────────
+
+
+class Harness:
+    def __init__(self, tracking_uri: str, artifact_root: Path) -> None:
+        self.tracking_uri = tracking_uri
+        self.artifact_root = artifact_root
+        self.client = MlflowClient(tracking_uri=tracking_uri)
+
+    def _use(self, manifest: str) -> str:
+        """Point MLflow at this store and the manifest's experiment; returns its id."""
+        mlflow.set_tracking_uri(self.tracking_uri)
+        name = experiment_name(manifest)
+        found = self.client.get_experiment_by_name(name)
+        if found is None:
+            location = (self.artifact_root / name.replace("/", "-")).resolve().as_uri()
+            experiment_id = str(self.client.create_experiment(name, artifact_location=location))
+        else:
+            experiment_id = str(found.experiment_id)
+        mlflow.set_experiment(experiment_id=experiment_id)
+        return experiment_id
+
+    def dataset(self, manifest: str, manifest_sha256: str, cases: list[Case]) -> EvaluationDataset:
+        """The manifest as an MLflow evaluation dataset, registered once and reused."""
+        experiment_id = self._use(manifest)
+        for existing in datasets.search_datasets(experiment_ids=[experiment_id]):
+            if existing.name == manifest:
+                if (existing.tags or {}).get("manifest_sha256") != manifest_sha256:
+                    raise ManifestMismatch(
+                        f"dataset {manifest} was registered from a different manifest"
+                    )
+                return existing
+        dataset = datasets.create_dataset(
+            name=manifest, experiment_id=[experiment_id], tags={"manifest_sha256": manifest_sha256}
+        )
+        dataset.merge_records([record_of(c) for c in cases])
+        return dataset  # type: ignore[no-any-return]  # create_dataset is untyped
+
+    def evaluate(
+        self,
+        system: System,
+        manifest: str,
+        manifest_sha256: str,
+        cases: list[Case],
+        params: dict[str, Any],
+    ) -> tuple[str, scoring.Summary]:
+        """Run the system on the manifest and record it; returns the MLflow run id and Summary."""
+        data = self.dataset(manifest, manifest_sha256, cases)
+
+        # The root span of every trace: one per question. Anything the system calls
+        # inside — a model, a tool — appears as a child span.
+        @mlflow.trace(name=system.name, span_type=SpanType.CHAIN)
+        def predict(question: dict[str, Any]) -> dict[str, Any]:
+            answer = system.predict(Question.model_validate(question))
+            return {"candidates": [c.model_dump() for c in answer]}
+
+        with mlflow.start_run(run_name=system.name) as run:
+            mlflow.log_params(params)
+            result = mlflow.genai.evaluate(data=data, predict_fn=predict, scorers=[diagnosis])
+            self._check_complete(run.info.run_id, expected=len(cases))
+            n_gene = sum(c.gene is not None for c in cases)
+            summary = summary_of(result.metrics, len(cases), n_gene)
+            mlflow.log_metrics(wilson_metrics(summary))
+        return str(run.info.run_id), summary
+
+    def _recorded(self, run_id: str) -> list[Any]:
+        """The traces a run recorded, once pending writes are flushed."""
+        mlflow.flush_trace_async_logging()
+        experiment_id = self.client.get_run(run_id).info.experiment_id
+        traces = mlflow.search_traces(
+            locations=[experiment_id], run_id=run_id, return_type="list", max_results=100_000
+        )
+        return list(traces)
+
+    def _check_complete(self, run_id: str, expected: int) -> None:
+        """Refuse to score a run whose answers did not all reach MLflow."""
+        recorded = len(self._recorded(run_id))
+        if recorded != expected:
+            raise IncompleteRun(
+                f"only {recorded} of {expected} answers were recorded in MLflow; "
+                "the run is marked failed and was not scored — run it again"
+            )
+
+    def rescore(
+        self, run_id: str, manifest_sha256: str, expected: int
+    ) -> tuple[str, scoring.Summary, dict[str, str]]:
+        """Score a run's recorded answers again, as a new run. The system is not asked again."""
+        params = dict(self.client.get_run(run_id).data.params)
+        if params.get("manifest_sha256") != manifest_sha256:
+            raise ManifestMismatch(
+                f"the manifest changed since run {run_id}; scores would not compare"
+            )
+        self._use(params["manifest"])
+        traces = self._recorded(run_id)
+        if len(traces) != expected:
+            raise IncompleteRun(f"run {run_id} recorded {len(traces)} of {expected} answers")
+        n_gene = sum(any(a.name == "gene" for a in t.info.assessments) for t in traces)
+        with mlflow.start_run(run_name=f"{params['system']} (rescored)") as run:
+            mlflow.log_params({**params, "rescored_from": run_id})
+            result = mlflow.genai.evaluate(data=traces, scorers=[diagnosis])
+            summary = summary_of(result.metrics, len(traces), n_gene)
+            mlflow.log_metrics(wilson_metrics(summary))
+        return str(run.info.run_id), summary, params
+
+    def runs(self, manifest: str) -> list[dict[str, Any]]:
+        """Every run on a manifest, newest first, with its headline numbers."""
+        found = self.client.get_experiment_by_name(experiment_name(manifest))
+        if found is None:
+            return []
+        rows = []
+        for run in self.client.search_runs(
+            [found.experiment_id], order_by=["attributes.start_time DESC"]
+        ):
+            row = {
+                "run_id": run.info.run_id,
+                "name": run.info.run_name,
+                "start_time": run.info.start_time,
+            }
+            row["code"] = run.data.params.get("code", "")
+            row.update({k: run.data.metrics.get(f"{k}/mean") for k in HEADLINE})
+            rows.append(row)
+        return rows

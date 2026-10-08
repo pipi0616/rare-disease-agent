@@ -39,14 +39,17 @@ class CaseScore(BaseModel):
     gene_rank: int | None
 
 
-def score_case(case: Case, candidates: list[Candidate]) -> CaseScore:
+def ranks(
+    candidates: list[Candidate], disease_id: str, gene: str | None
+) -> tuple[int | None, int | None]:
+    """Where the confirmed disease and gene first appear in an answer (1 = top); None = absent."""
     disease_rank = next(
-        (i for i, c in enumerate(candidates, 1) if normalize_omim(c.disease_id) == case.disease_id),
+        (i for i, c in enumerate(candidates, 1) if normalize_omim(c.disease_id) == disease_id),
         None,
     )
     gene_rank = None
-    if case.gene:
-        truth = case.gene.casefold()
+    if gene:
+        truth = gene.casefold()
         gene_rank = next(
             (
                 i
@@ -55,6 +58,15 @@ def score_case(case: Case, candidates: list[Candidate]) -> CaseScore:
             ),
             None,
         )
+    return disease_rank, gene_rank
+
+
+def found(rank: int | None, k: int) -> bool:
+    return rank is not None and rank <= k
+
+
+def score_case(case: Case, candidates: list[Candidate]) -> CaseScore:
+    disease_rank, gene_rank = ranks(candidates, case.disease_id, case.gene)
     return CaseScore(
         case_id=case.id,
         answered=bool(candidates),
@@ -95,17 +107,41 @@ class Summary(BaseModel):
     gene: dict[int, Rate]
 
 
+def summary_from_counts(
+    disease_hits: dict[int, int],
+    n_cases: int,
+    gene_hits: dict[int, int],
+    n_gene: int,
+    n_answered: int,
+) -> Summary:
+    """A Summary from hit counts at each k. n_gene counts only cases that have a causal gene."""
+    return Summary(
+        n_cases=n_cases,
+        n_answered=n_answered,
+        disease={k: rate(disease_hits[k], n_cases) for k in KS},
+        gene={k: rate(gene_hits[k], n_gene) for k in KS},
+    )
+
+
+def summary_from_hits(
+    disease_hits: dict[int, list[bool]], gene_hits: dict[int, list[bool]], n_answered: int
+) -> Summary:
+    """A Summary from per-case hits at each k. Gene lists hold only cases that have a gene."""
+    return summary_from_counts(
+        {k: sum(disease_hits[k]) for k in KS},
+        len(disease_hits[KS[0]]),
+        {k: sum(gene_hits[k]) for k in KS},
+        len(gene_hits[KS[0]]),
+        n_answered,
+    )
+
+
 def summarize(scores: list[CaseScore]) -> Summary:
     with_gene = [s for s in scores if s.has_gene]
-
-    def found(rank: int | None, k: int) -> bool:
-        return rank is not None and rank <= k
-
-    return Summary(
-        n_cases=len(scores),
-        n_answered=sum(s.answered for s in scores),
-        disease={k: rate(sum(found(s.disease_rank, k) for s in scores), len(scores)) for k in KS},
-        gene={k: rate(sum(found(s.gene_rank, k) for s in with_gene), len(with_gene)) for k in KS},
+    return summary_from_hits(
+        {k: [found(s.disease_rank, k) for s in scores] for k in KS},
+        {k: [found(s.gene_rank, k) for s in with_gene] for k in KS},
+        sum(s.answered for s in scores),
     )
 
 
