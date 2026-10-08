@@ -20,6 +20,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+import mlflow
 from mlflow import MlflowClient
 from mlflow.entities import Feedback, SpanType
 from mlflow.genai import datasets
@@ -30,7 +31,6 @@ from raredx.data.cases import Case
 from raredx.evals import scoring
 from raredx.evals.scoring import KS
 from raredx.evals.systems import Candidate, Question, System
-from raredx.mlflow_setup import mlflow  # first: process-wide MLflow settings
 
 HEADLINE = ("disease_top1", "disease_top10", "gene_top10")
 

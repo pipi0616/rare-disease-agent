@@ -19,7 +19,7 @@ class MissingAPIKey(Exception):
 def client(settings: Settings) -> OpenAI:
     if settings.llm_api_key is None:
         raise MissingAPIKey("no model API key: put DEEPSEEK_API_KEY=... in .env (see .env.example)")
-    from raredx.mlflow_setup import mlflow  # imported here: only model runs need it
+    import mlflow  # imported here: only model runs need it
 
     mlflow.openai.autolog()
     return OpenAI(
