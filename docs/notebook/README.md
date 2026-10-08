@@ -45,3 +45,4 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [09](09_llm_baseline.ipynb) | 第一个基线：大模型直接猜 |
 | [10](10_phenotype_tool.ipynb) | 第一个工具：按症状给所有罕见病排序（和一次数据泄漏） |
 | [11](11_disease_lookup.ipynb) | 第二个工具：查一个病的资料（工具的回答怎么写给模型看） |
+| [12](12_match_check.ipynb) | 第三个工具：逐条核对，再重新排序（先粗筛、再精排） |
