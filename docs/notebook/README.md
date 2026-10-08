@@ -38,3 +38,4 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [04](04_github_ci_pr.ipynb) | GitHub 与自动检查：正本永远是好的 |
 | [05](05_data.ipynb) | 准备考题：一万例真实病例 |
 | [06](06_eval_sets.ipynb) | 评测集：调参用哪份、最后考哪份、放在哪 |
+| [07](07_scoring.ipynb) | 判分：尺子怎么做，怎么知道尺子是准的 |
