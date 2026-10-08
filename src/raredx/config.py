@@ -15,6 +15,8 @@ class Settings(BaseSettings):
 
     # Raw downloads and derived files. Never in git; `raredx data fetch` recreates it.
     data_dir: Path = Path("data")
+    # Dataset registry and frozen manifests. In git: they define what is evaluated.
+    evals_dir: Path = Path("evals")
 
 
 settings = Settings()

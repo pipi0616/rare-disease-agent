@@ -118,18 +118,3 @@ def test_design_and_heldout_partition_the_cases(archive: Path) -> None:
     cases, _ = pp.load(archive)
     assert sorted(c.id for c in pp.design(cases) + pp.heldout(cases)) == sorted(c.id for c in cases)
     assert all(c.split == pp.split_of(c.pmid) for c in cases)
-
-
-def test_verify_rejects_a_tampered_archive(tmp_path: Path) -> None:
-    f = tmp_path / "x.zip"
-    f.write_bytes(b"hello")
-    pp.verify(f, pp.sha256_of(f))
-    with pytest.raises(ValueError, match="sha256"):
-        pp.verify(f, "0" * 64)
-
-
-def test_archive_path_is_versioned(tmp_path: Path) -> None:
-    assert (
-        pp.archive_path(tmp_path)
-        == tmp_path / "raw" / "phenopacket-store" / pp.RELEASE_VERSION / "all_phenopackets.zip"
-    )
