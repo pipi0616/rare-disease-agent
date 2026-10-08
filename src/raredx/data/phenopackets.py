@@ -12,7 +12,7 @@ its source paper, so anything that reads the literature must be stopped from
 reading that paper; the split below and the leakage controls in the eval layer
 exist for that.
 
-Source: https://github.com/monarch-initiative/phenopacket-store (releases).
+Source and pinned release: the `phenopacket-store` entry in evals/datasets.toml.
 """
 
 import hashlib
@@ -20,85 +20,9 @@ import json
 import zipfile
 from collections import Counter
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
-import httpx
-from pydantic import BaseModel
-
-RELEASE_VERSION = "0.1.27"
-RELEASE_URL = (
-    "https://github.com/monarch-initiative/phenopacket-store/releases/download/"
-    f"{RELEASE_VERSION}/all_phenopackets.zip"
-)
-# sha256 of the release asset. A download that does not match is deleted, not used.
-RELEASE_SHA256 = "d0c70005bb09b87035087516252b6b539fbc0415be7c664b73c9cde7eedf205a"
-
-Split = Literal["design", "heldout"]
-
-
-class Variant(BaseModel):
-    gene: str
-    hgvs_c: str | None = None
-    hgvs_p: str | None = None
-    zygosity: str = "unknown"
-
-
-class Case(BaseModel):
-    id: str
-    cohort: str  # the store's folder, usually the gene or syndrome name
-    hpo_ids: list[str]  # features the authors observed; `excluded` ones are dropped
-    hpo_labels: list[str]
-    disease_id: str  # OMIM:nnnnnn
-    disease_label: str
-    gene: str | None  # None for e.g. chromosomal-deletion cohorts
-    variants: list[Variant]
-    pmid: str  # PMID:nnnnnnnn — also decides the split
-    sex: str | None
-    split: Split
-
-
-# ── fetching ────────────────────────────────────────────────────────
-
-
-def archive_path(data_dir: Path) -> Path:
-    return data_dir / "raw" / "phenopacket-store" / RELEASE_VERSION / "all_phenopackets.zip"
-
-
-def sha256_of(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
-def verify(path: Path, expected: str) -> None:
-    actual = sha256_of(path)
-    if actual != expected:
-        raise ValueError(f"{path}: sha256 {actual} != expected {expected}")
-
-
-def fetch(data_dir: Path, *, force: bool = False) -> Path:
-    """Download the release archive into data_dir and verify it. Idempotent."""
-    target = archive_path(data_dir)
-    if target.exists() and not force:
-        verify(target, RELEASE_SHA256)
-        return target
-    target.parent.mkdir(parents=True, exist_ok=True)
-    tmp = target.with_suffix(".zip.part")
-    with httpx.stream("GET", RELEASE_URL, follow_redirects=True, timeout=120) as r:
-        r.raise_for_status()
-        with tmp.open("wb") as f:
-            for chunk in r.iter_bytes():
-                f.write(chunk)
-    try:
-        verify(tmp, RELEASE_SHA256)
-    except ValueError:
-        tmp.unlink()
-        raise
-    tmp.replace(target)
-    return target
-
+from raredx.data.cases import Case, Split, Variant
 
 # ── the design / held-out split, decided by code, not by memory ─────
 #

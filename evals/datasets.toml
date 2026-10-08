@@ -1,0 +1,13 @@
+# Every evaluation dataset: where it comes from, which version, how to verify it.
+#
+# Code reads this file; no version, URL or checksum is written anywhere else.
+# Adding a dataset is one entry here plus a parser. A new upstream release is a
+# new version here, and its files land in a new folder — the old ones stay.
+
+[phenopacket-store]
+version = "0.1.27"
+url = "https://github.com/monarch-initiative/phenopacket-store/releases/download/0.1.27/all_phenopackets.zip"
+sha256 = "d0c70005bb09b87035087516252b6b539fbc0415be7c664b73c9cde7eedf205a"
+homepage = "https://github.com/monarch-initiative/phenopacket-store"
+license = "BSD-3-Clause"
+role = "primary: design split for development, held-out split for the final run"
