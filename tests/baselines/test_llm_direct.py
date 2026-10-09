@@ -2,12 +2,11 @@
 
 import json
 from collections.abc import Callable
-from types import SimpleNamespace
-from typing import Any
 
 import pytest
 from pydantic import ValidationError
 
+from conftest import FakeLLM
 from raredx.baselines.llm_direct import SYSTEM_PROMPT, LLMDirect, parse, user_prompt
 from raredx.config import Settings
 from raredx.data.cases import Case
@@ -21,21 +20,10 @@ ANSWER = {
 }
 
 
-class FakeClient:
-    """Stands in for OpenAI(): returns the replies given, records every request."""
-
-    def __init__(self, *replies: str) -> None:
-        self.replies = list(replies)
-        self.requests: list[dict[str, Any]] = []
-        self.chat = SimpleNamespace(completions=SimpleNamespace(create=self._create))
-
-    def _create(self, **request: Any) -> Any:
-        self.requests.append(request)
-        message = SimpleNamespace(content=self.replies.pop(0))
-        return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+FakeClient = FakeLLM
 
 
-def system(client: FakeClient, *, thinking: bool = False) -> LLMDirect:
+def system(client: FakeLLM, *, thinking: bool = False) -> LLMDirect:
     return LLMDirect(client, "deepseek-flash", thinking=thinking)  # type: ignore[arg-type]
 
 

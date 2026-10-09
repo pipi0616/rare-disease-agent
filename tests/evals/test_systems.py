@@ -7,7 +7,9 @@ from raredx.evals.systems import Oracle, Popularity, Question, question_of
 
 
 def test_a_question_carries_no_part_of_the_answer(make_case: Callable[..., Case]) -> None:
-    allowed = {"case_id", "hpo_ids", "hpo_labels", "sex"}
+    # candidate_genes: the genotype track's simulated sequencing — the causal gene hidden
+    # among decoys, as a real exome result would hold it. The phenotype question has none.
+    allowed = {"case_id", "hpo_ids", "hpo_labels", "sex", "candidate_genes"}
     assert set(Question.model_fields) == allowed
     q = question_of(make_case("1")).model_dump_json()
     assert "OMIM" not in q and "DAP3" not in q and "PMID" not in q and "Perrault" not in q

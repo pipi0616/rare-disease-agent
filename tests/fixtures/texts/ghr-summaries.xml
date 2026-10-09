@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A miniature of MedlinePlus Genetics' ghr-summaries.xml, for tests -->
+<summaries xmlns="https://medlineplus.gov/download/ghr-summaries-20250602.xsd" xmlns:html="http://www.w3.org/1999/xhtml">
+<health-condition-summary id="1">
+<name>Hearing-retina syndrome</name>
+<ghr-page>https://medlineplus.gov/genetics/condition/hearing-retina-syndrome</ghr-page>
+<text-list>
+<text><text-role>description</text-role><html><html:p>Hearing-retina syndrome causes hearing loss and night blindness from rod-cone dystrophy.</html:p><html:p>It runs in families.</html:p></html></text>
+<text><text-role>other</text-role><html><html:p>Not part of the description.</html:p></html></text>
+</text-list>
+<db-key-list>
+<db-key><db>OMIM</db><key>690002</key></db-key>
+<db-key><db>MeSH</db><key>D000001</key></db-key>
+</db-key-list>
+</health-condition-summary>
+<health-condition-summary id="2">
+<name>A condition without an OMIM key</name>
+<ghr-page>https://medlineplus.gov/genetics/condition/none</ghr-page>
+<text-list><text><text-role>description</text-role><html><html:p>It has no OMIM key.</html:p></html></text></text-list>
+<db-key-list><db-key><db>MeSH</db><key>D000002</key></db-key></db-key-list>
+</health-condition-summary>
+</summaries>

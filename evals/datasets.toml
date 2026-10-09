@@ -1,13 +1,57 @@
-# Every evaluation dataset: where it comes from, which version, how to verify it.
+# Every external dataset: the cases we evaluate on, and the knowledge the tools read.
 #
 # Code reads this file; no version, URL or checksum is written anywhere else.
 # Adding a dataset is one entry here plus a parser. A new upstream release is a
 # new version here, and its files land in a new folder — the old ones stay.
+#
+# `url` is the release folder. Each entry under `.files` is one file in it:
+# downloaded from url + its name, and checked against the sha256 given.
 
 [phenopacket-store]
 version = "0.1.27"
-url = "https://github.com/monarch-initiative/phenopacket-store/releases/download/0.1.27/all_phenopackets.zip"
-sha256 = "d0c70005bb09b87035087516252b6b539fbc0415be7c664b73c9cde7eedf205a"
+url = "https://github.com/monarch-initiative/phenopacket-store/releases/download/0.1.27/"
 homepage = "https://github.com/monarch-initiative/phenopacket-store"
 license = "BSD-3-Clause"
 role = "primary: design split for development, held-out split for the final run"
+
+[phenopacket-store.files]
+"all_phenopackets.zip" = "d0c70005bb09b87035087516252b6b539fbc0415be7c664b73c9cde7eedf205a"
+
+[hpo]
+version = "v2026-09-01"
+url = "https://github.com/obophenotype/human-phenotype-ontology/releases/download/v2026-09-01/"
+homepage = "https://hpo.jax.org"
+license = "HPO license: free to use, cite the version used; https://hpo.jax.org/license"
+role = "knowledge: the ontology and disease annotations the phenotype tools read"
+
+# The sha256 of each file as GitHub publishes it for the release's assets.
+[hpo.files]
+"hp.obo" = "93dace952fcb3ec4728818857f6ba76bc2d5312f4d83266519b8694b8e798f22"
+"phenotype.hpoa" = "e89aa39c8f97bf5a52c5d160f9250a603681d630ade8ec2679d84ac5aece1f72"
+"genes_to_phenotype.txt" = "507a17bff9c49e6329fbd88b1f91734fa7e9fdea5c06304044c0892eb6ab248c"
+"genes_to_disease.txt" = "7937a1b92779dc8614e39ace623b443c7c71dd15e4de11d5e52b14e331ab5978"
+
+# Disease texts for the RAG tool. Neither upstream versions its download URL
+# (latest_only): the version is the release date the file states (Orphanet) or the
+# day it was fetched (MedlinePlus), and a changed upstream file fails its checksum.
+[orphanet]
+version = "2026-06-23"
+url = "https://www.orphadata.com/data/xml/"
+homepage = "https://www.orphadata.com"
+license = "CC BY 4.0; cite Orphanet (www.orpha.net)"
+role = "knowledge: rare-disease definitions with their OMIM mappings, for text retrieval"
+latest_only = true
+
+[orphanet.files]
+"en_product1.xml" = "df8d562a0c6011af36a74eb4000ce81ca7d723e8031010819fb71727c0962bbb"
+
+[medlineplus]
+version = "2026-10-09"
+url = "https://medlineplus.gov/download/"
+homepage = "https://medlineplus.gov/genetics/"
+license = "public domain; credit: Source: MedlinePlus, National Library of Medicine"
+role = "knowledge: genetic-condition summaries with their OMIM keys, for text retrieval"
+latest_only = true
+
+[medlineplus.files]
+"ghr-summaries.xml" = "fdc8bd614310c12718379cef6569962e5d0e791cecabcc355b53a72816ac263a"

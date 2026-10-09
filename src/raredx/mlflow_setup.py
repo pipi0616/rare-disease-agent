@@ -1,8 +1,13 @@
 """Process-wide MLflow settings, applied before mlflow is first imported.
 
-Code imports mlflow from here (`from raredx.mlflow_setup import mlflow`), so
-these defaults hold however a run starts. Each can still be overridden from the
-environment.
+The package's __init__ imports this module before anything else, and Python
+runs a package's __init__ before any of its modules. So these defaults hold
+before any module here imports mlflow, whatever order its imports are in.
+Nothing here imports mlflow itself, so importing raredx stays fast. Each
+setting can still be overridden from the environment.
+
+Some are read once, when mlflow is first imported — telemetry, for one, starts
+or not right then — which is why the order matters.
 
 Three of them work around problems found while building the evaluation; all
 three show up only under evaluate()'s parallel threads:
@@ -32,7 +37,3 @@ os.environ.setdefault("MLFLOW_SQLALCHEMYSTORE_POOL_SIZE", "40")
 os.environ.setdefault("MLFLOW_SQLALCHEMYSTORE_MAX_OVERFLOW", "40")
 if importlib.util.find_spec("litellm") is None:
     sys.modules.setdefault("litellm", None)  # type: ignore[arg-type]
-
-import mlflow  # noqa: E402
-
-__all__ = ["mlflow"]

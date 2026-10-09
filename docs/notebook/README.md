@@ -29,6 +29,8 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 （找不到 raredx 内核的话，在项目目录运行一次：
 `uv run python -m ipykernel install --user --name raredx --display-name "raredx (.venv)"`）
 
+防泄露是整个项目里最要紧的一件事：每个工具做了什么、怎么检查，见 [防泄露说明](../leakage.md)。
+
 ## 目录
 
 | 章 | 内容 |
@@ -43,3 +45,14 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [07](07_scoring.ipynb) | 判分：尺子怎么做，怎么知道尺子是准的 |
 | [08](08_mlflow_eval.ipynb) | 用 MLflow 原生的方式做评测：数据集、打分器、追踪 |
 | [09](09_llm_baseline.ipynb) | 第一个基线：大模型直接猜 |
+| [10](10_phenotype_tool.ipynb) | 第一个工具：按症状给所有罕见病排序（和一次数据泄漏） |
+| [11](11_disease_lookup.ipynb) | 第二个工具：查一个病的资料（工具的回答怎么写给模型看） |
+| [12](12_match_check.ipynb) | 第三个工具：逐条核对，再重新排序（先粗筛、再精排） |
+| [13](13_mcp_server.ipynb) | 把三个工具做成标准接口（MCP）：任何 AI 应用都能接上 |
+| [14](14_fixed_pipeline.ipynb) | 固定流程：工具查完，交给大模型判断（逐题比：真进步还是运气） |
+| [15](15_agent.ipynb) | 第一个 agent：让大模型自己决定查什么（怎么让它按规矩停下来） |
+| [16](16_error_analysis.ipynb) | 改进 agent：先看错题，再决定做什么（新开局、补满 10 个、定下工具清单） |
+| [17](17_similar_patients.ipynb) | 第四个工具：找相似的病人（病例检索，以及检索类工具怎么防泄露） |
+| [18](18_disease_texts.ipynb) | 第五个工具：查疾病介绍（RAG：切块、向量库、混合检索，单独评测检索） |
+| [19](19_candidate_genes.ipynb) | 第六个工具：看基因检测结果（模拟测序、按症状给基因排名、另一种考法） |
+| [20](20_final_exam.ipynb) | 大考：消融实验、agent 显著胜过固定流程、重放判断（一个负面结果）、两次意外 |

@@ -72,3 +72,10 @@ def test_wilson_interval_matches_known_values() -> None:
     assert (round(low, 3), round(high, 3)) == (0.431, 0.569)
     low, high = scoring.wilson(0, 200)
     assert low == 0.0 and round(high, 3) == 0.019
+
+
+def test_the_sign_test_counts_only_the_cases_the_systems_disagree_on() -> None:
+    assert scoring.sign_test(11, 1) == pytest.approx(0.00635, abs=1e-5)
+    assert scoring.sign_test(1, 11) == scoring.sign_test(11, 1)  # either order
+    assert scoring.sign_test(5, 5) == 1.0  # an even split is no evidence either way
+    assert scoring.sign_test(0, 0) == 1.0  # no disagreement, nothing to test

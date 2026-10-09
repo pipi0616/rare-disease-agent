@@ -8,22 +8,105 @@ ranked candidate diseases and genes with cited evidence. Evaluated on public,
 leakage-controlled case collections against classical, fixed-pipeline and
 single-call baselines.
 
-**Status:** first model baseline. On the 200-case dev set, a single call to
-`deepseek-flash` (no tools) finds the confirmed disease in its top 10 for
-28.0% of patients [22.2–34.6], against a 9.0% floor that ignores the
-phenotype; top-1 is 14.5%. The agent has to beat this.
+**Status:** the agent, evaluated and ablated, with seven tools and the baselines it is measured against. Tools:
+`rank_diseases` (every OMIM disease ranked against the patient's phenotype),
+`lookup_disease` (one disease's features with their frequencies, inheritance,
+onset, genes and sources, sized for a model to read), `check_match` (the
+patient's findings against one disease: explained, unexplained, contradicted,
+and the disease's frequent features the patient lacks), `find_disease` (a
+disease's OMIM id from its name), `find_similar_patients` (the published
+patients whose phenotype is closest, with their confirmed diagnoses) and
+`search_disease_texts` (Orphanet and MedlinePlus descriptions, hybrid
+retrieval, each passage with its source), and, when the patient has been
+sequenced, `rank_candidate_genes` (candidate genes ranked by how well their
+diseases match the phenotype). The agent gets the four core tools and
+`find_similar_patients` (and `rank_candidate_genes` with sequencing data);
+the text search, which the ablation found worth nothing, is served over MCP
+and given to the agent only with `--with-texts`. On the 200-case dev set
+(recall of the confirmed disease, 95% intervals):
+
+| system | top-1 | top-10 |
+|---|---|---|
+| **final agent**: starts from the fixed pipeline's evidence, then calls its tools as it decides, up to 8 turns | **40.5%** [33.9–47.4] | **58.5%** [51.6–65.1] |
+| first agent (four tools, no head start) | 39.0% [32.5–45.9] | 54.0% [47.1–60.8] |
+| fixed pipeline: the tools' top 10 with their evidence, ranked by one model call | 35.5% [29.2–42.3] | 54.5% [47.6–61.3] |
+| rank, then check: T2's top 30 reordered by findings explained (no model) | 30.5% | 54.5% [47.6–61.3] |
+| nearest published patients alone (tool T5, no model) | 29.0% | 46.5% [39.7–53.4] |
+| phenotype similarity alone (tool T2, no model) | 19.0% | 49.0% [42.2–55.9] |
+| disease texts alone (tool T6, hybrid retrieval, no model) | 8.0% | 17.0% [12.4–22.8] |
+| a single call to `deepseek-flash`, no tools | 14.5% | 28.0% [22.2–34.6] |
+| floor: the same diseases for every patient | 0.5% | 9.0% |
+
+The phenotype tool scores 82.0% if a case's own source paper is left in its
+knowledge: HPO curated many disease annotations from the very papers these
+cases come from. Every evaluation therefore masks each case's paper from the
+knowledge the tools read; the 49.0% is the masked number.
+Masked, 41 of the 200 confirmed diseases have no phenotype left in HPO —
+mostly diseases known from that single paper — so phenotype ranking alone
+cannot pass about 80% here. How each tool is kept from the answer, and how
+every run is audited for it, is written up in `docs/leakage.md`.
+
+The fixed pipeline's gain at first place is paired, not just a higher rate:
+on the same 200 cases it was right where rank-then-check was wrong 11 times,
+and the reverse once (sign test p = 0.006), for about $0.27 a run.
+The final agent's lead over the fixed pipeline is established: paired on the
+same 200 cases and masking rules, 12 cases to 2 at first place (sign test
+p = 0.013) and 10 to 2 in the top ten (p = 0.039). The first agent's lead was
+14 to 7 (p = 0.19), not established. A run costs about $0.55 off-peak (about
+49,000 input tokens per case, most of them cached).
+
+An error analysis of the agent's 122 first-place misses, computed from its
+traces, found 77 retrieval failures — the right disease never appeared in any
+tool output — and 45 judgment failures. The next tools target them, and a
+seeded variant (`seeded-agent`) starts from the fixed pipeline's evidence and
+fills a short answer list from the tools' order. They were evaluated
+together on dev-200 (chapter 20), one ablation run per tool: similar-patient
+retrieval was worth about three points at first place (10 cases to 4,
+p = 0.18; kept); the text search nothing measurable (4 to 2, p = 0.69) for 18%
+more tokens (dropped from the agent). The error analysis repeated on the
+final agent shows the bottleneck moved from retrieval (40 -> 23 cases) to
+judgment between close relatives (29 -> 46). Three ways of re-judging the
+recorded evidence in one call — an evidence table, a review of the agent's
+ranking, thinking mode — did not beat the agent's own judgment; with
+sequencing data, the final agent ties the no-model gene ranking (62.5% vs
+62.0% top-1).
+
+The first of them, nearest published patients, beats the disease ranking at
+first place on its own (35 cases to 15 paired, p = 0.007), and the two find
+different diseases: either one's top 10 holds the confirmed disease about
+half the time, the two together 59.5%. Its bank is the design split, each
+case's own paper masked; bank and cases share one curation style, so the
+number is likely optimistic for a clinician's free-text findings.
+
+Text retrieval, the second, finds the exact disease far less often (17.0%
+top-10; hybrid beat dense, 9.5%, and BM25, 15.5%): descriptions differ little
+between subtypes. In the agent it supplies descriptions and citations; the
+ablation will say what that is worth.
+
+**Phenotype + genotype, a separate exam.** In the clinic a patient is
+sequenced. Phenopacket Store records the causal gene but not the exome, so
+`eval run --with-genes` simulates one: the causal gene among 49 decoys drawn
+per case (seeded) from known disease genes not linked to the case's
+disease, sorted by symbol — genes only, uniform decoys, both stated
+simplifications. With that list, ranking the genes by phenotype alone, no
+model, gets the confirmed disease first in 62.0% of dev-200 cases and in the
+top 10 in 78.5%; the ceiling is 80%, since 40 cases' diseases are known only
+from their own paper, whose gene–disease link is masked with it. It is
+reported apart from the phenotype-only numbers above, never as a gain.
 
 ## Run
 
 ```bash
 uv sync                    # create the environment from uv.lock
-uv run raredx data fetch   # download the pinned release into data/raw, verify its sha256
+uv run raredx data fetch   # download every pinned source into data/raw, verify each sha256
 uv run raredx data build   # parse it into data/processed: one case per line
 uv run raredx data stats   # 10,374 published cases, 780 OMIM diseases, 699 genes
 uv run raredx eval check   # the frozen manifests keep every rule
 uv run raredx llm check    # model key and endpoint; costs nothing
-uv run raredx eval run --system llm-direct --split ci-20     # run, score, record in MLflow
+uv run raredx eval run --system rank-then-check --split dev-200  # run, score, record in MLflow
+uv run raredx eval run --system llm-direct --split ci-20     # the model baseline (billed)
 uv run raredx eval runs --split dev-200                      # every recorded run on dev-200
+uv run raredx eval compare <run id> <run id>                 # two runs, question by question
 uv run raredx eval score <run id>                            # re-score recorded traces, no re-run
 uv run mlflow ui --port 5050                                 # browse runs at http://127.0.0.1:5050
 ```
@@ -31,7 +114,9 @@ uv run mlflow ui --port 5050                                 # browse runs at ht
 Scoring rules are fixed in `src/raredx/evals/scoring.py`: a disease counts when
 its OMIM number matches, a gene when its symbol matches; a case with no answer
 is a miss that stays in the denominator; every top-k rate carries a 95% Wilson
-interval. Systems only ever see a `Question` (the phenotype), never the answer.
+interval. Systems only ever see a `Question` (the phenotype), never the answer,
+and while a system works on a case, the case's source paper is masked from the
+knowledge its tools read (`src/raredx/knowledge/masking.py`).
 
 Evaluation runs on MLflow's native GenAI evaluation (`src/raredx/evals/harness.py`):
 each frozen manifest is registered as an MLflow evaluation dataset, the scoring
@@ -46,7 +131,8 @@ team setup needs.
 
 Data never enters git: `data/` is ignored and the commands above recreate it
 byte-for-byte. What *is* in git is the definition of what gets evaluated:
-`evals/datasets.toml` (every source, its version, URL, checksum and licence)
+`evals/datasets.toml` (every source — the cases and the HPO release the tools
+read — with its version, URL, per-file checksums and licence)
 and `evals/splits/` (frozen case-ID manifests):
 
 | manifest | cases | used for |
@@ -55,6 +141,25 @@ and `evals/splits/` (frozen case-ID manifests):
 | `design` | 6,014 | confirming a change at full size |
 | `ci-20` | 20 of dev-200 | the regression check in CI |
 | `heldout` | 4,360 | the final run, once |
+
+## Tools over MCP
+
+The tools are served over the Model Context Protocol, the standard way AI
+applications call tools (`src/raredx/mcp_server.py`, the official MCP Python SDK):
+
+```bash
+uv run raredx mcp                              # stdio: a host launches this command
+uv run raredx mcp --transport streamable-http  # or serve the tools at a URL
+```
+
+Claude Code picks the server up from `.mcp.json` when it is opened in this
+folder (it asks before running it). Any other host — Claude Desktop, an IDE, a
+LangGraph agent — takes the same launch command:
+`uv run --directory /absolute/path/to/rare-disease-agent raredx mcp`.
+The schemas a model sees are generated from the tools' signatures and
+docstrings; an unknown disease id comes back as a tool error the model can act
+on; every tool is marked read-only. Calls are traced in the MLflow experiment
+`mcp-server`.
 
 ## Model
 
@@ -82,8 +187,13 @@ src/raredx/     all application code — an installed package, no path hacks
   config.py       settings from RAREDX_* environment variables / .env
   data/           datasets: registry, fetch, verify, parse, processed layer
   evals/          manifests, systems, scoring rules, MLflow evaluation harness
-  baselines/      systems the agent must beat: the single-call LLM baseline
+  knowledge/      reference knowledge the tools read (HPO), and source masking
+  tools/          the agent's tools: typed, described, tested alone, traced
+  baselines/      systems the agent must beat: similarity, rank-then-check, the fixed
+                  pipeline, one LLM call
   llm.py          the model client (OpenAI SDK, MLflow autologging)
+  agent.py        the agent: LangChain's create_agent over the tools, with its bounds
+  mcp_server.py   the tools over MCP, for any host or agent framework
   mlflow_setup.py process-wide MLflow settings, applied before mlflow loads
 evals/          dataset registry and frozen manifests — what gets evaluated
 tests/          pytest suite; one test per behaviour, no network, no real data
