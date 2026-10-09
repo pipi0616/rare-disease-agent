@@ -43,6 +43,13 @@ top-10 wins are all diseases the ranking never showed it — ones it thought
 of, found by name and checked — while it often listed fewer than ten
 answers. It costs about $1.17 a run at peak price ($0.58 off-peak).
 
+An error analysis of the agent's 122 first-place misses, computed from its
+traces, found 77 retrieval failures — the right disease never appeared in any
+tool output — and 45 judgment failures. The next tools target them, and a
+seeded variant (`seeded-agent`) starts from the fixed pipeline's evidence and
+fills a short answer list from the tools' order. They are evaluated together
+on dev-200, with one ablation run per tool.
+
 ## Run
 
 ```bash

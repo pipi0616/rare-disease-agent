@@ -49,3 +49,4 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [13](13_mcp_server.ipynb) | 把三个工具做成标准接口（MCP）：任何 AI 应用都能接上 |
 | [14](14_fixed_pipeline.ipynb) | 固定流程：工具查完，交给大模型判断（逐题比：真进步还是运气） |
 | [15](15_agent.ipynb) | 第一个 agent：让大模型自己决定查什么（怎么让它按规矩停下来） |
+| [16](16_error_analysis.ipynb) | 改进 agent：先看错题，再决定做什么（新开局、补满 10 个、定下工具清单） |
