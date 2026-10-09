@@ -86,7 +86,11 @@ class RankDiseases:
                 profiles, kind="omim", method=self.method, combine=self.combine
             )
             ids = self.hpo.disease_ids
-            order = sorted(range(len(ids)), key=lambda i: (-scores[i], ids[i]))
+            hidden = self.hpo.known_only_from(masking.current())
+            order = sorted(
+                (i for i in range(len(ids)) if ids[i] not in hidden),
+                key=lambda i: (-scores[i], ids[i]),
+            )
             matches = [
                 Match(
                     disease_id=ids[i],

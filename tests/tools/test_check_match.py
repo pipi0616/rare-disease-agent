@@ -109,3 +109,14 @@ def test_each_check_is_recorded_as_a_tool_span(check: CheckMatch) -> None:
     [span] = trace.data.spans
     assert (span.name, span.span_type) == ("check_match", "TOOL")
     assert span.inputs == {"hpo_ids": [SNHL], "disease_id": "OMIM:690001"}
+
+
+def test_a_disease_known_only_from_a_masked_paper_cannot_be_checked(check: CheckMatch) -> None:
+    with masking.masked(["PMID:1004"]), pytest.raises(UnknownDisease, match="not a disease"):
+        check([AMENORRHEA], "OMIM:690004")
+
+
+def test_an_explained_finding_does_not_list_the_masked_paper(check: CheckMatch) -> None:
+    with masking.masked(["PMID:1002"]):
+        report = check([ROD_CONE], "OMIM:690002")
+    assert report.explained[0].sources == ["OMIM:690002"]  # the line also cites PMID:1002

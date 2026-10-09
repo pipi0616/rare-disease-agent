@@ -6,7 +6,8 @@ not only those rank_diseases proposed. Names are matched fuzzily (rapidfuzz's
 WRatio: word order, partial names and punctuation are forgiven), against every
 OMIM disease in the HPO release.
 
-A disease's name is not knowledge drawn from any paper, so nothing is masked.
+A disease described only in a masked paper is not found: its very name comes
+from that paper (in evaluation, the case's own).
 """
 
 from typing import Annotated
@@ -16,6 +17,7 @@ from mlflow.entities import SpanType
 from pydantic import BaseModel, Field, validate_call
 from rapidfuzz import fuzz, process, utils
 
+from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
 
 
@@ -51,8 +53,10 @@ class FindDisease:
         propose. Several close matches can come back (numbered subtypes, say); read
         the names.
         """
+        hidden = self.hpo.known_only_from(masking.current())
+        names = {d: n for d, n in self.hpo.names.items() if d not in hidden}
         hits = process.extract(
-            name, self.hpo.names, scorer=fuzz.WRatio, processor=utils.default_process, limit=None
+            name, names, scorer=fuzz.WRatio, processor=utils.default_process, limit=None
         )
         hits.sort(key=lambda h: (-h[1], h[2]))  # equal scores in id order, for repeatability
         return Found(

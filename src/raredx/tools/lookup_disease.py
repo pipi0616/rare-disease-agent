@@ -91,7 +91,7 @@ class LookupDisease:
         course = self.hpo.lines(disease_id, "C", masked)
         sources = {ref for f in found for ref in f.sources}
         for line in (*inheritance, *course):
-            sources |= line.refs
+            sources |= line.refs - masked
         return DiseaseProfile(
             disease_id=disease_id,
             disease_name=self.hpo.names[disease_id],

@@ -277,13 +277,14 @@ class HPO:
 
     def features(self, disease: str, masked: frozenset[str] = frozenset()) -> list[Feature]:
         """The disease's phenotypic features, each gathered from all its lines: those
-        some source saw, and those every source looked for and found absent."""
+        some source saw, and those every source looked for and found absent. A feature
+        kept because another source also reports it does not list the masked one."""
         written: dict[str, list[str]] = {}
         cited: dict[str, set[str]] = {}
         for line in self.lines(disease, "P", masked):
             term = self.term(line.term)[0]
             written.setdefault(term, []).append(line.frequency)
-            cited.setdefault(term, set()).update(line.refs)
+            cited.setdefault(term, set()).update(line.refs - masked)  # never list a masked paper
         features = []
         for term, frequencies in written.items():
             _, label, information = self.term(term)

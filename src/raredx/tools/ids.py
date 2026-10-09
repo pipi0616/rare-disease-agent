@@ -4,6 +4,7 @@ from typing import Annotated
 
 from pydantic import StringConstraints
 
+from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
 
 HpoId = Annotated[str, StringConstraints(pattern=r"^HP:\d{7}$")]
@@ -15,8 +16,12 @@ class UnknownDisease(LookupError):
 
 
 def require_disease(hpo: HPO, disease_id: str) -> None:
-    """Raise an error the model can act on when the disease is not in the release."""
-    if disease_id not in hpo.names:
+    """Raise an error the model can act on when the disease is not in the release.
+
+    While a paper is masked, a disease HPO knows only from that paper does not exist
+    either, and the error says exactly what it says for any unknown id: nothing tells
+    the model that something was hidden."""
+    if disease_id not in hpo.names or disease_id in hpo.known_only_from(masking.current()):
         raise UnknownDisease(
             f"{disease_id} is not a disease in HPO {hpo.release}; "
             "use an id that rank_diseases returned"

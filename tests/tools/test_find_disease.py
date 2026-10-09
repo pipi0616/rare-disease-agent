@@ -4,6 +4,7 @@ import mlflow
 import pytest
 from pydantic import ValidationError
 
+from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
 from raredx.tools.find_disease import FindDisease
 
@@ -47,3 +48,14 @@ def test_each_search_is_recorded_as_a_tool_span(find: FindDisease) -> None:
     assert trace is not None
     [span] = trace.data.spans
     assert (span.name, span.span_type) == ("find_disease", "TOOL")
+
+
+def test_a_disease_known_only_from_a_masked_paper_is_not_found_by_name(
+    find: FindDisease,
+) -> None:
+    name = "Amenorrhea known from one paper"
+    assert find(name).matches[0].disease_id == "OMIM:690004"
+    with masking.masked(["PMID:1004"]):
+        assert "OMIM:690004" not in [m.disease_id for m in find(name).matches]
+    with masking.masked(["PMID:1001"]):  # another paper: it is still there
+        assert find(name).matches[0].disease_id == "OMIM:690004"

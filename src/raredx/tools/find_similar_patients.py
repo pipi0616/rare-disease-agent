@@ -13,7 +13,8 @@ down; for many, other papers had reported patients with the same disease.
 
 The similarity is the disease ranking's (Resnik, funSimAvg), between two
 patients' terms. Patients from a masked paper are left out: in evaluation the
-case's own paper, so neither the case nor anyone reported with it is found.
+case's own paper, so neither the case nor anyone reported with it is found. So
+are patients of a disease HPO knows only from a masked paper, as for every tool.
 What the bank holds is the caller's choice; evaluation gives it the design
 split only, so the heldout cases stay unseen until the final run.
 """
@@ -68,11 +69,12 @@ class FindSimilarPatients:
         if not len(patient):
             return [], unrecognized
         masked = masking.current()
+        hidden = self.hpo.known_only_from(masked)
         scores = patient.similarity_scores(self._sets, kind="omim", method=METHOD, combine=COMBINE)
         found = [
             (case, score)
             for case, score in zip(self.bank, scores, strict=True)
-            if score > 0 and case.pmid not in masked
+            if score > 0 and case.pmid not in masked and case.disease_id not in hidden
         ]
         found.sort(key=lambda x: (-x[1], x[0].id))
         return found, unrecognized
@@ -97,6 +99,7 @@ class FindSimilarPatients:
         found, unrecognized = self.ranked(hpo_ids)
         findings = [str(term.id) for term in self.hpo.patient(hpo_ids)[0]]
         masked = masking.current()
+        hidden = self.hpo.known_only_from(masked)
         return SimilarPatients(
             patients=[
                 SimilarPatient(
@@ -108,7 +111,9 @@ class FindSimilarPatients:
                 )
                 for case, score in found[:top_k]
             ],
-            searched=sum(case.pmid not in masked for case in self.bank),
+            searched=sum(
+                case.pmid not in masked and case.disease_id not in hidden for case in self.bank
+            ),
             unrecognized=unrecognized,
         )
 

@@ -50,13 +50,23 @@ def test_masked_sources_drop_out_of_every_part_of_the_answer(lookup: LookupDisea
     assert profile.sources == ["PMID:1006"]
 
 
-def test_a_disease_known_only_from_a_masked_paper_comes_back_empty(
+def test_a_disease_known_only_from_a_masked_paper_does_not_exist(lookup: LookupDisease) -> None:
+    with masking.masked(["PMID:1004"]), pytest.raises(UnknownDisease) as hidden:
+        lookup("OMIM:690004")
+    with pytest.raises(UnknownDisease) as unknown:
+        lookup("OMIM:999999")
+    # The same words as for any unknown id: the model is never told something was hidden.
+    assert str(hidden.value) == str(unknown.value).replace("999999", "690004")
+
+
+def test_a_kept_feature_does_not_list_the_masked_paper_among_its_sources(
     lookup: LookupDisease,
 ) -> None:
-    with masking.masked(["PMID:1004"]):
-        profile = lookup("OMIM:690004")
-    assert (profile.features, profile.n_features, profile.sources) == ([], 0, [])
-    assert "mask" not in profile.model_dump_json().lower()  # the model is never told
+    # OMIM:690002's rod-cone dystrophy cites PMID:1002 and its OMIM entry.
+    with masking.masked(["PMID:1002"]):
+        profile = lookup("OMIM:690002")
+    assert features(profile) == [("HP:0000510", None)]
+    assert profile.features[0].sources == ["OMIM:690002"] and profile.sources == ["OMIM:690002"]
 
 
 def test_an_unknown_disease_is_an_error_the_model_can_act_on(lookup: LookupDisease) -> None:

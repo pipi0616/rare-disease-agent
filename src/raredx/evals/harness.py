@@ -7,6 +7,9 @@
               Each answer is a trace; a failure is an ERROR trace and scores as a miss.
     mask      while the system works on a case, the case's source paper is hidden from
               the knowledge its tools read, so no tool reads the answer.
+    audit     after the run, every tool output in the traces is read back: none may
+              show the case's own paper, or a disease known only from it. The counts
+              are logged, and the run is tagged leak_audit=passed or failed.
     scorer    a code check (@scorer) applying the rules in scoring.py: top-k hits for
               disease and gene, gene checks only where the case has a causal gene.
     run       one MLflow run per evaluation in the experiment eval/<manifest>: params say
@@ -17,8 +20,11 @@ Re-scoring evaluates a run's recorded traces again with the current scorer. The
 system is not asked again — for a model, nothing is paid again.
 """
 
+import json
+import re
 import statistics
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -166,12 +172,16 @@ class Harness:
         params: dict[str, Any],
         *,
         mask_source_papers: bool = True,
+        hidden_of: Callable[[str], set[str]] | None = None,
     ) -> tuple[str, scoring.Summary]:
         """Run the system on the manifest and record it; returns the MLflow run id and Summary.
 
         While the system works on a case, the case's source paper is masked from the
         knowledge its tools read (raredx.knowledge.masking). Turning that off measures
         how much a score owed to reading the answer; such runs are named "(unmasked)".
+
+        A masked run is then audited (leak_audit). `hidden_of` gives, for a paper, the
+        diseases known only from it; without it only the paper itself is looked for.
         """
         data = self.dataset(manifest, manifest_sha256, cases)
         papers = {c.id: c.pmid for c in cases}
@@ -193,6 +203,11 @@ class Harness:
             result = mlflow.genai.evaluate(data=data, predict_fn=predict, scorers=[diagnosis])
             mlflow.log_metric("usage/wall_seconds", round(time.monotonic() - started, 1))
             self._check_complete(run.info.run_id, expected=len(cases))
+            if mask_source_papers:
+                audit = self.leak_audit(run.info.run_id, papers, hidden_of)
+                mlflow.log_metrics(audit)
+                leaked = audit["leak/own_paper_shown"] + audit["leak/hidden_disease_shown"]
+                mlflow.set_tag("leak_audit", "failed" if leaked else "passed")
             n_gene = sum(c.gene is not None for c in cases)
             summary = summary_of(result.metrics, len(cases), n_gene)
             mlflow.log_metrics(wilson_metrics(summary))
@@ -215,6 +230,33 @@ class Harness:
                 f"only {recorded} of {expected} answers were recorded in MLflow; "
                 "the run is marked failed and was not scored — run it again"
             )
+
+    def leak_audit(
+        self,
+        run_id: str,
+        papers: dict[str, str],
+        hidden_of: Callable[[str], set[str]] | None = None,
+    ) -> dict[str, float]:
+        """Read back every tool output the run recorded and count those that show the
+        case's own paper, or a disease known only from it. Both counts must be 0."""
+        outputs = own = hidden = 0
+        for trace in self.traces(run_id):
+            pmid = papers[trace.data.spans[0].inputs["question"]["case_id"]]
+            paper = re.compile(re.escape(pmid) + r"(?!\d)")
+            diseases = sorted(hidden_of(pmid)) if hidden_of else []
+            disease = re.compile("|".join(re.escape(d) + r"(?!\d)" for d in diseases))
+            for span in trace.data.spans:
+                if span.span_type != SpanType.TOOL:
+                    continue
+                text = json.dumps(span.outputs, default=str)
+                outputs += 1
+                own += bool(paper.search(text))
+                hidden += bool(diseases and disease.search(text))
+        return {
+            "leak/tool_outputs_read": outputs,
+            "leak/own_paper_shown": own,
+            "leak/hidden_disease_shown": hidden,
+        }
 
     def hits(self, run_id: str, k: int) -> dict[str, bool]:
         """Per case: whether the run had the confirmed disease in its top k — the

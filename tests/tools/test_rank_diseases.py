@@ -70,3 +70,10 @@ def test_each_call_is_recorded_as_a_tool_span(rank: RankDiseases) -> None:
     assert (span.name, span.span_type) == ("rank_diseases", "TOOL")
     assert span.inputs == {"hpo_ids": ["HP:0000407", "HP:0000786"], "top_k": 10}
     assert span.outputs["matches"][0]["disease_id"] == "OMIM:690001"
+
+
+def test_a_disease_known_only_from_a_masked_paper_is_never_ranked(hpo: HPO) -> None:
+    rank = RankDiseases(hpo)
+    assert "OMIM:690004" in [m.disease_id for m in rank(["HP:0000786"], top_k=10).matches]
+    with masking.masked(["PMID:1004"]):
+        assert "OMIM:690004" not in [m.disease_id for m in rank(["HP:0000786"], top_k=10).matches]

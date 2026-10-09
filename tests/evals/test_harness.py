@@ -8,8 +8,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import mlflow
 import pytest
-from mlflow.entities import Feedback
+from mlflow.entities import Feedback, SpanType
 
 from raredx.data.cases import Case
 from raredx.evals import harness as h
@@ -153,3 +154,58 @@ def test_each_cases_verdict_can_be_read_back_for_a_paired_comparison(
     params = {"system": "flaky", "manifest": "toy", "manifest_sha256": "sha-1"}
     run_id, _ = harness.evaluate(Flaky(), "toy", "sha-1", cases, params)
     assert harness.hits(run_id, 1) == {"1": True, "2": False, "3": False}
+
+
+class Leaky:
+    """Its one tool shows each case's own paper, and a disease named per case."""
+
+    name = "leaky"
+
+    def __init__(self, leak: bool) -> None:
+        self.leak = leak
+
+    @mlflow.trace(span_type=SpanType.TOOL)
+    def tool(self, case_id: str) -> dict[str, str]:
+        return {"source": f"PMID:{case_id}" if self.leak else "PMID:99", "disease": "OMIM:600001"}
+
+    def predict(self, question: Question) -> list[Candidate]:
+        self.tool(question.case_id)
+        return [Candidate(disease_name="x", disease_id="OMIM:100000")]
+
+
+def test_a_tool_that_shows_the_cases_own_paper_fails_the_leak_audit(
+    harness: h.Harness, cases: list[Case]
+) -> None:
+    params = {"system": "leaky", "manifest": "toy"}
+    clean, _ = harness.evaluate(Leaky(leak=False), "toy", "sha-1", cases, params)
+    run = harness.client.get_run(clean).data
+    assert run.tags["leak_audit"] == "passed"
+    assert run.metrics["leak/tool_outputs_read"] == 3 and run.metrics["leak/own_paper_shown"] == 0
+
+    leaky, _ = harness.evaluate(Leaky(leak=True), "toy", "sha-1", cases, params)
+    run = harness.client.get_run(leaky).data
+    assert run.tags["leak_audit"] == "failed" and run.metrics["leak/own_paper_shown"] == 3
+
+
+def test_the_audit_also_looks_for_diseases_known_only_from_the_paper(
+    harness: h.Harness, cases: list[Case]
+) -> None:
+    def hidden_of(pmid: str) -> set[str]:
+        return {"OMIM:600001"} if pmid == "PMID:2" else set()
+
+    params = {"system": "leaky", "manifest": "toy"}
+    run_id, _ = harness.evaluate(
+        Leaky(leak=False), "toy", "sha-1", cases, params, hidden_of=hidden_of
+    )
+    run = harness.client.get_run(run_id).data
+    assert run.metrics["leak/hidden_disease_shown"] == 1 and run.tags["leak_audit"] == "failed"
+
+
+def test_a_paper_id_is_not_mistaken_for_a_longer_one(harness: h.Harness, cases: list[Case]) -> None:
+    class Near(Leaky):
+        @mlflow.trace(span_type=SpanType.TOOL)
+        def tool(self, case_id: str) -> dict[str, str]:
+            return {"source": f"PMID:{case_id}0"}  # PMID:10 is not PMID:1
+
+    run_id, _ = harness.evaluate(Near(leak=True), "toy", "sha-1", cases, {"system": "near"})
+    assert harness.client.get_run(run_id).data.tags["leak_audit"] == "passed"

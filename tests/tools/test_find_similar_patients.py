@@ -1,5 +1,7 @@
 """T5, find similar patients, on a small bank over the miniature HPO release."""
 
+from collections.abc import Callable
+
 import mlflow
 import pytest
 from pydantic import ValidationError
@@ -77,3 +79,18 @@ def test_each_search_is_recorded_as_a_tool_span(find: FindSimilarPatients) -> No
     assert trace is not None
     [span] = trace.data.spans
     assert (span.name, span.span_type) == ("find_similar_patients", "TOOL")
+
+
+def test_patients_of_a_disease_known_only_from_a_masked_paper_are_not_found(
+    hpo: HPO, patients: list[Case], make_case: Callable[..., Case]
+) -> None:
+    # A patient of OMIM:690004 from another paper; HPO knows the disease from PMID:1004 alone.
+    other = make_case(
+        "p9", hpo_ids=[AMENORRHEA], hpo_labels=["a"], disease_id="OMIM:690004", pmid="PMID:2009"
+    )
+    find = FindSimilarPatients(hpo, [*patients, other], "test bank")
+    assert "PMID:2009" in [p.source for p in find([AMENORRHEA]).patients]
+    with masking.masked(["PMID:1004"]):
+        result = find([AMENORRHEA])
+    assert "OMIM:690004" not in [p.disease_id for p in result.patients]
+    assert result.searched == 5

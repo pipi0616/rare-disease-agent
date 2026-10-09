@@ -17,6 +17,8 @@ from raredx.evals.provenance import code_version
 from raredx.evals.systems import Oracle, Popularity, System
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from openai import OpenAI
 
     from raredx.evals.harness import Harness
@@ -362,6 +364,16 @@ def _system(
     _fail(f"unknown system {name!r}: choose {', '.join(SYSTEMS)}")
 
 
+def _hidden_of(evals_dir: Path, data_dir: Path) -> "Callable[[str], set[str]] | None":
+    """For the leak audit: the diseases HPO knows only from a given paper. None when the
+    HPO release was never fetched (then only the paper itself is looked for)."""
+    folder = sources.raw_dir(sources.load_sources(evals_dir / "datasets.toml")["hpo"], data_dir)
+    if not (folder / "hp.obo").exists():
+        return None
+    knowledge = _knowledge(evals_dir, data_dir)
+    return lambda pmid: knowledge.known_only_from(frozenset({pmid}))
+
+
 def _harness() -> "Harness":
     from raredx.evals.harness import Harness  # imported here: mlflow is slow to load
 
@@ -427,7 +439,13 @@ def run_system(
     harness = _harness()
     try:
         run_id, summary = harness.evaluate(
-            chosen, split, manifest_sha256, selected, params, mask_source_papers=mask_source_paper
+            chosen,
+            split,
+            manifest_sha256,
+            selected,
+            params,
+            mask_source_papers=mask_source_paper,
+            hidden_of=_hidden_of(evals_dir, data_dir),
         )
     except IncompleteRun as e:
         _fail(str(e))
@@ -454,6 +472,16 @@ def run_system(
             f"{usage['usage/seconds_per_case']:.1f} s per case"
         )
     typer.echo(f"recorded in MLflow: experiment eval/{split}, run {run_id}")
+    if mask_source_paper:
+        run = harness.client.get_run(run_id).data
+        audit = (
+            f"{run.metrics['leak/tool_outputs_read']:,.0f} tool outputs read; "
+            f"own paper shown {run.metrics['leak/own_paper_shown']:.0f}, "
+            f"diseases known only from it shown {run.metrics['leak/hidden_disease_shown']:.0f}"
+        )
+        if run.tags["leak_audit"] != "passed":
+            _fail(f"leak audit FAILED ({audit}): do not use these numbers")
+        typer.echo(f"leak audit passed: {audit}")
 
 
 @eval_app.command("score")
