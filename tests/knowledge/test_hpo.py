@@ -43,7 +43,7 @@ def test_genes_are_the_mendelian_ones(hpo: HPO) -> None:
         "OMIM:690002": ("GENEB1", "GENEB2"),
         "OMIM:690005": ("GENEE",),
         "OMIM:699998": ("GENEF",),  # a disease with no phenotype annotation
-    }
+    }  # and OMIM:690004's gene "-" (no symbol) is not a gene
 
 
 def test_a_genes_diseases_are_those_with_phenotype_annotations(hpo: HPO) -> None:

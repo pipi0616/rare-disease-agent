@@ -175,6 +175,11 @@ def _annotations(path: Path) -> tuple[dict[str, list[Line]], dict[str, str]]:
 def _genes(path: Path) -> dict[str, tuple[str, ...]]:
     genes: dict[str, set[str]] = defaultdict(set)
     for row in _rows(path):
+        if row["gene_symbol"] in (
+            "",
+            "-",
+        ):  # an NCBI entry with no symbol (e.g. a regulatory region)
+            continue
         if row["disease_id"].startswith("OMIM:") and row["association_type"] == "MENDELIAN":
             genes[row["disease_id"]].add(row["gene_symbol"])
     return {disease: tuple(sorted(symbols)) for disease, symbols in genes.items()}

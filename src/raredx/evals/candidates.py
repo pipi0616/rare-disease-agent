@@ -26,7 +26,7 @@ from raredx.knowledge.hpo import HPO
 
 N_CANDIDATES = 50
 SPEC = (
-    f"genes-v2: causal + {N_CANDIDATES - 1} decoys "
+    f"genes-v3: causal + {N_CANDIDATES - 1} decoys "
     "from HPO's Mendelian genes of annotated OMIM diseases"
 )
 
