@@ -8,7 +8,7 @@ ranked candidate diseases and genes with cited evidence. Evaluated on public,
 leakage-controlled case collections against classical, fixed-pipeline and
 single-call baselines.
 
-**Status:** the first agent, six tools, and the baselines it is measured against. Tools:
+**Status:** the first agent, seven tools, and the baselines it is measured against. Tools:
 `rank_diseases` (every OMIM disease ranked against the patient's phenotype),
 `lookup_disease` (one disease's features with their frequencies, inheritance,
 onset, genes and sources, sized for a model to read), `check_match` (the
@@ -17,7 +17,9 @@ and the disease's frequent features the patient lacks), `find_disease` (a
 disease's OMIM id from its name), `find_similar_patients` (the published
 patients whose phenotype is closest, with their confirmed diagnoses) and
 `search_disease_texts` (Orphanet and MedlinePlus descriptions, hybrid
-retrieval, each passage with its source). On the
+retrieval, each passage with its source), and, when the patient has been
+sequenced, `rank_candidate_genes` (candidate genes ranked by how well their
+diseases match the phenotype). On the
 200-case dev set (recall of the confirmed disease, 95% intervals):
 
 | system | top-1 | top-10 |
@@ -67,6 +69,17 @@ Text retrieval, the second, finds the exact disease far less often (17.0%
 top-10; hybrid beat dense, 9.5%, and BM25, 15.5%): descriptions differ little
 between subtypes. In the agent it supplies descriptions and citations; the
 ablation will say what that is worth.
+
+**Phenotype + genotype, a separate exam.** In the clinic a patient is
+sequenced. Phenopacket Store records the causal gene but not the exome, so
+`eval run --with-genes` simulates one: the causal gene among 49 decoys drawn
+per case (seeded) from known disease genes not linked to the case's
+disease, sorted by symbol — genes only, uniform decoys, both stated
+simplifications. With that list, ranking the genes by phenotype alone, no
+model, gets the confirmed disease first in 62.0% of dev-200 cases and in the
+top 10 in 78.5%; the ceiling is 80%, since 40 cases' diseases are known only
+from their own paper, whose gene–disease link is masked with it. It is
+reported apart from the phenotype-only numbers above, never as a gain.
 
 ## Run
 

@@ -54,3 +54,4 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [16](16_error_analysis.ipynb) | 改进 agent：先看错题，再决定做什么（新开局、补满 10 个、定下工具清单） |
 | [17](17_similar_patients.ipynb) | 第四个工具：找相似的病人（病例检索，以及检索类工具怎么防泄露） |
 | [18](18_disease_texts.ipynb) | 第五个工具：查疾病介绍（RAG：切块、向量库、混合检索，单独评测检索） |
+| [19](19_candidate_genes.ipynb) | 第六个工具：看基因检测结果（模拟测序、按症状给基因排名、另一种考法） |
