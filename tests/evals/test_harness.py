@@ -209,3 +209,10 @@ def test_a_paper_id_is_not_mistaken_for_a_longer_one(harness: h.Harness, cases: 
 
     run_id, _ = harness.evaluate(Near(leak=True), "toy", "sha-1", cases, {"system": "near"})
     assert harness.client.get_run(run_id).data.tags["leak_audit"] == "passed"
+
+
+def test_a_system_that_reads_no_tool_outputs_is_not_called_a_pass(
+    harness: h.Harness, cases: list[Case]
+) -> None:
+    run_id, _ = harness.evaluate(Oracle.from_cases(cases), "toy", "sha-1", cases, {"system": "o"})
+    assert harness.client.get_run(run_id).data.tags["leak_audit"] == "no tool outputs"

@@ -9,7 +9,8 @@
               the knowledge its tools read, so no tool reads the answer.
     audit     after the run, every tool output in the traces is read back: none may
               show the case's own paper, or a disease known only from it. The counts
-              are logged, and the run is tagged leak_audit=passed or failed.
+              are logged, and the run is tagged leak_audit=passed or failed — or "no
+              tool outputs" for a system that reads none, which is not a pass.
     scorer    a code check (@scorer) applying the rules in scoring.py: top-k hits for
               disease and gene, gene checks only where the case has a causal gene.
     run       one MLflow run per evaluation in the experiment eval/<manifest>: params say
@@ -207,7 +208,10 @@ class Harness:
                 audit = self.leak_audit(run.info.run_id, papers, hidden_of)
                 mlflow.log_metrics(audit)
                 leaked = audit["leak/own_paper_shown"] + audit["leak/hidden_disease_shown"]
-                mlflow.set_tag("leak_audit", "failed" if leaked else "passed")
+                verdict = "failed" if leaked else "passed"
+                if not audit["leak/tool_outputs_read"]:
+                    verdict = "no tool outputs"  # nothing to read: not a pass
+                mlflow.set_tag("leak_audit", verdict)
             n_gene = sum(c.gene is not None for c in cases)
             summary = summary_of(result.metrics, len(cases), n_gene)
             mlflow.log_metrics(wilson_metrics(summary))

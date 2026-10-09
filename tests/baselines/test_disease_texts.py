@@ -28,3 +28,22 @@ def test_a_run_records_the_index(hpo: HPO, text_index: TextIndex) -> None:
     text_index.info.update(passages=4, dense="d", sparse="s")
     params = DiseaseTextsRank(SearchDiseaseTexts(text_index, hpo)).params()
     assert params["text_index"] == "test texts; 4 passages"
+
+
+def test_a_passage_about_many_diseases_credits_each_less(
+    hpo: HPO, text_index: TextIndex, make_case: Callable[..., Case]
+) -> None:
+    from raredx.knowledge.texts import Passage
+
+    shared = Passage(
+        text="x", disease_ids=["OMIM:690003", "OMIM:690005"], disease_name="x", source="s"
+    )
+    single = Passage(text="y", disease_ids=["OMIM:690001"], disease_name="y", source="s")
+
+    class Fixed(DiseaseTextsRank):
+        def passages(self, query: str) -> list[Passage]:
+            return [shared, single]  # the shared passage ranks first
+
+    system = Fixed(SearchDiseaseTexts(text_index, hpo))
+    answers = system.predict(question_of(make_case("q", hpo_labels=["a"])))
+    assert answers[0].disease_id == "OMIM:690001"  # a whole credit beats half of a better one

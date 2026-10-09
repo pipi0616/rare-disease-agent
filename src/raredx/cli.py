@@ -479,9 +479,12 @@ def run_system(
             f"own paper shown {run.metrics['leak/own_paper_shown']:.0f}, "
             f"diseases known only from it shown {run.metrics['leak/hidden_disease_shown']:.0f}"
         )
-        if run.tags["leak_audit"] != "passed":
+        if run.tags["leak_audit"] == "failed":
             _fail(f"leak audit FAILED ({audit}): do not use these numbers")
-        typer.echo(f"leak audit passed: {audit}")
+        if run.tags["leak_audit"] == "no tool outputs":
+            typer.echo("leak audit: no tool outputs to read (the system calls no tools)")
+        else:
+            typer.echo(f"leak audit passed: {audit}")
 
 
 @eval_app.command("score")
