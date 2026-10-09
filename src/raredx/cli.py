@@ -207,6 +207,10 @@ SYSTEMS = (
     "seeded-agent",
     "llm-direct",
     "llm-direct-thinking",
+    "judge-table",
+    "judge-review",
+    "judge-table-thinking",
+    "judge-review-thinking",
 )
 
 
@@ -297,6 +301,7 @@ def _system(
     similarity: str | None = None,
     without: tuple[str, ...] = (),
     with_genes: bool = False,
+    from_run: str | None = None,
 ) -> System:
     if name == "oracle":
         return Oracle.from_cases(cases)
@@ -369,6 +374,29 @@ def _system(
             extra_tools=extra,
             name=label,
         )
+    if name.startswith("judge-"):
+        from raredx.evals.evidence import gather
+        from raredx.evals.harness import candidates_of
+        from raredx.judge import EvidenceJudge
+
+        if not from_run:
+            _fail("the judge replays a recorded agent run: give --from-run RUN_ID")
+        variant, _, thinking = name.removeprefix("judge-").partition("-")
+        traces = _harness().traces(from_run)
+        evidence = {e.case_id: e for e in map(gather, traces)}
+        answers = {
+            t.data.spans[0].inputs["question"]["case_id"]: candidates_of(t.data.spans[0].outputs)
+            for t in traces
+        }
+        return EvidenceJudge(
+            _model_client(),
+            settings.llm_model,
+            evidence,
+            answers,
+            from_run,
+            variant,
+            thinking=thinking == "thinking",
+        )
     if name in ("llm-direct", "llm-direct-thinking"):
         from raredx.baselines.llm_direct import LLMDirect
 
@@ -422,6 +450,10 @@ def run_system(
         bool,
         typer.Option(help="The genotype track: each case comes with simulated candidate genes."),
     ] = False,
+    from_run: Annotated[
+        str | None,
+        typer.Option(help="The judges: the recorded agent run whose evidence they rule on."),
+    ] = None,
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
@@ -438,7 +470,10 @@ def run_system(
     manifest = _manifest(evals_dir, split)
     by_id = {c.id: c for c in cases}
     selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
-    chosen = _system(system, cases, evals_dir, data_dir, similarity, left_out, with_genes)
+    chosen = _system(system, cases, evals_dir, data_dir, similarity, left_out, with_genes, from_run)
+    recorded = getattr(chosen, "evidence", None)
+    if isinstance(recorded, dict) and {c.id for c in selected} - set(recorded):
+        _fail(f"run {from_run} has no record of some cases in {split}: replay the same manifest")
     build = case_store.read_build_info(out_dir)
     manifest_sha256 = sources.sha256_of(manifest)
     params = {
