@@ -302,6 +302,7 @@ def _system(
     without: tuple[str, ...] = (),
     with_genes: bool = False,
     from_run: str | None = None,
+    with_texts: bool = False,
 ) -> System:
     if name == "oracle":
         return Oracle.from_cases(cases)
@@ -359,13 +360,17 @@ def _system(
         extra: list[Any] = []
         if "find_similar_patients" not in without:
             extra.append(_patient_bank(cases, evals_dir, data_dir))
-        if "search_disease_texts" not in without:
+        # Off by default since chapter 20: on dev-200 the text search added nothing (4 cases
+        # to 2 at top-1, p = 0.69) and cost 18% more tokens. --with-texts adds it back.
+        if with_texts and "search_disease_texts" not in without:
             extra.append(_text_search(evals_dir, data_dir))
         if with_genes and "rank_candidate_genes" not in without:
             from raredx.tools.rank_candidate_genes import RankCandidateGenes
 
             extra.append(RankCandidateGenes(knowledge))
-        label = f"{name} (without {', '.join(without)})" if without else name
+        label = name + (" (with search_disease_texts)" if with_texts else "")
+        if without:
+            label += f" (without {', '.join(without)})"
         return Agent(
             model,
             settings.llm_model,
@@ -454,6 +459,10 @@ def run_system(
         str | None,
         typer.Option(help="The judges: the recorded agent run whose evidence they rule on."),
     ] = None,
+    with_texts: Annotated[
+        bool,
+        typer.Option(help="The agents: add the disease-text search, off by default since ch 20."),
+    ] = False,
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
@@ -470,7 +479,9 @@ def run_system(
     manifest = _manifest(evals_dir, split)
     by_id = {c.id: c for c in cases}
     selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
-    chosen = _system(system, cases, evals_dir, data_dir, similarity, left_out, with_genes, from_run)
+    chosen = _system(
+        system, cases, evals_dir, data_dir, similarity, left_out, with_genes, from_run, with_texts
+    )
     recorded = getattr(chosen, "evidence", None)
     if isinstance(recorded, dict) and {c.id for c in selected} - set(recorded):
         _fail(f"run {from_run} has no record of some cases in {split}: replay the same manifest")
