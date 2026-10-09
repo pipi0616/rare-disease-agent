@@ -12,7 +12,7 @@ and no tool called again. That is how changes to the final judgment are tried
 cheaply (replay), before one of them is built into the agent and run in full.
 
 Only the tools' own spans are read (their outputs are the tools' models, as
-dicts); LangChain's wrappers around them hold the same output as text.
+dicts); LangChain's wrappers around them hold the same output as a message.
 """
 
 from typing import Any
@@ -51,7 +51,9 @@ def _tool_outputs(trace: Any) -> list[tuple[str, dict[str, Any]]]:
     return [
         (span.name, span.outputs)
         for span in sorted(trace.data.spans, key=lambda s: s.start_time_ns)
-        if span.span_type == "TOOL" and isinstance(span.outputs, dict)
+        if span.span_type == "TOOL"
+        and isinstance(span.outputs, dict)
+        and "additional_kwargs" not in span.outputs  # LangChain's ToolMessage, a copy
     ]
 
 

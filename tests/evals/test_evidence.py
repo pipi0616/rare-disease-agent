@@ -98,7 +98,8 @@ def recorded_case() -> Any:
                 span("check_match", check_b, 3),
                 span("find_similar_patients", similar, 4),
                 span("find_similar_patients", similar, 5),  # searched twice: counted once
-                span("find_similar_patients", '{"as": "text"}', 6),  # LangChain's copy: ignored
+                span("find_similar_patients", '{"as": "text"}', 6),  # a copy as text: ignored
+                span("check_match", {"content": "{}", "additional_kwargs": {}}, 6),  # LangChain's
                 span("search_disease_texts", texts, 7),
             ]
         )
