@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
     from raredx.evals.harness import Harness
     from raredx.knowledge.hpo import HPO
+    from raredx.tools.find_similar_patients import FindSimilarPatients
     from raredx.tools.rank_diseases import RankDiseases
 
 app = typer.Typer(help="raredx — rare-disease diagnosis agent.", no_args_is_help=True)
@@ -165,6 +166,7 @@ SYSTEMS = (
     "popularity",
     "phenotype-rank",
     "rank-then-check",
+    "similar-patients",
     "fixed-pipeline",
     "agent",
     "seeded-agent",
@@ -197,6 +199,27 @@ def _ranker(evals_dir: Path, data_dir: Path, similarity: str | None) -> "RankDis
         _fail(str(e))
 
 
+def _patient_bank(
+    cases: list[Case],
+    evals_dir: Path,
+    data_dir: Path,
+    *,
+    splits_used: tuple[str, ...] = ("design",),
+) -> "FindSimilarPatients":
+    """Tool T5 over the published patients of the given splits. Evaluation uses the
+    design split alone: the heldout cases stay unseen until the final run."""
+    from raredx.tools.find_similar_patients import FindSimilarPatients
+
+    build = case_store.read_build_info(sources.processed_dir(_source(evals_dir), data_dir))
+    bank = [c for c in cases if c.split in splits_used]
+    name = f"{build['source']} {build['version']}, {' + '.join(splits_used)}: {len(bank)} patients"
+    return FindSimilarPatients(_knowledge(evals_dir, data_dir), bank, name)
+
+
+# Tools an agent can be given beyond the four core ones; --without leaves one out.
+EXTRA_TOOLS = ("find_similar_patients",)
+
+
 def _model_client() -> "OpenAI":
     from raredx import llm
 
@@ -212,6 +235,7 @@ def _system(
     evals_dir: Path,
     data_dir: Path,
     similarity: str | None = None,
+    without: tuple[str, ...] = (),
 ) -> System:
     if name == "oracle":
         return Oracle.from_cases(cases)
@@ -229,6 +253,10 @@ def _system(
 
         ranker = _ranker(evals_dir, data_dir, similarity)
         return RankThenCheck(ranker, CheckMatch(ranker.hpo))
+    if name == "similar-patients":
+        from raredx.baselines.similar_patients import SimilarPatientsRank
+
+        return SimilarPatientsRank(_patient_bank(cases, evals_dir, data_dir))
     if name == "fixed-pipeline":
         from raredx.baselines.fixed_pipeline import FixedPipeline
         from raredx.tools.check_match import CheckMatch
@@ -251,7 +279,18 @@ def _system(
             model = llm.chat_model(settings)
         except llm.MissingAPIKey as e:
             _fail(str(e))
-        return Agent(model, settings.llm_model, knowledge, seeded=name == "seeded-agent")
+        extra = []
+        if "find_similar_patients" not in without:
+            extra.append(_patient_bank(cases, evals_dir, data_dir))
+        label = f"{name} (without {', '.join(without)})" if without else name
+        return Agent(
+            model,
+            settings.llm_model,
+            knowledge,
+            seeded=name == "seeded-agent",
+            extra_tools=extra,
+            name=label,
+        )
     if name in ("llm-direct", "llm-direct-thinking"):
         from raredx.baselines.llm_direct import LLMDirect
 
@@ -287,17 +326,27 @@ def run_system(
         bool,
         typer.Option(help="Hide each case's source paper from the knowledge tools read."),
     ] = True,
+    without: Annotated[
+        list[str] | None,
+        typer.Option(help=f"The agents: leave out a tool ({' | '.join(EXTRA_TOOLS)}); repeatable."),
+    ] = None,
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
     """Evaluate a system on a manifest with MLflow; the run and every answer are recorded."""
     if split == "heldout" and not final:
         _fail("heldout is the final exam: run it once, with --final, when the design is frozen")
+    left_out = tuple(sorted(set(without or [])))
+    unknown = [t for t in left_out if t not in EXTRA_TOOLS]
+    if unknown:
+        _fail(f"--without takes {', '.join(EXTRA_TOOLS)}; not {', '.join(unknown)}")
+    if left_out and system not in ("agent", "seeded-agent"):
+        _fail("--without applies to the agents only")
     out_dir, cases = _processed(data_dir, evals_dir)
     manifest = _manifest(evals_dir, split)
     by_id = {c.id: c for c in cases}
     selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
-    chosen = _system(system, cases, evals_dir, data_dir, similarity)
+    chosen = _system(system, cases, evals_dir, data_dir, similarity, left_out)
     build = case_store.read_build_info(out_dir)
     manifest_sha256 = sources.sha256_of(manifest)
     params = {
@@ -446,11 +495,21 @@ def serve_mcp(
     from raredx.mcp_server import build
 
     knowledge = _knowledge(evals_dir, data_dir)
+    # Serving is not an exam: the patient bank holds every published patient.
+    out_dir = sources.processed_dir(_source(evals_dir), data_dir)
+    similar = None
+    if (out_dir / case_store.CASES_FILE).exists():
+        similar = _patient_bank(
+            case_store.read(out_dir), evals_dir, data_dir, splits_used=("design", "heldout")
+        )
+    else:
+        typer.echo("no processed cases: serving without find_similar_patients", err=True)
     # A host shows the server's stderr as its log; keep MLflow's routine INFO lines out.
     logging.getLogger("mlflow").setLevel(logging.WARNING)
     mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
     mlflow.set_experiment("mcp-server")  # every call a host makes is traced here
-    build(knowledge).run(transport="streamable-http" if transport == "streamable-http" else "stdio")
+    server = build(knowledge, similar)
+    server.run(transport="streamable-http" if transport == "streamable-http" else "stdio")
 
 
 # ── llm ─────────────────────────────────────────────────────────────

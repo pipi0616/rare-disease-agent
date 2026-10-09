@@ -11,9 +11,11 @@ import pytest
 from mcp import Client
 from mcp.types import TextContent
 
+from raredx.data.cases import Case
 from raredx.knowledge.hpo import HPO
 from raredx.mcp_server import build
 from raredx.tools.check_match import CheckMatch
+from raredx.tools.find_similar_patients import FindSimilarPatients
 from raredx.tools.lookup_disease import LookupDisease
 from raredx.tools.rank_diseases import RankDiseases
 
@@ -93,3 +95,15 @@ async def test_an_unknown_disease_reaches_the_model_as_an_error_it_can_act_on(
 async def test_malformed_arguments_are_refused_before_the_tool_runs(client: Client) -> None:
     result = await client.call_tool("rank_diseases", {"hpo_ids": ["deafness"]})
     assert result.is_error and "should match pattern" in text(result)
+
+
+@pytest.mark.anyio
+async def test_given_a_patient_bank_the_server_adds_find_similar_patients(
+    hpo: HPO, patients: list[Case]
+) -> None:
+    server = build(hpo, FindSimilarPatients(hpo, patients, "test bank"))
+    async with Client(server, raise_exceptions=True) as c:
+        tools = {t.name: t for t in (await c.list_tools()).tools}
+        assert "find_similar_patients" in tools and len(tools) == 5
+        result = await c.call_tool("find_similar_patients", {"hpo_ids": ["HP:0000407"]})
+        assert "PMID:2001" in text(result)

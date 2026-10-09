@@ -20,6 +20,7 @@ from raredx.evals.systems import question_of
 from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
 from raredx.tools.check_match import CheckMatch
+from raredx.tools.find_similar_patients import FindSimilarPatients
 from raredx.tools.rank_diseases import RankDiseases
 
 OFFERED: list[list[str]] = []  # the tools offered to the model, call by call
@@ -187,3 +188,39 @@ def test_the_seeded_agent_records_its_seed_and_fill(hpo: HPO) -> None:
     params = system.params()
     assert system.name == "seeded-agent" and params["prompt_version"] == "seeded-v1"
     assert (params["seed"], params["fill"]) == ("rank-then-check top 10", "the tools' order")
+
+
+def test_an_extra_tool_is_offered_and_named_in_the_prompt(
+    hpo: HPO, case: Case, patients: list[Case]
+) -> None:
+    OFFERED.clear()
+    RECEIVED.clear()
+    similar = FindSimilarPatients(hpo, patients, "test bank")
+    moves = iter(
+        [
+            call("find_similar_patients", hpo_ids=case.hpo_ids),
+            answer(("OMIM:690001", "Hearing-ovarian syndrome", "similar patients have it")),
+        ]
+    )
+    system = Agent(ScriptedModel(messages=moves), "deepseek-flash", hpo, extra_tools=[similar])
+    system.predict(question_of(case))
+    assert "find_similar_patients" in OFFERED[0]
+    assert "- find_similar_patients: published patients" in str(RECEIVED[0][0].content)
+    [found] = [m for m in RECEIVED[-1] if m.type == "tool"]
+    assert "PMID:2001" in str(found.content)
+    assert system.params()["patient_bank"] == "test bank"
+
+
+def test_without_the_extra_tool_the_prompt_does_not_mention_it(hpo: HPO, case: Case) -> None:
+    RECEIVED.clear()
+    moves = iter([answer(("OMIM:690001", "Hearing-ovarian syndrome", "fits"))])
+    agent(hpo, moves).predict(question_of(case))
+    assert "find_similar_patients" not in str(RECEIVED[0][0].content)
+
+
+def test_a_tool_without_a_prompt_guide_is_refused(hpo: HPO) -> None:
+    class Unguided:
+        name = "mystery_tool"
+
+    with pytest.raises(ValueError, match="mystery_tool"):
+        Agent(ScriptedModel(messages=iter([])), "deepseek-flash", hpo, extra_tools=[Unguided()])

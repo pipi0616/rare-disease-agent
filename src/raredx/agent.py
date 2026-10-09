@@ -30,7 +30,7 @@ it reaches the fixed pipeline's. The prompts are versioned like the baselines'.
 
 import functools
 import inspect
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from langchain.agents import create_agent
@@ -64,18 +64,33 @@ PROMPT_VERSION = "agent-v3"
 SEEDED_PROMPT_VERSION = "seeded-v1"
 MAX_MODEL_CALLS = 8
 
-_ROLE_AND_TOOLS = """\
+_ROLE = """\
 You are a clinical geneticist. Your task is to diagnose a patient with a suspected \
 rare Mendelian disease from their phenotype, given as Human Phenotype Ontology (HPO) \
 terms.
 
-Your tools work over the HPO disease annotations:
-- rank_diseases: every OMIM disease ranked by how well its phenotype matches. Start here.
-- check_match: the patient's findings against one disease: which it explains, which it \
-does not, which its patients were found not to have, and its frequent features the \
-patient lacks.
-- lookup_disease: one disease's features and their frequencies, inheritance, onset, genes.
-- find_disease: the OMIM id of a disease you have in mind, by name."""
+Your tools work over the HPO disease annotations:"""
+
+# One line per tool in the system prompt, in the order the tools are given. A run
+# without a tool (an ablation) does not mention it; with the four core tools only, the
+# prompt is exactly the one agent-v3 and seeded-v1 were measured with.
+GUIDES = {
+    "rank_diseases": "every OMIM disease ranked by how well its phenotype matches. Start here.",
+    "check_match": "the patient's findings against one disease: which it explains, which "
+    "it does not, which its patients were found not to have, and its frequent features "
+    "the patient lacks.",
+    "lookup_disease": "one disease's features and their frequencies, inheritance, onset, genes.",
+    "find_disease": "the OMIM id of a disease you have in mind, by name.",
+    "find_similar_patients": "published patients whose phenotype resembles this one, with "
+    "their confirmed diagnoses (from Phenopacket Store, not the HPO annotations). Call it "
+    "beside rank_diseases: a disease several similar patients share is a strong candidate, "
+    "even one the ranking missed.",
+}
+
+
+def _role_and_tools(tools: list[str]) -> str:
+    return "\n".join([_ROLE, *(f"- {name}: {GUIDES[name]}" for name in tools)])
+
 
 _WEIGHING = """\
 Weigh the evidence: a diagnosis should \
@@ -83,7 +98,7 @@ explain the patient's findings, above all the specific ones; findings recorded a
 and missing hallmark features count against it; inheritance and onset should fit. You \
 may name a disease the tools know little about if you have good reason."""
 
-SYSTEM_PROMPT = f"""{_ROLE_AND_TOOLS}
+_INVESTIGATE = f"""
 
 Investigate before you answer. Check the leading candidates with check_match. The \
 ranking can miss a disease with few annotations: if you suspect one it did not \
@@ -94,7 +109,7 @@ rounds are usually enough: rank, check the leading candidates (several calls at 
 once), check any you suspect, then answer. When you have enough, give your final \
 answer: up to 10 OMIM diseases, most likely first, each with a one-sentence reason."""
 
-SEEDED_SYSTEM_PROMPT = f"""{_ROLE_AND_TOOLS}
+_INVESTIGATE_SEEDED = f"""
 
 The tools have already ranked every disease against the patient and checked the \
 leading candidates: their evidence is in the first message. Spend your turns on what \
@@ -104,6 +119,12 @@ checked), and a closer look where candidates are close. {_WEIGHING}
 Your budget is {MAX_MODEL_CALLS} turns, and the last one is for your answer; answer \
 sooner if the evidence is clear. Give your final answer: up to 10 OMIM diseases, most \
 likely first, each with a one-sentence reason."""
+
+
+def system_prompt(tools: list[str], *, seeded: bool = False) -> str:
+    """The system prompt for an agent with these tools."""
+    return f"{_role_and_tools(tools)}{_INVESTIGATE_SEEDED if seeded else _INVESTIGATE}"
+
 
 FILLED = "Not ranked by the agent: filled in from the phenotype tools' order."
 
@@ -167,22 +188,30 @@ def _error_for_model(error: Exception, request: Any) -> str | None:
 
 class Agent:
     def __init__(
-        self, model: BaseChatModel, model_name: str, hpo: HPO, *, seeded: bool = False
+        self,
+        model: BaseChatModel,
+        model_name: str,
+        hpo: HPO,
+        *,
+        seeded: bool = False,
+        extra_tools: Sequence[Any] = (),
+        name: str | None = None,
     ) -> None:
+        """The four core tools, plus any extra ones (each named in GUIDES). `name` is the
+        system's name in the evaluation; by default "agent" or "seeded-agent"."""
         self.model_name = model_name
         self.hpo = hpo
         self.seeded = seeded
-        self.name = "seeded-agent" if seeded else "agent"
+        self.name = name or ("seeded-agent" if seeded else "agent")
         rank, check, lookup = RankDiseases(hpo), CheckMatch(hpo), LookupDisease(hpo)
         self.seed = RankThenCheck(rank, check)
         self.lookup = lookup
-        tools: list[RankDiseases | CheckMatch | LookupDisease | FindDisease] = [
-            rank,
-            check,
-            lookup,
-            FindDisease(hpo),
-        ]
+        tools: list[Any] = [rank, check, lookup, FindDisease(hpo), *extra_tools]
+        self.extra_tools = list(extra_tools)
         self.tool_names = [t.name for t in tools]
+        unknown = [n for n in self.tool_names if n not in GUIDES]
+        if unknown:
+            raise ValueError(f"no prompt guide for tool(s) {', '.join(unknown)}")
         middleware: list[Any] = [  # each is typed for its own state; the agent combines them
             ModelCallLimitMiddleware(run_limit=MAX_MODEL_CALLS, exit_behavior="end"),
             _answer_on_the_last_turn,
@@ -191,7 +220,7 @@ class Agent:
         self.graph = create_agent(
             model,
             tools=[as_langchain_tool(t) for t in tools],
-            system_prompt=SEEDED_SYSTEM_PROMPT if seeded else SYSTEM_PROMPT,
+            system_prompt=system_prompt(self.tool_names, seeded=seeded),
             response_format=ToolStrategy(FinalAnswer),
             middleware=middleware,
         )
@@ -207,6 +236,9 @@ class Agent:
         }
         if self.seeded:
             params |= {"seed": f"rank-then-check top {SHOWN}", "fill": "the tools' order"}
+        for tool in self.extra_tools:
+            if hasattr(tool, "bank_name"):
+                params["patient_bank"] = tool.bank_name
         return params
 
     def predict(self, question: Question) -> list[Candidate]:

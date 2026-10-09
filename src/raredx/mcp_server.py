@@ -28,23 +28,29 @@ from mcp.types import ToolAnnotations
 from raredx.knowledge.hpo import HPO
 from raredx.tools.check_match import CheckMatch
 from raredx.tools.find_disease import FindDisease
+from raredx.tools.find_similar_patients import FindSimilarPatients
 from raredx.tools.ids import UnknownDisease
 from raredx.tools.lookup_disease import LookupDisease
 from raredx.tools.rank_diseases import RankDiseases
 
 INSTRUCTIONS = """\
 Tools for diagnosing rare diseases from a patient's phenotype, coded as HPO terms
-(Human Phenotype Ontology). Start with rank_diseases on the patient's terms, then
-weigh candidates with check_match and read them with lookup_disease; find_disease
-gives the id of a disease known by name. Answers cite the sources they rest on."""
+(Human Phenotype Ontology). Start with rank_diseases on the patient's terms, and
+find_similar_patients beside it when it is served; then weigh candidates with
+check_match and read them with lookup_disease; find_disease gives the id of a
+disease known by name. Answers cite the sources they rest on."""
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 
 
-def build(hpo: HPO) -> MCPServer:
-    """The MCP server over one HPO release."""
+def build(hpo: HPO, similar: FindSimilarPatients | None = None) -> MCPServer:
+    """The MCP server over one HPO release, and over a bank of published patients when
+    one is given."""
     server = MCPServer("raredx", instructions=INSTRUCTIONS)
-    for tool in (RankDiseases(hpo), LookupDisease(hpo), CheckMatch(hpo), FindDisease(hpo)):
+    tools: list[Any] = [RankDiseases(hpo), LookupDisease(hpo), CheckMatch(hpo), FindDisease(hpo)]
+    if similar is not None:
+        tools.append(similar)
+    for tool in tools:
         server.add_tool(
             _as_mcp_tool(tool.__call__, tool.name),
             name=tool.name,

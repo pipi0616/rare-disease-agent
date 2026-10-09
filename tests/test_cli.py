@@ -79,3 +79,13 @@ def test_compare_names_the_problem_when_a_run_does_not_exist(
     result = runner.invoke(app, ["eval", "compare", "no-such-run", "nor-this-one"])
     assert result.exit_code == 1
     assert "raredx eval runs" in result.output
+
+
+def test_without_takes_only_an_extra_tool_and_only_for_the_agents(tmp_path: Path) -> None:
+    base = ["eval", "run", "--data-dir", str(tmp_path), "--evals-dir", str(EVALS)]
+    result = runner.invoke(app, [*base, "--system", "agent", "--without", "rank_diseases"])
+    assert result.exit_code == 1 and "find_similar_patients" in result.output
+    result = runner.invoke(
+        app, [*base, "--system", "phenotype-rank", "--without", "find_similar_patients"]
+    )
+    assert result.exit_code == 1 and "agents only" in result.output

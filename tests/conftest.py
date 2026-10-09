@@ -63,6 +63,33 @@ def make_case() -> Callable[..., Case]:
     return factory
 
 
+@pytest.fixture
+def patients(make_case: Callable[..., Case]) -> list[Case]:
+    """A small bank of published patients over the miniature release, one paper each."""
+    snhl, bilateral, amenorrhea = "HP:0000407", "HP:0008619", "HP:0000786"
+    rod_cone, seizure = "HP:0000510", "HP:0001250"
+    rows = [
+        ("p1", [snhl, amenorrhea], "OMIM:690001", "Hearing-ovarian syndrome", "GENEA"),
+        ("p2", [bilateral, amenorrhea], "OMIM:690001", "Hearing-ovarian syndrome", "GENEA"),
+        ("p3", [snhl, rod_cone], "OMIM:690002", "Hearing-retina syndrome", "GENEB"),
+        ("p4", [seizure], "OMIM:690003", "Seizure disorder", "GENEC"),
+        # A disease HPO has not annotated: the bank still knows its patient.
+        ("p5", [snhl, amenorrhea, seizure], "OMIM:699999", "Unannotated syndrome", "GENEZ"),
+    ]
+    return [
+        make_case(
+            case_id,
+            hpo_ids=terms,
+            hpo_labels=terms,
+            disease_id=disease,
+            disease_label=label,
+            gene=gene,
+            pmid=f"PMID:200{case_id[1:]}",
+        )
+        for case_id, terms, disease, label, gene in rows
+    ]
+
+
 class FakeLLM:
     """Stands in for OpenAI(): returns the replies given, in turn; records every request."""
 
