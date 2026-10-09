@@ -167,6 +167,7 @@ SYSTEMS = (
     "rank-then-check",
     "fixed-pipeline",
     "agent",
+    "seeded-agent",
     "llm-direct",
     "llm-direct-thinking",
 )
@@ -241,7 +242,7 @@ def _system(
             CheckMatch(ranker.hpo),
             LookupDisease(ranker.hpo),
         )
-    if name == "agent":
+    if name in ("agent", "seeded-agent"):
         from raredx import llm
         from raredx.agent import Agent
 
@@ -250,7 +251,7 @@ def _system(
             model = llm.chat_model(settings)
         except llm.MissingAPIKey as e:
             _fail(str(e))
-        return Agent(model, settings.llm_model, knowledge)
+        return Agent(model, settings.llm_model, knowledge, seeded=name == "seeded-agent")
     if name in ("llm-direct", "llm-direct-thinking"):
         from raredx.baselines.llm_direct import LLMDirect
 

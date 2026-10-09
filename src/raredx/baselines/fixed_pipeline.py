@@ -80,17 +80,21 @@ def _evidence(report: MatchReport, profile: DiseaseProfile) -> list[str]:
     return lines
 
 
-def user_prompt(question: Question, shown: list[tuple[MatchReport, DiseaseProfile]]) -> str:
-    lines = [
-        f"Sex: {question.sex or 'unknown'}",
-        "Findings (HPO): " + "; ".join(question.hpo_labels),
-        "",
-        "Candidates, in the order the phenotype tools rank them:",
-    ]
+def candidates_block(shown: list[tuple[MatchReport, DiseaseProfile]]) -> str:
+    """The tools' candidates, numbered in their order, each with its evidence."""
+    lines = ["Candidates, in the order the phenotype tools rank them:"]
     for i, (report, profile) in enumerate(shown, 1):
         first, *rest = _evidence(report, profile)
         lines += [f"[{i}] {first}", *rest]
     return "\n".join(lines)
+
+
+def user_prompt(question: Question, shown: list[tuple[MatchReport, DiseaseProfile]]) -> str:
+    findings = [
+        f"Sex: {question.sex or 'unknown'}",
+        "Findings (HPO): " + "; ".join(question.hpo_labels),
+    ]
+    return "\n".join(findings) + "\n\n" + candidates_block(shown)
 
 
 class Ranked(BaseModel):

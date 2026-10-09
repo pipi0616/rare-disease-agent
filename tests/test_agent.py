@@ -13,11 +13,13 @@ from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.outputs import ChatResult
 
-from raredx.agent import LAST_TURN, MAX_MODEL_CALLS, Agent, NoFinalAnswer, as_langchain_tool
+from raredx.agent import FILLED, LAST_TURN, MAX_MODEL_CALLS, Agent, NoFinalAnswer, as_langchain_tool
+from raredx.baselines.rank_then_check import RankThenCheck
 from raredx.data.cases import Case
 from raredx.evals.systems import question_of
 from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
+from raredx.tools.check_match import CheckMatch
 from raredx.tools.rank_diseases import RankDiseases
 
 OFFERED: list[list[str]] = []  # the tools offered to the model, call by call
@@ -144,3 +146,44 @@ def test_the_tools_reach_the_model_with_their_own_schemas(hpo: HPO) -> None:
     params = agent(hpo, iter([])).params()
     assert params["tools"] == "rank_diseases, check_match, lookup_disease, find_disease"
     assert (params["prompt_version"], params["max_model_calls"]) == ("agent-v3", MAX_MODEL_CALLS)
+
+
+def seeded(hpo: HPO, moves: Iterator[AIMessage]) -> Agent:
+    return Agent(ScriptedModel(messages=moves), "deepseek-flash", hpo, seeded=True)
+
+
+def test_the_seeded_agent_starts_from_the_tools_evidence(hpo: HPO, case: Case) -> None:
+    RECEIVED.clear()
+    moves = iter([answer(("OMIM:690001", "Hearing-ovarian syndrome", "explains both"))])
+    seeded(hpo, moves).predict(question_of(case))
+    system, first = RECEIVED[0][0], RECEIVED[0][1]
+    assert "The tools have already ranked every disease" in str(system.content)
+    assert "SNHL (HP:0000407)" in str(first.content)  # the ids it needs to call the tools
+    assert "Candidates, in the order the phenotype tools rank them:" in str(first.content)
+    assert "explains 2 of 2 findings" in str(first.content)
+
+
+def test_a_short_answer_is_filled_from_the_tools_order(hpo: HPO, case: Case) -> None:
+    moves = iter([answer(("OMIM:690004", "Amenorrhea known from one paper", "my pick"))])
+    answers = seeded(hpo, moves).predict(question_of(case))
+    tools_order = [
+        m.disease_id
+        for m, _ in RankThenCheck(RankDiseases(hpo), CheckMatch(hpo)).ordered(question_of(case))
+    ]
+    assert [c.disease_id for c in answers] == ["OMIM:690004"] + [
+        d for d in tools_order if d != "OMIM:690004"
+    ]
+    assert answers[0].reason == "my pick"
+    assert all(c.reason == FILLED for c in answers[1:])
+
+
+def test_the_plain_agent_does_not_fill(hpo: HPO, case: Case) -> None:
+    moves = iter([answer(("OMIM:690004", "Amenorrhea known from one paper", "my pick"))])
+    assert len(agent(hpo, moves).predict(question_of(case))) == 1
+
+
+def test_the_seeded_agent_records_its_seed_and_fill(hpo: HPO) -> None:
+    system = seeded(hpo, iter([]))
+    params = system.params()
+    assert system.name == "seeded-agent" and params["prompt_version"] == "seeded-v1"
+    assert (params["seed"], params["fill"]) == ("rank-then-check top 10", "the tools' order")

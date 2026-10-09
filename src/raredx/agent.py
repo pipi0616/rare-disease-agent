@@ -18,8 +18,14 @@ Bounds, all LangChain middleware:
   (ToolErrorMiddleware); anything else fails the case;
 - the final answer is a schema the model must fill (ToolStrategy).
 
+The seeded agent (`seeded=True`) starts where the fixed pipeline stops: its
+first message already holds the tools' top ten with their evidence, so its
+turns go to what the tools cannot do — a disease they missed, found by name and
+checked. A list shorter than ten is filled from the tools' order; those entries
+say so in their reason.
+
 The tools run in this process, so the evaluation's mask reaches them exactly as
-it reaches the fixed pipeline's. The prompt is versioned like the baselines'.
+it reaches the fixed pipeline's. The prompts are versioned like the baselines'.
 """
 
 import functools
@@ -41,7 +47,10 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import BaseModel, Field, ValidationError
 
+from raredx.baselines.fixed_pipeline import SHOWN, candidates_block
 from raredx.baselines.llm_direct import user_prompt
+from raredx.baselines.phenotype_rank import candidate
+from raredx.baselines.rank_then_check import RankThenCheck
 from raredx.evals.scoring import normalize_omim
 from raredx.evals.systems import Candidate, Question
 from raredx.knowledge.hpo import HPO
@@ -52,9 +61,10 @@ from raredx.tools.lookup_disease import LookupDisease
 from raredx.tools.rank_diseases import RankDiseases
 
 PROMPT_VERSION = "agent-v3"
+SEEDED_PROMPT_VERSION = "seeded-v1"
 MAX_MODEL_CALLS = 8
 
-SYSTEM_PROMPT = f"""\
+_ROLE_AND_TOOLS = """\
 You are a clinical geneticist. Your task is to diagnose a patient with a suspected \
 rare Mendelian disease from their phenotype, given as Human Phenotype Ontology (HPO) \
 terms.
@@ -65,19 +75,37 @@ Your tools work over the HPO disease annotations:
 does not, which its patients were found not to have, and its frequent features the \
 patient lacks.
 - lookup_disease: one disease's features and their frequencies, inheritance, onset, genes.
-- find_disease: the OMIM id of a disease you have in mind, by name.
+- find_disease: the OMIM id of a disease you have in mind, by name."""
+
+_WEIGHING = """\
+Weigh the evidence: a diagnosis should \
+explain the patient's findings, above all the specific ones; findings recorded absent \
+and missing hallmark features count against it; inheritance and onset should fit. You \
+may name a disease the tools know little about if you have good reason."""
+
+SYSTEM_PROMPT = f"""{_ROLE_AND_TOOLS}
 
 Investigate before you answer. Check the leading candidates with check_match. The \
 ranking can miss a disease with few annotations: if you suspect one it did not \
-propose, find it by name and check it too. Weigh the evidence: a diagnosis should \
-explain the patient's findings, above all the specific ones; findings recorded absent \
-and missing hallmark features count against it; inheritance and onset should fit. You \
-may name a disease the tools know little about if you have good reason.
+propose, find it by name and check it too. {_WEIGHING}
 
 Your budget is {MAX_MODEL_CALLS} turns, and the last one is for your answer. A few \
 rounds are usually enough: rank, check the leading candidates (several calls at \
 once), check any you suspect, then answer. When you have enough, give your final \
 answer: up to 10 OMIM diseases, most likely first, each with a one-sentence reason."""
+
+SEEDED_SYSTEM_PROMPT = f"""{_ROLE_AND_TOOLS}
+
+The tools have already ranked every disease against the patient and checked the \
+leading candidates: their evidence is in the first message. Spend your turns on what \
+they cannot do: a disease they may have missed (one you suspect, found by name and \
+checked), and a closer look where candidates are close. {_WEIGHING}
+
+Your budget is {MAX_MODEL_CALLS} turns, and the last one is for your answer; answer \
+sooner if the evidence is clear. Give your final answer: up to 10 OMIM diseases, most \
+likely first, each with a one-sentence reason."""
+
+FILLED = "Not ranked by the agent: filled in from the phenotype tools' order."
 
 
 LAST_TURN = (
@@ -138,15 +166,20 @@ def _error_for_model(error: Exception, request: Any) -> str | None:
 
 
 class Agent:
-    name = "agent"
-
-    def __init__(self, model: BaseChatModel, model_name: str, hpo: HPO) -> None:
+    def __init__(
+        self, model: BaseChatModel, model_name: str, hpo: HPO, *, seeded: bool = False
+    ) -> None:
         self.model_name = model_name
         self.hpo = hpo
+        self.seeded = seeded
+        self.name = "seeded-agent" if seeded else "agent"
+        rank, check, lookup = RankDiseases(hpo), CheckMatch(hpo), LookupDisease(hpo)
+        self.seed = RankThenCheck(rank, check)
+        self.lookup = lookup
         tools: list[RankDiseases | CheckMatch | LookupDisease | FindDisease] = [
-            RankDiseases(hpo),
-            CheckMatch(hpo),
-            LookupDisease(hpo),
+            rank,
+            check,
+            lookup,
             FindDisease(hpo),
         ]
         self.tool_names = [t.name for t in tools]
@@ -158,24 +191,32 @@ class Agent:
         self.graph = create_agent(
             model,
             tools=[as_langchain_tool(t) for t in tools],
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt=SEEDED_SYSTEM_PROMPT if seeded else SYSTEM_PROMPT,
             response_format=ToolStrategy(FinalAnswer),
             middleware=middleware,
         )
 
     def params(self) -> dict[str, Any]:
-        return {
+        params: dict[str, Any] = {
             "model": self.model_name,
             "thinking": False,
-            "prompt_version": PROMPT_VERSION,
+            "prompt_version": SEEDED_PROMPT_VERSION if self.seeded else PROMPT_VERSION,
             "max_model_calls": MAX_MODEL_CALLS,
             "tools": ", ".join(self.tool_names),
             "hpo_release": self.hpo.release,
         }
+        if self.seeded:
+            params |= {"seed": f"rank-then-check top {SHOWN}", "fill": "the tools' order"}
+        return params
 
     def predict(self, question: Question) -> list[Candidate]:
+        prompt = user_prompt(question)
+        if self.seeded:
+            ordered = self.seed.ordered(question)
+            shown = [(r, self.lookup(m.disease_id, max_features=1)) for m, r in ordered[:SHOWN]]
+            prompt += "\n\n" + candidates_block(shown)
         result = self.graph.invoke(
-            {"messages": [HumanMessage(user_prompt(question))]},
+            {"messages": [HumanMessage(prompt)]},
             # A backstop only: each turn is several graph steps (middleware hooks, the
             # model, the tools); the model-call limit is what bounds a run.
             {"recursion_limit": 10 * MAX_MODEL_CALLS},
@@ -197,4 +238,11 @@ class Agent:
                     reason=d.reason,
                 )
             )
+        if self.seeded:
+            listed = {c.disease_id for c in candidates}
+            for match, _ in ordered:
+                if len(candidates) >= 10:
+                    break
+                if match.disease_id not in listed:
+                    candidates.append(candidate(match).model_copy(update={"reason": FILLED}))
         return candidates
