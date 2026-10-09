@@ -1,6 +1,7 @@
 """The `raredx` command line. Thin: every command calls into the package and prints."""
 
 import functools
+import hashlib
 import statistics
 from datetime import datetime
 from pathlib import Path
@@ -200,6 +201,7 @@ SYSTEMS = (
     "rank-then-check",
     "similar-patients",
     "disease-texts",
+    "gene-rank",
     "fixed-pipeline",
     "agent",
     "seeded-agent",
@@ -275,7 +277,7 @@ def _text_search(evals_dir: Path, data_dir: Path) -> "SearchDiseaseTexts":
 
 
 # Tools an agent can be given beyond the four core ones; --without leaves one out.
-EXTRA_TOOLS = ("find_similar_patients", "search_disease_texts")
+EXTRA_TOOLS = ("find_similar_patients", "search_disease_texts", "rank_candidate_genes")
 
 
 def _model_client() -> "OpenAI":
@@ -294,6 +296,7 @@ def _system(
     data_dir: Path,
     similarity: str | None = None,
     without: tuple[str, ...] = (),
+    with_genes: bool = False,
 ) -> System:
     if name == "oracle":
         return Oracle.from_cases(cases)
@@ -319,6 +322,13 @@ def _system(
         from raredx.baselines.disease_texts import DiseaseTextsRank
 
         return DiseaseTextsRank(_text_search(evals_dir, data_dir))
+    if name == "gene-rank":
+        from raredx.baselines.gene_rank import GeneRank
+        from raredx.tools.rank_candidate_genes import RankCandidateGenes
+
+        if not with_genes:
+            _fail("gene-rank ranks candidate genes: run it with --with-genes")
+        return GeneRank(RankCandidateGenes(_knowledge(evals_dir, data_dir)))
     if name == "fixed-pipeline":
         from raredx.baselines.fixed_pipeline import FixedPipeline
         from raredx.tools.check_match import CheckMatch
@@ -346,6 +356,10 @@ def _system(
             extra.append(_patient_bank(cases, evals_dir, data_dir))
         if "search_disease_texts" not in without:
             extra.append(_text_search(evals_dir, data_dir))
+        if with_genes and "rank_candidate_genes" not in without:
+            from raredx.tools.rank_candidate_genes import RankCandidateGenes
+
+            extra.append(RankCandidateGenes(knowledge))
         label = f"{name} (without {', '.join(without)})" if without else name
         return Agent(
             model,
@@ -404,6 +418,10 @@ def run_system(
         list[str] | None,
         typer.Option(help=f"The agents: leave out a tool ({' | '.join(EXTRA_TOOLS)}); repeatable."),
     ] = None,
+    with_genes: Annotated[
+        bool,
+        typer.Option(help="The genotype track: each case comes with simulated candidate genes."),
+    ] = False,
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
@@ -420,7 +438,7 @@ def run_system(
     manifest = _manifest(evals_dir, split)
     by_id = {c.id: c for c in cases}
     selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
-    chosen = _system(system, cases, evals_dir, data_dir, similarity, left_out)
+    chosen = _system(system, cases, evals_dir, data_dir, similarity, left_out, with_genes)
     build = case_store.read_build_info(out_dir)
     manifest_sha256 = sources.sha256_of(manifest)
     params = {
@@ -434,18 +452,28 @@ def run_system(
     system_params = getattr(chosen, "params", None)
     if callable(system_params):  # e.g. the model, thinking mode and prompt version
         params.update(system_params())
+    label, dataset_sha256, genes = split, manifest_sha256, None
+    if with_genes:  # its own experiment and dataset: a different exam
+        from raredx.evals import candidates
+
+        knowledge = _knowledge(evals_dir, data_dir)
+        genes = {c.id: candidates.candidate_genes(c, knowledge) for c in selected}
+        label = f"{split}+genes"
+        dataset_sha256 = hashlib.sha256(f"{manifest_sha256} {candidates.SPEC}".encode()).hexdigest()
+        params |= {"label": label, "track": "phenotype+genes", "candidates": candidates.SPEC}
     from raredx.evals.harness import IncompleteRun
 
     harness = _harness()
     try:
         run_id, summary = harness.evaluate(
             chosen,
-            split,
-            manifest_sha256,
+            label,
+            dataset_sha256,
             selected,
             params,
             mask_source_papers=mask_source_paper,
             hidden_of=_hidden_of(evals_dir, data_dir),
+            genes=genes,
         )
     except IncompleteRun as e:
         _fail(str(e))
@@ -461,7 +489,7 @@ def run_system(
         usage["usage/cost_usd_estimate"] = round(cost, 4)
         harness.log_metrics(run_id, usage)
     unmasked = "" if mask_source_paper else " · unmasked"
-    typer.echo(scoring.render(summary, f"{chosen.name} · {split}{unmasked}"))
+    typer.echo(scoring.render(summary, f"{chosen.name} · {label}{unmasked}"))
     if summary.n_answered < summary.n_cases:
         missing = summary.n_cases - summary.n_answered
         typer.echo(f"note: {missing} cases got no answer; their traces in MLflow show why")
@@ -471,7 +499,7 @@ def run_system(
             f"tokens, about ${usage['usage/cost_usd_estimate']:.2f} at peak price; "
             f"{usage['usage/seconds_per_case']:.1f} s per case"
         )
-    typer.echo(f"recorded in MLflow: experiment eval/{split}, run {run_id}")
+    typer.echo(f"recorded in MLflow: experiment eval/{label}, run {run_id}")
     if mask_source_paper:
         run = harness.client.get_run(run_id).data
         audit = (
@@ -504,7 +532,8 @@ def score_run(
     except (ManifestMismatch, IncompleteRun) as e:
         _fail(str(e))
     typer.echo(scoring.render(summary, f"{params['system']} · {params['manifest']} · rescored"))
-    typer.echo(f"recorded in MLflow: experiment eval/{params['manifest']}, run {new_id}")
+    label = params.get("label", params["manifest"])
+    typer.echo(f"recorded in MLflow: experiment eval/{label}, run {new_id}")
 
 
 @eval_app.command("compare")
@@ -599,6 +628,9 @@ def serve_mcp(
         )
     else:
         typer.echo("no processed cases: serving without find_similar_patients", err=True)
+    from raredx.tools.rank_candidate_genes import RankCandidateGenes
+
+    extra.append(RankCandidateGenes(knowledge))
     registry = sources.load_sources(evals_dir / "datasets.toml")
     if (_text_index_dir(registry, data_dir, knowledge.release) / "index.json").exists():
         extra.append(_text_search(evals_dir, data_dir))

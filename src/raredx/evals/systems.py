@@ -1,7 +1,8 @@
 """Systems under evaluation, and the boundary they work behind.
 
-A system sees a Question — the phenotype — and nothing else: no diagnosis, no
-gene, no source paper. Whatever the system is, a fixed baseline or the agent,
+A system sees a Question — the phenotype, and in the genotype track a list of
+candidate genes from (simulated) sequencing — and nothing else: no diagnosis,
+no causal gene, no source paper. Whatever the system is, a fixed baseline or the agent,
 it answers with a ranked list of Candidates, best first.
 
 Two reference systems live here to calibrate the scorer, not to be reported:
@@ -24,6 +25,8 @@ class Question(BaseModel):
     hpo_ids: list[str]
     hpo_labels: list[str]
     sex: str | None
+    # The phenotype + genotype track only: simulated sequencing (evals/candidates.py).
+    candidate_genes: list[str] | None = None
 
 
 class Candidate(BaseModel):

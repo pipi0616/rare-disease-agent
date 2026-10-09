@@ -104,3 +104,10 @@ def test_index_says_to_fetch_the_texts_first(tmp_path: Path) -> None:
     )
     assert result.exit_code == 1
     assert "raredx data fetch orphanet medlineplus" in result.output
+
+
+def test_gene_rank_needs_the_genotype_track(tmp_path: Path) -> None:
+    from raredx.cli import _system
+
+    with pytest.raises(typer.Exit):
+        _system("gene-rank", [], EVALS, tmp_path)

@@ -21,6 +21,7 @@ from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
 from raredx.tools.check_match import CheckMatch
 from raredx.tools.find_similar_patients import FindSimilarPatients
+from raredx.tools.rank_candidate_genes import RankCandidateGenes
 from raredx.tools.rank_diseases import RankDiseases
 
 OFFERED: list[list[str]] = []  # the tools offered to the model, call by call
@@ -224,3 +225,29 @@ def test_a_tool_without_a_prompt_guide_is_refused(hpo: HPO) -> None:
 
     with pytest.raises(ValueError, match="mystery_tool"):
         Agent(ScriptedModel(messages=iter([])), "deepseek-flash", hpo, extra_tools=[Unguided()])
+
+
+def test_candidate_genes_reach_the_model_and_the_gene_tool_is_offered(hpo: HPO, case: Case) -> None:
+    OFFERED.clear()
+    RECEIVED.clear()
+    moves = iter(
+        [
+            call("rank_candidate_genes", hpo_ids=case.hpo_ids, genes=["GENEA", "GENEE"]),
+            answer(("OMIM:690001", "Hearing-ovarian syndrome", "GENEA's disease fits")),
+        ]
+    )
+    system = Agent(
+        ScriptedModel(messages=moves), "deepseek-flash", hpo, extra_tools=[RankCandidateGenes(hpo)]
+    )
+    question = question_of(case).model_copy(update={"candidate_genes": ["GENEA", "GENEE"]})
+    system.predict(question)
+    assert "rank_candidate_genes" in OFFERED[0]
+    assert "Candidate genes from sequencing (at most one is causal): GENEA, GENEE" in str(
+        RECEIVED[0][1].content
+    )
+
+
+def test_without_candidate_genes_the_prompt_has_no_genes_line(hpo: HPO, case: Case) -> None:
+    RECEIVED.clear()
+    agent(hpo, iter([answer(("OMIM:690001", "x", "fits"))])).predict(question_of(case))
+    assert "Candidate genes" not in str(RECEIVED[0][1].content)

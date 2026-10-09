@@ -85,6 +85,10 @@ GUIDES = {
     "their confirmed diagnoses (from Phenopacket Store, not the HPO annotations). Call it "
     "beside rank_diseases: a disease several similar patients share is a strong candidate, "
     "even one the ranking missed.",
+    "rank_candidate_genes": "the patient's candidate genes from sequencing, ranked by how "
+    "well the diseases each is known to cause match the phenotype. Use it first when the "
+    "patient has candidate genes: a disease of a well-ranked gene is a strong candidate. A "
+    "gene with no known disease may still be causal, but cannot be scored.",
     "search_disease_texts": "search what Orphanet and MedlinePlus write about diseases, in "
     "your own words: key findings, or a disease's name. Use it to read how a candidate is "
     "described, or to find diseases described with findings the other tools weigh poorly; "

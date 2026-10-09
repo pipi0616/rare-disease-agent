@@ -18,6 +18,7 @@ from raredx.mcp_server import build
 from raredx.tools.check_match import CheckMatch
 from raredx.tools.find_similar_patients import FindSimilarPatients
 from raredx.tools.lookup_disease import LookupDisease
+from raredx.tools.rank_candidate_genes import RankCandidateGenes
 from raredx.tools.rank_diseases import RankDiseases
 from raredx.tools.search_disease_texts import SearchDiseaseTexts
 
@@ -122,3 +123,12 @@ async def test_given_a_text_index_the_server_adds_search_disease_texts(
         assert "search_disease_texts" in tools
         result = await c.call_tool("search_disease_texts", {"query": "night blindness"})
         assert "OMIM:690002" in text(result)
+
+
+@pytest.mark.anyio
+async def test_the_gene_tool_can_be_served(hpo: HPO) -> None:
+    async with Client(build(hpo, [RankCandidateGenes(hpo)]), raise_exceptions=True) as c:
+        result = await c.call_tool(
+            "rank_candidate_genes", {"hpo_ids": ["HP:0000407"], "genes": ["GENEA", "NOVEL1"]}
+        )
+        assert "GENEA" in text(result) and "NOVEL1" in text(result)

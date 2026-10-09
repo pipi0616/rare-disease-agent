@@ -44,6 +44,12 @@ def user_prompt(question: Question) -> str:
         f"- {label} ({term})"
         for label, term in zip(question.hpo_labels, question.hpo_ids, strict=True)
     ]
+    if question.candidate_genes:
+        lines += [
+            "",
+            "Candidate genes from sequencing (at most one is causal): "
+            + ", ".join(question.candidate_genes),
+        ]
     return "\n".join(lines)
 
 

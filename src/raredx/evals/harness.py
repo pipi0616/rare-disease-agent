@@ -60,10 +60,14 @@ def experiment_name(manifest: str) -> str:
 # ── data ────────────────────────────────────────────────────────────
 
 
-def record_of(case: Case) -> dict[str, Any]:
+def record_of(case: Case, candidate_genes: list[str] | None = None) -> dict[str, Any]:
     """One evaluation record: what the system sees, and what the scorer checks against."""
     question = Question(
-        case_id=case.id, hpo_ids=case.hpo_ids, hpo_labels=case.hpo_labels, sex=case.sex
+        case_id=case.id,
+        hpo_ids=case.hpo_ids,
+        hpo_labels=case.hpo_labels,
+        sex=case.sex,
+        candidate_genes=candidate_genes,
     )
     expectations: dict[str, str] = {
         "disease_id": case.disease_id,
@@ -148,8 +152,15 @@ class Harness:
         mlflow.set_experiment(experiment_id=experiment_id)
         return experiment_id
 
-    def dataset(self, manifest: str, manifest_sha256: str, cases: list[Case]) -> EvaluationDataset:
-        """The manifest as an MLflow evaluation dataset, registered once and reused."""
+    def dataset(
+        self,
+        manifest: str,
+        manifest_sha256: str,
+        cases: list[Case],
+        genes: dict[str, list[str]] | None = None,
+    ) -> EvaluationDataset:
+        """The manifest as an MLflow evaluation dataset, registered once and reused. With
+        candidate genes it is the genotype track's: a name and a hash of its own."""
         experiment_id = self._use(manifest)
         for existing in datasets.search_datasets(experiment_ids=[experiment_id]):
             if existing.name == manifest:
@@ -161,7 +172,7 @@ class Harness:
         dataset = datasets.create_dataset(
             name=manifest, experiment_id=[experiment_id], tags={"manifest_sha256": manifest_sha256}
         )
-        dataset.merge_records([record_of(c) for c in cases])
+        dataset.merge_records([record_of(c, (genes or {}).get(c.id)) for c in cases])
         return dataset  # type: ignore[no-any-return]  # create_dataset is untyped
 
     def evaluate(
@@ -174,6 +185,7 @@ class Harness:
         *,
         mask_source_papers: bool = True,
         hidden_of: Callable[[str], set[str]] | None = None,
+        genes: dict[str, list[str]] | None = None,
     ) -> tuple[str, scoring.Summary]:
         """Run the system on the manifest and record it; returns the MLflow run id and Summary.
 
@@ -184,7 +196,7 @@ class Harness:
         A masked run is then audited (leak_audit). `hidden_of` gives, for a paper, the
         diseases known only from it; without it only the paper itself is looked for.
         """
-        data = self.dataset(manifest, manifest_sha256, cases)
+        data = self.dataset(manifest, manifest_sha256, cases, genes)
         papers = {c.id: c.pmid for c in cases}
 
         # The root span of every trace: one per question. Anything the system calls
@@ -298,7 +310,7 @@ class Harness:
             raise ManifestMismatch(
                 f"the manifest changed since run {run_id}; scores would not compare"
             )
-        self._use(params["manifest"])
+        self._use(params.get("label", params["manifest"]))
         traces = self.traces(run_id)
         if len(traces) != expected:
             raise IncompleteRun(f"run {run_id} recorded {len(traces)} of {expected} answers")

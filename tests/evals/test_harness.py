@@ -216,3 +216,17 @@ def test_a_system_that_reads_no_tool_outputs_is_not_called_a_pass(
 ) -> None:
     run_id, _ = harness.evaluate(Oracle.from_cases(cases), "toy", "sha-1", cases, {"system": "o"})
     assert harness.client.get_run(run_id).data.tags["leak_audit"] == "no tool outputs"
+
+
+def test_the_genotype_track_puts_the_candidate_genes_in_the_question(cases: list[Case]) -> None:
+    record = h.record_of(cases[0], ["GENEA", "DAP3"])
+    assert record["inputs"]["question"]["candidate_genes"] == ["GENEA", "DAP3"]
+    assert h.record_of(cases[0])["inputs"]["question"]["candidate_genes"] is None
+
+
+def test_a_genotype_run_records_its_own_dataset(harness: h.Harness, cases: list[Case]) -> None:
+    genes = {c.id: ["DAP3", "GENEA"] for c in cases}
+    params = {"system": "oracle", "manifest": "toy", "label": "toy+genes"}
+    harness.evaluate(Oracle.from_cases(cases), "toy+genes", "sha-g", cases, params, genes=genes)
+    dataset = harness.dataset("toy+genes", "sha-g", cases, genes)
+    assert dataset.name == "toy+genes"

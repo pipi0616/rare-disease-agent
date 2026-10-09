@@ -37,7 +37,8 @@ Tools for diagnosing rare diseases from a patient's phenotype, coded as HPO term
 (Human Phenotype Ontology). Start with rank_diseases on the patient's terms, and
 find_similar_patients beside it when it is served; then weigh candidates with
 check_match and read them with lookup_disease, or search_disease_texts for how
-they are described; find_disease gives the id of a disease known by name.
+they are described; find_disease gives the id of a disease known by name. With
+candidate genes from sequencing, rank_candidate_genes ranks them by phenotype.
 Answers cite the sources they rest on."""
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)

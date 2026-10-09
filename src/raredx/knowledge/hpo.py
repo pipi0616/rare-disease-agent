@@ -190,6 +190,11 @@ class HPO:
         self.release = release
         self._lines, self.names = _annotations(folder / ANNOTATIONS)
         self.genes = _genes(folder / GENES)
+        diseases_of_gene: dict[str, list[str]] = defaultdict(list)
+        for disease, symbols in sorted(self.genes.items()):
+            for symbol in symbols:
+                diseases_of_gene[symbol].append(disease)
+        self.diseases_of_gene = {g: tuple(ds) for g, ds in diseases_of_gene.items()}
         self.disease_ids = sorted(self.names)
         self._index = {d: i for i, d in enumerate(self.disease_ids)}
         self._profiles = [self._profile(d) for d in self.disease_ids]
