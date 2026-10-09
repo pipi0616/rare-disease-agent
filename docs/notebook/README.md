@@ -29,6 +29,8 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 （找不到 raredx 内核的话，在项目目录运行一次：
 `uv run python -m ipykernel install --user --name raredx --display-name "raredx (.venv)"`）
 
+防泄露是整个项目里最要紧的一件事：每个工具做了什么、怎么检查，见 [防泄露说明](../leakage.md)。
+
 ## 目录
 
 | 章 | 内容 |
@@ -51,3 +53,4 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [15](15_agent.ipynb) | 第一个 agent：让大模型自己决定查什么（怎么让它按规矩停下来） |
 | [16](16_error_analysis.ipynb) | 改进 agent：先看错题，再决定做什么（新开局、补满 10 个、定下工具清单） |
 | [17](17_similar_patients.ipynb) | 第四个工具：找相似的病人（病例检索，以及检索类工具怎么防泄露） |
+| [18](18_disease_texts.ipynb) | 第五个工具：查疾病介绍（RAG：切块、向量库、混合检索，单独评测检索） |

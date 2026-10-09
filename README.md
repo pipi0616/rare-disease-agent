@@ -8,14 +8,16 @@ ranked candidate diseases and genes with cited evidence. Evaluated on public,
 leakage-controlled case collections against classical, fixed-pipeline and
 single-call baselines.
 
-**Status:** the first agent, five tools, and the baselines it is measured against. Tools:
+**Status:** the first agent, six tools, and the baselines it is measured against. Tools:
 `rank_diseases` (every OMIM disease ranked against the patient's phenotype),
 `lookup_disease` (one disease's features with their frequencies, inheritance,
 onset, genes and sources, sized for a model to read), `check_match` (the
 patient's findings against one disease: explained, unexplained, contradicted,
 and the disease's frequent features the patient lacks), `find_disease` (a
-disease's OMIM id from its name) and `find_similar_patients` (the published
-patients whose phenotype is closest, with their confirmed diagnoses). On the
+disease's OMIM id from its name), `find_similar_patients` (the published
+patients whose phenotype is closest, with their confirmed diagnoses) and
+`search_disease_texts` (Orphanet and MedlinePlus descriptions, hybrid
+retrieval, each passage with its source). On the
 200-case dev set (recall of the confirmed disease, 95% intervals):
 
 | system | top-1 | top-10 |
@@ -25,6 +27,7 @@ patients whose phenotype is closest, with their confirmed diagnoses). On the
 | rank, then check: T2's top 30 reordered by findings explained (no model) | 30.5% | 54.5% [47.6–61.3] |
 | nearest published patients alone (tool T5, no model) | 29.0% | 46.5% [39.7–53.4] |
 | phenotype similarity alone (tool T2, no model) | 19.0% | 49.0% [42.2–55.9] |
+| disease texts alone (tool T6, hybrid retrieval, no model) | 8.0% | 17.0% [12.4–22.8] |
 | a single call to `deepseek-flash`, no tools | 14.5% | 28.0% [22.2–34.6] |
 | floor: the same diseases for every patient | 0.5% | 9.0% |
 
@@ -34,7 +37,8 @@ cases come from. Every evaluation therefore masks each case's paper from the
 knowledge the tools read; the 49.0% is the masked number.
 Masked, 41 of the 200 confirmed diseases have no phenotype left in HPO —
 mostly diseases known from that single paper — so phenotype ranking alone
-cannot pass about 80% here.
+cannot pass about 80% here. How each tool is kept from the answer, and how
+every run is audited for it, is written up in `docs/leakage.md`.
 
 The fixed pipeline's gain at first place is paired, not just a higher rate:
 on the same 200 cases it was right where rank-then-check was wrong 11 times,
@@ -58,6 +62,11 @@ different diseases: either one's top 10 holds the confirmed disease about
 half the time, the two together 59.5%. Its bank is the design split, each
 case's own paper masked; bank and cases share one curation style, so the
 number is likely optimistic for a clinician's free-text findings.
+
+Text retrieval, the second, finds the exact disease far less often (17.0%
+top-10; hybrid beat dense, 9.5%, and BM25, 15.5%): descriptions differ little
+between subtypes. In the agent it supplies descriptions and citations; the
+ablation will say what that is worth.
 
 ## Run
 
