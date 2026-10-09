@@ -23,7 +23,7 @@ patients whose phenotype is closest, with their confirmed diagnoses). On the
 | agent: the model calls the four tools as it decides, up to 8 turns | **39.0%** [32.5–45.9] | 54.0% [47.1–60.8] |
 | fixed pipeline: the tools' top 10 with their evidence, ranked by one model call | 35.5% [29.2–42.3] | 54.5% [47.6–61.3] |
 | rank, then check: T2's top 30 reordered by findings explained (no model) | 30.5% | 54.5% [47.6–61.3] |
-| nearest published patients alone (tool T5, no model) | 29.0% | 47.5% [40.7–54.4] |
+| nearest published patients alone (tool T5, no model) | 29.0% | 46.5% [39.7–53.4] |
 | phenotype similarity alone (tool T2, no model) | 19.0% | 49.0% [42.2–55.9] |
 | a single call to `deepseek-flash`, no tools | 14.5% | 28.0% [22.2–34.6] |
 | floor: the same diseases for every patient | 0.5% | 9.0% |
@@ -55,7 +55,7 @@ on dev-200, with one ablation run per tool.
 The first of them, nearest published patients, beats the disease ranking at
 first place on its own (35 cases to 15 paired, p = 0.007), and the two find
 different diseases: either one's top 10 holds the confirmed disease about
-half the time, the two together 60.5%. Its bank is the design split, each
+half the time, the two together 59.5%. Its bank is the design split, each
 case's own paper masked; bank and cases share one curation style, so the
 number is likely optimistic for a clinician's free-text findings.
 
