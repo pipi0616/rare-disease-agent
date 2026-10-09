@@ -7,6 +7,9 @@
               Each answer is a trace; a failure is an ERROR trace and scores as a miss.
     mask      while the system works on a case, the case's source paper is hidden from
               the knowledge its tools read, so no tool reads the answer.
+    api       a case that failed because the model API failed (no credit, rate limit,
+              server error, timeout) says nothing about the system: such failures are
+              counted apart and the run is tagged model_api_errors, to be rerun.
     audit     after the run, every tool output in the traces is read back: none may
               show the case's own paper, or a disease known only from it. The counts
               are logged, and the run is tagged leak_audit=passed or failed — or "no
@@ -43,6 +46,19 @@ from raredx.evals.systems import Candidate, Question, System
 from raredx.knowledge import masking
 
 HEADLINE = ("disease_top1", "disease_top10", "gene_top10")
+
+# Exceptions of the OpenAI SDK that mean the API failed, not the system under test.
+MODEL_API_ERRORS = frozenset(
+    {
+        "APIConnectionError",
+        "APIStatusError",
+        "APITimeoutError",
+        "AuthenticationError",
+        "InternalServerError",
+        "PermissionDeniedError",
+        "RateLimitError",
+    }
+)
 
 
 class ManifestMismatch(Exception):
@@ -216,6 +232,10 @@ class Harness:
             result = mlflow.genai.evaluate(data=data, predict_fn=predict, scorers=[diagnosis])
             mlflow.log_metric("usage/wall_seconds", round(time.monotonic() - started, 1))
             self._check_complete(run.info.run_id, expected=len(cases))
+            api_errors, first = self.model_api_errors(run.info.run_id)
+            mlflow.log_metric("errors/model_api", api_errors)
+            if api_errors:
+                mlflow.set_tag("model_api_errors", first)
             if mask_source_papers:
                 audit = self.leak_audit(run.info.run_id, papers, hidden_of)
                 mlflow.log_metrics(audit)
@@ -246,6 +266,21 @@ class Harness:
                 f"only {recorded} of {expected} answers were recorded in MLflow; "
                 "the run is marked failed and was not scored — run it again"
             )
+
+    def model_api_errors(self, run_id: str) -> tuple[int, str]:
+        """How many cases failed because the model API failed, and the first such error."""
+        count, first = 0, ""
+        for trace in self.traces(run_id):
+            errors = [
+                e.attributes
+                for span in trace.data.spans
+                for e in span.events
+                if e.name == "exception" and e.attributes.get("exception.type") in MODEL_API_ERRORS
+            ]
+            if errors:
+                count += 1
+                first = first or str(errors[0].get("exception.message", ""))[:300]
+        return count, first
 
     def leak_audit(
         self,

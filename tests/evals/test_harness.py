@@ -8,9 +8,11 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+import httpx2
 import mlflow
 import pytest
 from mlflow.entities import Feedback, SpanType
+from openai import APIStatusError
 
 from raredx.data.cases import Case
 from raredx.evals import harness as h
@@ -230,3 +232,27 @@ def test_a_genotype_run_records_its_own_dataset(harness: h.Harness, cases: list[
     harness.evaluate(Oracle.from_cases(cases), "toy+genes", "sha-g", cases, params, genes=genes)
     dataset = harness.dataset("toy+genes", "sha-g", cases, genes)
     assert dataset.name == "toy+genes"
+
+
+class OutOfCredit:
+    """Fails every case the way the model API does when the account has no credit."""
+
+    name = "out-of-credit"
+
+    def predict(self, question: Question) -> list[Candidate]:
+        raise APIStatusError(
+            "Error code: 402 - Insufficient Balance",
+            response=httpx2.Response(402, request=httpx2.Request("POST", "https://api.test")),
+            body=None,
+        )
+
+
+def test_a_model_api_failure_is_counted_apart_from_the_systems_misses(
+    harness: h.Harness, cases: list[Case]
+) -> None:
+    run_id, _ = harness.evaluate(OutOfCredit(), "toy", "sha-1", cases, {"system": "x"})
+    run = harness.client.get_run(run_id).data
+    assert run.metrics["errors/model_api"] == 3
+    assert "Insufficient Balance" in run.tags["model_api_errors"]
+    flaky, _ = harness.evaluate(Flaky(), "toy", "sha-1", cases, {"system": "flaky"})
+    assert harness.client.get_run(flaky).data.metrics["errors/model_api"] == 0  # its own error

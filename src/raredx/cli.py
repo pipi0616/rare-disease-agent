@@ -500,6 +500,13 @@ def run_system(
             f"{usage['usage/seconds_per_case']:.1f} s per case"
         )
     typer.echo(f"recorded in MLflow: experiment eval/{label}, run {run_id}")
+    run_data = harness.client.get_run(run_id).data
+    if run_data.metrics.get("errors/model_api"):
+        _fail(
+            f"{run_data.metrics['errors/model_api']:.0f} cases failed because the model API "
+            f"failed ({run_data.tags.get('model_api_errors', '')}): these numbers are not the "
+            "system's — fix the cause and run again"
+        )
     if mask_source_paper:
         run = harness.client.get_run(run_id).data
         audit = (
