@@ -56,3 +56,10 @@ def test_each_ranking_is_recorded_as_a_tool_span(rank: RankCandidateGenes) -> No
     assert trace is not None
     [span] = trace.data.spans
     assert (span.name, span.span_type) == ("rank_candidate_genes", "TOOL")
+
+
+def test_a_gene_whose_disease_has_no_phenotype_annotations_cannot_be_scored(
+    rank: RankCandidateGenes,
+) -> None:
+    # GENEF causes OMIM:699998, which has no phenotype annotation in the release.
+    assert rank([SNHL], ["GENEF", "GENEA"]).no_known_disease == ["GENEF"]

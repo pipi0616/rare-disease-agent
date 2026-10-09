@@ -190,8 +190,12 @@ class HPO:
         self.release = release
         self._lines, self.names = _annotations(folder / ANNOTATIONS)
         self.genes = _genes(folder / GENES)
+        # Each gene's diseases, those with phenotype annotations only: the others have no
+        # name or profile here, so nothing can be said or scored about them.
         diseases_of_gene: dict[str, list[str]] = defaultdict(list)
         for disease, symbols in sorted(self.genes.items()):
+            if disease not in self.names:
+                continue
             for symbol in symbols:
                 diseases_of_gene[symbol].append(disease)
         self.diseases_of_gene = {g: tuple(ds) for g, ds in diseases_of_gene.items()}

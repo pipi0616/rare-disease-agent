@@ -6,7 +6,7 @@ of them, if any, is causal. Phenopacket Store records the causal gene but not
 the rest of the exome, so the rest is simulated:
 
 - the case's causal gene, and 49 decoys drawn from the genes HPO associates
-  with an OMIM disease (Mendelian): a filtered exome restricted to known
+  with an annotated OMIM disease (Mendelian): a filtered exome restricted to known
   disease genes, in order of magnitude;
 - no decoy is associated with the case's own disease, so no decoy is right;
 - the draw is seeded by the case id: the same list every run;
@@ -25,7 +25,10 @@ from raredx.data.cases import Case
 from raredx.knowledge.hpo import HPO
 
 N_CANDIDATES = 50
-SPEC = f"genes-v1: causal + {N_CANDIDATES - 1} decoys from HPO's Mendelian OMIM disease genes"
+SPEC = (
+    f"genes-v2: causal + {N_CANDIDATES - 1} decoys "
+    "from HPO's Mendelian genes of annotated OMIM diseases"
+)
 
 
 def candidate_genes(case: Case, hpo: HPO, n: int = N_CANDIDATES) -> list[str]:

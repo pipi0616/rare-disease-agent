@@ -42,7 +42,17 @@ def test_genes_are_the_mendelian_ones(hpo: HPO) -> None:
         "OMIM:690001": ("GENEA",),
         "OMIM:690002": ("GENEB1", "GENEB2"),
         "OMIM:690005": ("GENEE",),
+        "OMIM:699998": ("GENEF",),  # a disease with no phenotype annotation
     }
+
+
+def test_a_genes_diseases_are_those_with_phenotype_annotations(hpo: HPO) -> None:
+    assert hpo.diseases_of_gene == {
+        "GENEA": ("OMIM:690001",),
+        "GENEB1": ("OMIM:690002",),
+        "GENEB2": ("OMIM:690002",),
+        "GENEE": ("OMIM:690005",),
+    }  # GENEF's only disease has no annotation: nothing can be said about it
 
 
 def test_masking_a_paper_removes_only_what_rests_on_it_alone(hpo: HPO) -> None:
