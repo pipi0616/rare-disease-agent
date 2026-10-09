@@ -242,9 +242,9 @@ def test_candidate_genes_reach_the_model_and_the_gene_tool_is_offered(hpo: HPO, 
     question = question_of(case).model_copy(update={"candidate_genes": ["GENEA", "GENEE"]})
     system.predict(question)
     assert "rank_candidate_genes" in OFFERED[0]
-    assert "Candidate genes from sequencing (at most one is causal): GENEA, GENEE" in str(
-        RECEIVED[0][1].content
-    )
+    first = str(RECEIVED[0][1].content)
+    assert "Candidate genes from sequencing (at most one is causal): GENEA, GENEE" in first
+    assert "none of whose genes is on this list is unlikely" in first
 
 
 def test_without_candidate_genes_the_prompt_has_no_genes_line(hpo: HPO, case: Case) -> None:

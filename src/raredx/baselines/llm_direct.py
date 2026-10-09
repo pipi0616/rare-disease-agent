@@ -49,6 +49,8 @@ def user_prompt(question: Question) -> str:
             "",
             "Candidate genes from sequencing (at most one is causal): "
             + ", ".join(question.candidate_genes),
+            "The patient was sequenced: a disease none of whose genes is on this list is "
+            "unlikely, however well its phenotype fits.",
         ]
     return "\n".join(lines)
 
