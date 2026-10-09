@@ -8,7 +8,7 @@ ranked candidate diseases and genes with cited evidence. Evaluated on public,
 leakage-controlled case collections against classical, fixed-pipeline and
 single-call baselines.
 
-**Status:** the first agent, seven tools, and the baselines it is measured against. Tools:
+**Status:** the agent, evaluated and ablated, with seven tools and the baselines it is measured against. Tools:
 `rank_diseases` (every OMIM disease ranked against the patient's phenotype),
 `lookup_disease` (one disease's features with their frequencies, inheritance,
 onset, genes and sources, sized for a model to read), `check_match` (the
@@ -19,12 +19,16 @@ patients whose phenotype is closest, with their confirmed diagnoses) and
 `search_disease_texts` (Orphanet and MedlinePlus descriptions, hybrid
 retrieval, each passage with its source), and, when the patient has been
 sequenced, `rank_candidate_genes` (candidate genes ranked by how well their
-diseases match the phenotype). On the
-200-case dev set (recall of the confirmed disease, 95% intervals):
+diseases match the phenotype). The agent gets the four core tools and
+`find_similar_patients` (and `rank_candidate_genes` with sequencing data);
+the text search, which the ablation found worth nothing, is served over MCP
+and given to the agent only with `--with-texts`. On the 200-case dev set
+(recall of the confirmed disease, 95% intervals):
 
 | system | top-1 | top-10 |
 |---|---|---|
-| agent: the model calls the four tools as it decides, up to 8 turns | **39.0%** [32.5–45.9] | 54.0% [47.1–60.8] |
+| **final agent**: starts from the fixed pipeline's evidence, then calls its tools as it decides, up to 8 turns | **40.5%** [33.9–47.4] | **58.5%** [51.6–65.1] |
+| first agent (four tools, no head start) | 39.0% [32.5–45.9] | 54.0% [47.1–60.8] |
 | fixed pipeline: the tools' top 10 with their evidence, ranked by one model call | 35.5% [29.2–42.3] | 54.5% [47.6–61.3] |
 | rank, then check: T2's top 30 reordered by findings explained (no model) | 30.5% | 54.5% [47.6–61.3] |
 | nearest published patients alone (tool T5, no model) | 29.0% | 46.5% [39.7–53.4] |
@@ -45,18 +49,27 @@ every run is audited for it, is written up in `docs/leakage.md`.
 The fixed pipeline's gain at first place is paired, not just a higher rate:
 on the same 200 cases it was right where rank-then-check was wrong 11 times,
 and the reverse once (sign test p = 0.006), for about $0.27 a run.
-The agent's lead over the fixed pipeline is not established yet: paired at
-first place it is 14 cases to 7 (p = 0.19), and at top-10 10 to 11. Its ten
-top-10 wins are all diseases the ranking never showed it — ones it thought
-of, found by name and checked — while it often listed fewer than ten
-answers. It costs about $1.17 a run at peak price ($0.58 off-peak).
+The final agent's lead over the fixed pipeline is established: paired on the
+same 200 cases and masking rules, 12 cases to 2 at first place (sign test
+p = 0.013) and 10 to 2 in the top ten (p = 0.039). The first agent's lead was
+14 to 7 (p = 0.19), not established. A run costs about $0.55 off-peak (about
+49,000 input tokens per case, most of them cached).
 
 An error analysis of the agent's 122 first-place misses, computed from its
 traces, found 77 retrieval failures — the right disease never appeared in any
 tool output — and 45 judgment failures. The next tools target them, and a
 seeded variant (`seeded-agent`) starts from the fixed pipeline's evidence and
-fills a short answer list from the tools' order. They are evaluated together
-on dev-200, with one ablation run per tool.
+fills a short answer list from the tools' order. They were evaluated
+together on dev-200 (chapter 20), one ablation run per tool: similar-patient
+retrieval was worth about three points at first place (10 cases to 4,
+p = 0.18; kept); the text search nothing measurable (4 to 2, p = 0.69) for 18%
+more tokens (dropped from the agent). The error analysis repeated on the
+final agent shows the bottleneck moved from retrieval (40 -> 23 cases) to
+judgment between close relatives (29 -> 46). Three ways of re-judging the
+recorded evidence in one call — an evidence table, a review of the agent's
+ranking, thinking mode — did not beat the agent's own judgment; with
+sequencing data, the final agent ties the no-model gene ranking (62.5% vs
+62.0% top-1).
 
 The first of them, nearest published patients, beats the disease ranking at
 first place on its own (35 cases to 15 paired, p = 0.007), and the two find
