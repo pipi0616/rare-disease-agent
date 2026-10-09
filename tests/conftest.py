@@ -1,14 +1,20 @@
 """Shared test helpers."""
 
+import re
+import zlib
+from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
+import numpy as np
 import pytest
 
 from raredx.data.cases import Case
+from raredx.knowledge import texts
 from raredx.knowledge.hpo import HPO, load
+from raredx.knowledge.text_index import TextIndex
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -88,6 +94,42 @@ def patients(make_case: Callable[..., Case]) -> list[Case]:
         )
         for case_id, terms, disease, label, gene in rows
     ]
+
+
+class WordEmbedder:
+    """Stands in for the embedding models: a vector of word counts, dense and sparse
+    alike. No download, no model; texts sharing words come out close."""
+
+    DIM = 256
+
+    def _counts(self, text: str) -> Counter[int]:
+        return Counter(
+            zlib.crc32(w.encode()) % self.DIM for w in re.findall(r"[a-z]+", text.lower())
+        )
+
+    def passages(self, texts: list[str]) -> tuple[np.ndarray, list[tuple[list[int], list[float]]]]:
+        rows = [self.query(t) for t in texts]
+        return np.array([r[0] for r in rows], dtype=np.float32), [r[1] for r in rows]
+
+    def query(self, text: str) -> tuple[list[float], tuple[list[int], list[float]]]:
+        counts = self._counts(text)
+        dense = [float(counts.get(i, 0)) for i in range(self.DIM)]
+        indices = sorted(counts)
+        return dense, (indices, [float(counts[i]) for i in indices])
+
+
+@pytest.fixture(scope="session")
+def word_embedder() -> WordEmbedder:
+    return WordEmbedder()
+
+
+@pytest.fixture(scope="session")
+def text_index() -> TextIndex:
+    """The miniature disease texts (tests/fixtures/texts), indexed with WordEmbedder."""
+    passages = texts.read(FIXTURES / "texts", FIXTURES / "texts")
+    embedder = WordEmbedder()
+    dense, sparse = embedder.passages([p.text for p in passages])
+    return TextIndex(passages, dense, sparse, embedder, {"sources": "test texts"})
 
 
 class FakeLLM:

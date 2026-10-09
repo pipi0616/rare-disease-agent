@@ -233,6 +233,19 @@ class HPO:
         """The sources HPO's annotation of the disease was curated from."""
         return {ref for line in self._lines.get(disease, []) for ref in line.refs}
 
+    def known_only_from(self, masked: frozenset[str]) -> set[str]:
+        """Diseases citing a masked source with no observed feature left once it is
+        masked: what HPO knows of them comes from the masked papers alone. Any other
+        description of such a disease likely rests on the same papers."""
+        affected: set[str] = set()
+        for ref in masked:
+            affected |= self._citing.get(ref, set())
+        return {
+            disease
+            for disease in affected
+            if not any(not absent(line.frequency) for line in self.lines(disease, "P", masked))
+        }
+
     def cites(self, disease: str, reference: str) -> bool:
         """Whether HPO's annotation of the disease cites this reference."""
         return disease in self._citing.get(reference, set())

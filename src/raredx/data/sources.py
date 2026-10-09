@@ -25,6 +25,9 @@ class Source(BaseModel):
     homepage: str
     license: str
     role: str
+    # True when the upstream serves only its latest file at an unversioned URL: the
+    # sha256 is then the only pin, and a changed upstream fails it rather than slip in.
+    latest_only: bool = False
 
 
 def load_sources(path: Path) -> dict[str, Source]:

@@ -85,6 +85,10 @@ GUIDES = {
     "their confirmed diagnoses (from Phenopacket Store, not the HPO annotations). Call it "
     "beside rank_diseases: a disease several similar patients share is a strong candidate, "
     "even one the ranking missed.",
+    "search_disease_texts": "search what Orphanet and MedlinePlus write about diseases, in "
+    "your own words: key findings, or a disease's name. Use it to read how a candidate is "
+    "described, or to find diseases described with findings the other tools weigh poorly; "
+    "cite the source.",
 }
 
 

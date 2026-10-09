@@ -89,3 +89,18 @@ def test_without_takes_only_an_extra_tool_and_only_for_the_agents(tmp_path: Path
         app, [*base, "--system", "phenotype-rank", "--without", "find_similar_patients"]
     )
     assert result.exit_code == 1 and "agents only" in result.output
+
+
+def test_every_extra_tool_has_a_line_in_the_agent_prompt() -> None:
+    from raredx.agent import GUIDES
+    from raredx.cli import EXTRA_TOOLS
+
+    assert set(EXTRA_TOOLS) <= set(GUIDES)
+
+
+def test_index_says_to_fetch_the_texts_first(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app, ["data", "index", "--data-dir", str(tmp_path), "--evals-dir", str(EVALS)]
+    )
+    assert result.exit_code == 1
+    assert "raredx data fetch orphanet medlineplus" in result.output

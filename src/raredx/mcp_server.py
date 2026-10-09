@@ -18,7 +18,7 @@ in its own process.
 
 import functools
 import inspect
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from mcp.server import MCPServer
@@ -28,7 +28,6 @@ from mcp.types import ToolAnnotations
 from raredx.knowledge.hpo import HPO
 from raredx.tools.check_match import CheckMatch
 from raredx.tools.find_disease import FindDisease
-from raredx.tools.find_similar_patients import FindSimilarPatients
 from raredx.tools.ids import UnknownDisease
 from raredx.tools.lookup_disease import LookupDisease
 from raredx.tools.rank_diseases import RankDiseases
@@ -37,20 +36,19 @@ INSTRUCTIONS = """\
 Tools for diagnosing rare diseases from a patient's phenotype, coded as HPO terms
 (Human Phenotype Ontology). Start with rank_diseases on the patient's terms, and
 find_similar_patients beside it when it is served; then weigh candidates with
-check_match and read them with lookup_disease; find_disease gives the id of a
-disease known by name. Answers cite the sources they rest on."""
+check_match and read them with lookup_disease, or search_disease_texts for how
+they are described; find_disease gives the id of a disease known by name.
+Answers cite the sources they rest on."""
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, open_world_hint=False)
 
 
-def build(hpo: HPO, similar: FindSimilarPatients | None = None) -> MCPServer:
-    """The MCP server over one HPO release, and over a bank of published patients when
-    one is given."""
+def build(hpo: HPO, extra: Sequence[Any] = ()) -> MCPServer:
+    """The MCP server over one HPO release: the four core tools, and any extra ones
+    built over other knowledge (published patients, disease texts)."""
     server = MCPServer("raredx", instructions=INSTRUCTIONS)
     tools: list[Any] = [RankDiseases(hpo), LookupDisease(hpo), CheckMatch(hpo), FindDisease(hpo)]
-    if similar is not None:
-        tools.append(similar)
-    for tool in tools:
+    for tool in [*tools, *extra]:
         server.add_tool(
             _as_mcp_tool(tool.__call__, tool.name),
             name=tool.name,

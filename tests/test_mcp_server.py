@@ -13,11 +13,13 @@ from mcp.types import TextContent
 
 from raredx.data.cases import Case
 from raredx.knowledge.hpo import HPO
+from raredx.knowledge.text_index import TextIndex
 from raredx.mcp_server import build
 from raredx.tools.check_match import CheckMatch
 from raredx.tools.find_similar_patients import FindSimilarPatients
 from raredx.tools.lookup_disease import LookupDisease
 from raredx.tools.rank_diseases import RankDiseases
+from raredx.tools.search_disease_texts import SearchDiseaseTexts
 
 
 @pytest.fixture
@@ -101,9 +103,22 @@ async def test_malformed_arguments_are_refused_before_the_tool_runs(client: Clie
 async def test_given_a_patient_bank_the_server_adds_find_similar_patients(
     hpo: HPO, patients: list[Case]
 ) -> None:
-    server = build(hpo, FindSimilarPatients(hpo, patients, "test bank"))
+    server = build(hpo, [FindSimilarPatients(hpo, patients, "test bank")])
     async with Client(server, raise_exceptions=True) as c:
         tools = {t.name: t for t in (await c.list_tools()).tools}
         assert "find_similar_patients" in tools and len(tools) == 5
         result = await c.call_tool("find_similar_patients", {"hpo_ids": ["HP:0000407"]})
         assert "PMID:2001" in text(result)
+
+
+@pytest.mark.anyio
+async def test_given_a_text_index_the_server_adds_search_disease_texts(
+    hpo: HPO, text_index: TextIndex
+) -> None:
+    async with Client(
+        build(hpo, [SearchDiseaseTexts(text_index, hpo)]), raise_exceptions=True
+    ) as c:
+        tools = {t.name for t in (await c.list_tools()).tools}
+        assert "search_disease_texts" in tools
+        result = await c.call_tool("search_disease_texts", {"query": "night blindness"})
+        assert "OMIM:690002" in text(result)

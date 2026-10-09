@@ -1,9 +1,10 @@
 """The `raredx` command line. Thin: every command calls into the package and prints."""
 
+import functools
 import statistics
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, NoReturn
+from typing import TYPE_CHECKING, Annotated, Any, NoReturn
 
 import typer
 
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
     from raredx.knowledge.hpo import HPO
     from raredx.tools.find_similar_patients import FindSimilarPatients
     from raredx.tools.rank_diseases import RankDiseases
+    from raredx.tools.search_disease_texts import SearchDiseaseTexts
 
 app = typer.Typer(help="raredx — rare-disease diagnosis agent.", no_args_is_help=True)
 data_app = typer.Typer(help="Datasets: fetch, build and inspect.", no_args_is_help=True)
@@ -100,6 +102,34 @@ def build(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.
 
 
 @data_app.command()
+def index(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir) -> None:
+    """Embed the disease texts (Orphanet, MedlinePlus) for search; a few minutes, once."""
+    from raredx.knowledge import texts
+    from raredx.knowledge.text_index import FastEmbedder, TextIndex
+
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    folders = {name: sources.raw_dir(registry[name], data_dir) for name in TEXT_SOURCES}
+    missing = [name for name, folder in folders.items() if not any(folder.glob("*.xml"))]
+    if missing:
+        _fail(f"no {', '.join(missing)} download — run `raredx data fetch {' '.join(missing)}`")
+    knowledge = _knowledge(evals_dir, data_dir)
+    passages = []
+    for passage in texts.read(folders["orphanet"], folders["medlineplus"]):
+        known = [d for d in passage.disease_ids if d in knowledge.names]
+        if known:  # OMIM ids HPO does not know as diseases (e.g. gene entries) are dropped
+            passages.append(passage.model_copy(update={"disease_ids": known}))
+    typer.echo(f"embedding {len(passages)} passages ...")
+    dense, sparse = FastEmbedder(data_dir / "models").passages([p.text for p in passages])
+    info = {
+        "sources": ", ".join(f"{n} {registry[n].version}" for n in TEXT_SOURCES),
+        "hpo_release": knowledge.release,
+    }
+    folder = _text_index_dir(registry, data_dir, knowledge.release)
+    TextIndex.save(folder, passages, dense, sparse, info)
+    typer.echo(f"ok  {folder}: {len(passages)} passages")
+
+
+@data_app.command()
 def stats(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir) -> None:
     """Summarise the processed cases."""
     out_dir, cases = _processed(data_dir, evals_dir)
@@ -167,6 +197,7 @@ SYSTEMS = (
     "phenotype-rank",
     "rank-then-check",
     "similar-patients",
+    "disease-texts",
     "fixed-pipeline",
     "agent",
     "seeded-agent",
@@ -175,6 +206,7 @@ SYSTEMS = (
 )
 
 
+@functools.cache  # one release per process (hpo3 holds one ontology); load it once
 def _knowledge(evals_dir: Path, data_dir: Path) -> "HPO":
     """The pinned HPO release, loaded; a clear message if it was never fetched."""
     from raredx.knowledge import hpo
@@ -216,8 +248,32 @@ def _patient_bank(
     return FindSimilarPatients(_knowledge(evals_dir, data_dir), bank, name)
 
 
+TEXT_SOURCES = ("orphanet", "medlineplus")
+
+
+def _text_index_dir(
+    registry: dict[str, "sources.Source"], data_dir: Path, hpo_release: str
+) -> Path:
+    versions = "_".join(f"{n}-{registry[n].version}" for n in TEXT_SOURCES)
+    return data_dir / "processed" / "disease-texts" / f"{versions}_hpo-{hpo_release}"
+
+
+def _text_search(evals_dir: Path, data_dir: Path) -> "SearchDiseaseTexts":
+    """Tool T6 over the embedded disease texts; a clear message if they were never built."""
+    from raredx.knowledge.text_index import INFO, FastEmbedder, TextIndex
+    from raredx.tools.search_disease_texts import SearchDiseaseTexts
+
+    knowledge = _knowledge(evals_dir, data_dir)
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    folder = _text_index_dir(registry, data_dir, knowledge.release)
+    if not (folder / INFO).exists():
+        _fail(f"{folder} has no text index — run `raredx data index` first")
+    index = TextIndex.load(folder, FastEmbedder(data_dir / "models"))
+    return SearchDiseaseTexts(index, knowledge)
+
+
 # Tools an agent can be given beyond the four core ones; --without leaves one out.
-EXTRA_TOOLS = ("find_similar_patients",)
+EXTRA_TOOLS = ("find_similar_patients", "search_disease_texts")
 
 
 def _model_client() -> "OpenAI":
@@ -257,6 +313,10 @@ def _system(
         from raredx.baselines.similar_patients import SimilarPatientsRank
 
         return SimilarPatientsRank(_patient_bank(cases, evals_dir, data_dir))
+    if name == "disease-texts":
+        from raredx.baselines.disease_texts import DiseaseTextsRank
+
+        return DiseaseTextsRank(_text_search(evals_dir, data_dir))
     if name == "fixed-pipeline":
         from raredx.baselines.fixed_pipeline import FixedPipeline
         from raredx.tools.check_match import CheckMatch
@@ -279,9 +339,11 @@ def _system(
             model = llm.chat_model(settings)
         except llm.MissingAPIKey as e:
             _fail(str(e))
-        extra = []
+        extra: list[Any] = []
         if "find_similar_patients" not in without:
             extra.append(_patient_bank(cases, evals_dir, data_dir))
+        if "search_disease_texts" not in without:
+            extra.append(_text_search(evals_dir, data_dir))
         label = f"{name} (without {', '.join(without)})" if without else name
         return Agent(
             model,
@@ -497,18 +559,25 @@ def serve_mcp(
     knowledge = _knowledge(evals_dir, data_dir)
     # Serving is not an exam: the patient bank holds every published patient.
     out_dir = sources.processed_dir(_source(evals_dir), data_dir)
-    similar = None
+    extra: list[object] = []
     if (out_dir / case_store.CASES_FILE).exists():
-        similar = _patient_bank(
-            case_store.read(out_dir), evals_dir, data_dir, splits_used=("design", "heldout")
+        extra.append(
+            _patient_bank(
+                case_store.read(out_dir), evals_dir, data_dir, splits_used=("design", "heldout")
+            )
         )
     else:
         typer.echo("no processed cases: serving without find_similar_patients", err=True)
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    if (_text_index_dir(registry, data_dir, knowledge.release) / "index.json").exists():
+        extra.append(_text_search(evals_dir, data_dir))
+    else:
+        typer.echo("no text index: serving without search_disease_texts", err=True)
     # A host shows the server's stderr as its log; keep MLflow's routine INFO lines out.
     logging.getLogger("mlflow").setLevel(logging.WARNING)
     mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
     mlflow.set_experiment("mcp-server")  # every call a host makes is traced here
-    server = build(knowledge, similar)
+    server = build(knowledge, extra)
     server.run(transport="streamable-http" if transport == "streamable-http" else "stdio")
 
 

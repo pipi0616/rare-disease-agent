@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A miniature of Orphadata's en_product1.xml, for tests -->
+<JDBOR date="2099-01-01" version="test">
+  <DisorderList count="4">
+    <Disorder id="1">
+      <OrphaCode>9101</OrphaCode>
+      <Name lang="en">Hearing-ovarian syndrome</Name>
+      <ExternalReferenceList count="1">
+        <ExternalReference id="1">
+          <Source>OMIM</Source>
+          <Reference>690001</Reference>
+          <DisorderMappingRelation id="1"><Name lang="en">E (Exact mapping: the two concepts are equivalent)</Name></DisorderMappingRelation>
+        </ExternalReference>
+      </ExternalReferenceList>
+      <SummaryInformationList count="1"><SummaryInformation id="1"><TextSectionList count="1">
+        <TextSection id="1" lang="en">
+          <TextSectionType id="1"><Name lang="en">Definition</Name></TextSectionType>
+          <Contents>A rare syndrome of &lt;i&gt;sensorineural hearing loss&lt;/i&gt; with ovarian failure and absent menstruation.</Contents>
+        </TextSection>
+      </TextSectionList></SummaryInformation></SummaryInformationList>
+    </Disorder>
+    <Disorder id="2">
+      <OrphaCode>9102</OrphaCode>
+      <Name lang="en">Seizure disorders, group</Name>
+      <ExternalReferenceList count="1">
+        <ExternalReference id="2">
+          <Source>OMIM</Source>
+          <Reference>690003</Reference>
+          <DisorderMappingRelation id="2"><Name lang="en">BTNT (Broader term maps to a narrower term)</Name></DisorderMappingRelation>
+        </ExternalReference>
+      </ExternalReferenceList>
+      <SummaryInformationList count="1"><SummaryInformation id="2"><TextSectionList count="1">
+        <TextSection id="2" lang="en">
+          <TextSectionType id="1"><Name lang="en">Definition</Name></TextSectionType>
+          <Contents>A group of disorders with seizures.</Contents>
+        </TextSection>
+      </TextSectionList></SummaryInformation></SummaryInformationList>
+    </Disorder>
+    <Disorder id="3">
+      <OrphaCode>9103</OrphaCode>
+      <Name lang="en">Seizure disorder</Name>
+      <ExternalReferenceList count="1">
+        <ExternalReference id="3">
+          <Source>OMIM</Source>
+          <Reference>690003</Reference>
+          <DisorderMappingRelation id="3"><Name lang="en">E (Exact mapping: the two concepts are equivalent)</Name></DisorderMappingRelation>
+        </ExternalReference>
+      </ExternalReferenceList>
+    </Disorder>
+    <Disorder id="4">
+      <OrphaCode>9104</OrphaCode>
+      <Name lang="en">Amenorrhea known from one paper</Name>
+      <ExternalReferenceList count="1">
+        <ExternalReference id="4">
+          <Source>OMIM</Source>
+          <Reference>690004</Reference>
+          <DisorderMappingRelation id="4"><Name lang="en">E (Exact mapping: the two concepts are equivalent)</Name></DisorderMappingRelation>
+        </ExternalReference>
+      </ExternalReferenceList>
+      <SummaryInformationList count="1"><SummaryInformation id="4"><TextSectionList count="1">
+        <TextSection id="4" lang="en">
+          <TextSectionType id="1"><Name lang="en">Definition</Name></TextSectionType>
+          <Contents>Primary amenorrhea described in a single family.</Contents>
+        </TextSection>
+      </TextSectionList></SummaryInformation></SummaryInformationList>
+    </Disorder>
+  </DisorderList>
+</JDBOR>
