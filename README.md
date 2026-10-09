@@ -8,20 +8,22 @@ ranked candidate diseases and genes with cited evidence. Evaluated on public,
 leakage-controlled case collections against classical, fixed-pipeline and
 single-call baselines.
 
-**Status:** the first agent, four tools, and the baselines it is measured against. Tools:
+**Status:** the first agent, five tools, and the baselines it is measured against. Tools:
 `rank_diseases` (every OMIM disease ranked against the patient's phenotype),
 `lookup_disease` (one disease's features with their frequencies, inheritance,
 onset, genes and sources, sized for a model to read), `check_match` (the
 patient's findings against one disease: explained, unexplained, contradicted,
-and the disease's frequent features the patient lacks) and `find_disease` (a
-disease's OMIM id from its name). On the 200-case dev set (recall of the
-confirmed disease, 95% intervals):
+and the disease's frequent features the patient lacks), `find_disease` (a
+disease's OMIM id from its name) and `find_similar_patients` (the published
+patients whose phenotype is closest, with their confirmed diagnoses). On the
+200-case dev set (recall of the confirmed disease, 95% intervals):
 
 | system | top-1 | top-10 |
 |---|---|---|
 | agent: the model calls the four tools as it decides, up to 8 turns | **39.0%** [32.5–45.9] | 54.0% [47.1–60.8] |
 | fixed pipeline: the tools' top 10 with their evidence, ranked by one model call | 35.5% [29.2–42.3] | 54.5% [47.6–61.3] |
 | rank, then check: T2's top 30 reordered by findings explained (no model) | 30.5% | 54.5% [47.6–61.3] |
+| nearest published patients alone (tool T5, no model) | 29.0% | 47.5% [40.7–54.4] |
 | phenotype similarity alone (tool T2, no model) | 19.0% | 49.0% [42.2–55.9] |
 | a single call to `deepseek-flash`, no tools | 14.5% | 28.0% [22.2–34.6] |
 | floor: the same diseases for every patient | 0.5% | 9.0% |
@@ -49,6 +51,13 @@ tool output — and 45 judgment failures. The next tools target them, and a
 seeded variant (`seeded-agent`) starts from the fixed pipeline's evidence and
 fills a short answer list from the tools' order. They are evaluated together
 on dev-200, with one ablation run per tool.
+
+The first of them, nearest published patients, beats the disease ranking at
+first place on its own (35 cases to 15 paired, p = 0.007), and the two find
+different diseases: either one's top 10 holds the confirmed disease about
+half the time, the two together 60.5%. Its bank is the design split, each
+case's own paper masked; bank and cases share one curation style, so the
+number is likely optimistic for a clinician's free-text findings.
 
 ## Run
 
@@ -100,7 +109,7 @@ and `evals/splits/` (frozen case-ID manifests):
 
 ## Tools over MCP
 
-The three tools are served over the Model Context Protocol, the standard way AI
+The tools are served over the Model Context Protocol, the standard way AI
 applications call tools (`src/raredx/mcp_server.py`, the official MCP Python SDK):
 
 ```bash
