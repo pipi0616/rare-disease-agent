@@ -1,0 +1,9 @@
+# Published patients offered as examples (GET /v1/examples): one case of the heldout-papers
+# manifest per line, and what the held-out evaluation of v1.0 recorded for it. Ids only: the
+# cases themselves are read from the processed Phenopacket Store, never kept in git.
+case_id	title	in_evaluation
+PMID_15710732_15_month_old_male_patient	An easy case	Every system put the published diagnosis first, the phenotype ranking included.
+PMID_25681079_proband_FKT118	One the agent rescued	The phenotype ranking did not have the published diagnosis in its top ten; the agent put it first.
+PMID_22701786_proband	Sequencing moves it to first place	From the phenotype alone the agent had the published diagnosis in its top ten, not first; with candidate genes, first.
+PMID_25045150_Patient_III_5	Sequencing finds what the phenotype missed	From the phenotype alone the agent missed the published diagnosis; with candidate genes it put it first.
+PMID_20375004_4_II_1	One nobody can answer	No system found the published diagnosis from the phenotype: HPO describes the disease from this patient's own paper only, which is left out.

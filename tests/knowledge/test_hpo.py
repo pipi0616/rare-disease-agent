@@ -154,3 +154,14 @@ def test_how_a_finding_stands_to_a_feature(
     hpo: HPO, finding: str, feature: str, relation: str | None
 ) -> None:
     assert hpo.relation(finding, feature) == relation
+
+
+def test_terms_for_findings_are_found_by_name_whatever_the_case(hpo: HPO) -> None:
+    assert hpo.search("HEARING") == [
+        ("HP:0000365", "Hearing impairment"),  # names starting with the text first
+        ("HP:0000407", "Sensorineural hearing impairment"),  # then the shorter
+        ("HP:0008619", "Bilateral sensorineural hearing impairment"),
+    ]  # the obsolete "Old hearing term" is not offered
+    assert hpo.search("hearing", limit=1) == [("HP:0000365", "Hearing impairment")]
+    assert hpo.search("recessive") == []  # inheritance is not a finding
+    assert hpo.search("onset") == [] and hpo.search("  ") == []

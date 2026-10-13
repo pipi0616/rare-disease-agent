@@ -20,6 +20,7 @@ from raredx.evals.systems import Oracle, Popularity, System
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from fastapi import FastAPI
     from openai import OpenAI
 
     from raredx.evals.harness import Harness
@@ -700,6 +701,121 @@ def serve_mcp(
     mlflow.set_experiment("mcp-server")  # every call a host makes is traced here
     server = build(knowledge, extra)
     server.run(transport="streamable-http" if transport == "streamable-http" else "stdio")
+
+
+# ── service ─────────────────────────────────────────────────────────
+
+
+SERVICE_EXPERIMENT = "service"
+
+
+def _service(data_dir: Path, evals_dir: Path) -> "FastAPI":
+    """The HTTP service around the final system, built as the evaluation built it:
+    the seeded agent with the patient bank, and the same with the gene tool for
+    requests that carry candidate genes. Without a model API key, the fallback alone."""
+    import mlflow
+
+    from raredx import llm
+    from raredx.agent import Agent
+    from raredx.service import examples
+    from raredx.service.app import create_app
+    from raredx.service.diagnoser import Diagnoser
+    from raredx.tools.rank_candidate_genes import RankCandidateGenes
+
+    knowledge = _knowledge(evals_dir, data_dir)
+    _, cases = _processed(data_dir, evals_dir)
+    used = ("design",) if settings.service_patient_bank == "evaluated" else ("design", "heldout")
+    bank = _patient_bank(cases, evals_dir, data_dir, splits_used=used)
+    mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+    if mlflow.get_experiment_by_name(SERVICE_EXPERIMENT) is None:
+        # A local store keeps the traces' files under the configured root, as the
+        # evaluation's experiments do; a tracking server decides for itself.
+        local = not settings.mlflow_tracking_uri.startswith("http")
+        root = (settings.mlflow_artifact_root / SERVICE_EXPERIMENT).resolve().as_uri()
+        mlflow.create_experiment(SERVICE_EXPERIMENT, artifact_location=root if local else None)
+    mlflow.set_experiment(SERVICE_EXPERIMENT)  # every request is traced here
+    agent = with_genes = unavailable = None
+    try:
+        model = llm.chat_model(settings, timeout=settings.service_deadline_seconds, max_retries=1)
+    except llm.MissingAPIKey:
+        unavailable = "no model API key is configured"
+        typer.echo("no model API key: serving the no-model ranking only", err=True)
+    else:
+        name = settings.llm_model
+        agent = Agent(model, name, knowledge, seeded=True, extra_tools=[bank])
+        with_genes = Agent(
+            model, name, knowledge, seeded=True, extra_tools=[bank, RankCandidateGenes(knowledge)]
+        )
+    diagnoser = Diagnoser(
+        knowledge,
+        agent=agent,
+        agent_with_genes=with_genes,
+        unavailable_because=unavailable,
+        deadline_seconds=settings.service_deadline_seconds,
+        prices=(
+            settings.llm_price_input,
+            settings.llm_price_cached_input,
+            settings.llm_price_output,
+        ),
+        code=settings.build_version or code_version(),
+    )
+    key = settings.service_api_key
+    return create_app(
+        diagnoser,
+        examples=examples.load(cases, knowledge),
+        api_key=key.get_secret_value() if key else None,
+        max_concurrent=settings.service_max_concurrent,
+    )
+
+
+@app.command("serve")
+def serve_http(
+    host: Annotated[
+        str, typer.Option(help="127.0.0.1: this machine only. 0.0.0.0: inside a container.")
+    ] = "127.0.0.1",
+    port: int = 8000,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Serve the agent over HTTP: POST /v1/diagnose, its steps as a stream, and /docs."""
+    import logging
+
+    import uvicorn
+
+    service = _service(data_dir, evals_dir)
+    # The service's own log lines (one JSON line per answer), beside uvicorn's access log.
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    log = logging.getLogger("raredx.service")
+    log.addHandler(handler)
+    log.setLevel(logging.INFO)
+    logging.getLogger("mlflow").setLevel(logging.WARNING)
+    uvicorn.run(service, host=host, port=port, log_level="info")
+
+
+@app.command("demo")
+def demo_page(
+    api_url: Annotated[
+        str, typer.Option(help="Where `raredx serve` is listening.")
+    ] = "http://127.0.0.1:8000",
+    host: str = "127.0.0.1",
+    port: int = 8501,
+) -> None:
+    """Open the demo page (Streamlit) on a running `raredx serve`."""
+    import importlib.util
+    import os
+    import sys
+
+    if importlib.util.find_spec("streamlit") is None:
+        _fail("streamlit is not installed — run `uv sync` (it is in the demo group)")
+    page = Path(__file__).parent / "service" / "demo.py"
+    command = [sys.executable, "-m", "streamlit", "run", str(page)]
+    command += ["--server.address", host, "--server.port", str(port)]
+    # No first-run prompt, and no usage statistics sent to Streamlit: nothing leaves.
+    command += ["--server.headless", "true", "--browser.gatherUsageStats", "false"]
+    command += ["--client.toolbarMode", "minimal"]  # no "Deploy" button: this page stays here
+    # Streamlit takes this process's place, so a stop signal reaches it directly.
+    os.execve(sys.executable, command, {**os.environ, "RAREDX_API_URL": api_url})
 
 
 # ── llm ─────────────────────────────────────────────────────────────

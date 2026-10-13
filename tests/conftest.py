@@ -1,5 +1,6 @@
 """Shared test helpers."""
 
+import itertools
 import re
 import zlib
 from collections import Counter
@@ -10,6 +11,9 @@ from typing import Any
 
 import numpy as np
 import pytest
+from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
+from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.outputs import ChatResult
 
 from raredx.data.cases import Case
 from raredx.knowledge import texts
@@ -150,3 +154,35 @@ class FakeLLM:
 def fake_llm() -> type[FakeLLM]:
     """A model client that costs nothing: FakeLLM(reply, ...)."""
     return FakeLLM
+
+
+OFFERED: list[list[str]] = []  # the tools offered to a ScriptedModel, call by call
+RECEIVED: list[list[BaseMessage]] = []  # the messages it was sent, call by call
+
+
+class ScriptedModel(GenericFakeChatModel):
+    """Stands in for the chat model of an agent: plays the given moves, noting what it
+    was offered and sent. The tools, the middleware and the final answer stay real."""
+
+    def bind_tools(self, tools: Any, **kwargs: Any) -> "ScriptedModel":
+        OFFERED.append([t.name for t in tools])
+        return self
+
+    def _generate(self, messages: list[BaseMessage], *args: Any, **kwargs: Any) -> ChatResult:
+        RECEIVED.append(list(messages))
+        return super()._generate(messages, *args, **kwargs)
+
+
+_ids = itertools.count()
+
+
+def call(tool: str, **args: Any) -> AIMessage:
+    """One move: a new message each time, with its own tool-call id, as a real model sends."""
+    tool_call = {"name": tool, "args": args, "id": f"{tool}-{next(_ids)}", "type": "tool_call"}
+    return AIMessage(content="", tool_calls=[tool_call])
+
+
+def answer(*diagnoses: tuple[str, str, str]) -> AIMessage:
+    """The final move: the agent's answer, as (disease id, name, reason) rows."""
+    rows = [{"disease_id": d, "disease_name": n, "reason": r} for d, n, r in diagnoses]
+    return call("FinalAnswer", diagnoses=rows)

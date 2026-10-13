@@ -24,39 +24,51 @@ class MissingAPIKey(Exception):
     pass
 
 
-def client(settings: Settings) -> OpenAI:
-    if settings.llm_api_key is None:
+def api_key(settings: Settings) -> str:
+    """The model API key. A key left empty — .env.example copied and not filled in —
+    is a missing key, said here, not a 401 from the provider later."""
+    key = settings.llm_api_key.get_secret_value() if settings.llm_api_key else ""
+    if not key.strip():
         raise MissingAPIKey("no model API key: put DEEPSEEK_API_KEY=... in .env (see .env.example)")
+    return key
+
+
+def client(settings: Settings) -> OpenAI:
+    key = api_key(settings)
     import mlflow  # imported here: only model runs need it
 
     mlflow.openai.autolog()
     return OpenAI(
         base_url=settings.llm_base_url,
-        api_key=settings.llm_api_key.get_secret_value(),
+        api_key=key,
         timeout=180,
         max_retries=2,  # the SDK retries timeouts, rate limits and 5xx with backoff
     )
 
 
-def chat_model(settings: Settings) -> "BaseChatModel":
+def chat_model(
+    settings: Settings, *, timeout: float = 180, max_retries: int = 2
+) -> "BaseChatModel":
     """The same endpoint as a LangChain chat model, for agents.
 
     Reasoning mode off and temperature 0, as for the single-call baseline. MLflow's
     LangChain autologging traces each model call and tool call of an agent run.
+    The defaults wait long and retry, as suits an evaluation; a service answering
+    someone gives each call less time.
     """
-    if settings.llm_api_key is None:
-        raise MissingAPIKey("no model API key: put DEEPSEEK_API_KEY=... in .env (see .env.example)")
+    key = api_key(settings)
     import mlflow
     from langchain_openai import ChatOpenAI
+    from pydantic import SecretStr
 
     mlflow.langchain.autolog()
     return ChatOpenAI(
         model=settings.llm_model,
         base_url=settings.llm_base_url,
-        api_key=settings.llm_api_key,
+        api_key=SecretStr(key),
         temperature=0.0,
-        timeout=180,
-        max_retries=2,
+        timeout=timeout,
+        max_retries=max_retries,
         extra_body={"thinking": {"type": "disabled"}},
     )
 

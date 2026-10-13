@@ -6,13 +6,11 @@ answer are real.
 
 import itertools
 from collections.abc import Callable, Iterator
-from typing import Any
 
 import pytest
-from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langchain_core.outputs import ChatResult
+from langchain_core.messages import AIMessage, HumanMessage
 
+from conftest import OFFERED, RECEIVED, ScriptedModel, answer, call
 from raredx.agent import (
     FILLED,
     FUSED,
@@ -32,35 +30,6 @@ from raredx.tools.check_match import CheckMatch
 from raredx.tools.find_similar_patients import FindSimilarPatients
 from raredx.tools.rank_candidate_genes import RankCandidateGenes
 from raredx.tools.rank_diseases import RankDiseases
-
-OFFERED: list[list[str]] = []  # the tools offered to the model, call by call
-RECEIVED: list[list[BaseMessage]] = []  # the messages it was sent, call by call
-
-
-class ScriptedModel(GenericFakeChatModel):
-    """A fake chat model that plays the given moves, noting what it was offered and sent."""
-
-    def bind_tools(self, tools: Any, **kwargs: Any) -> "ScriptedModel":
-        OFFERED.append([t.name for t in tools])
-        return self
-
-    def _generate(self, messages: list[BaseMessage], *args: Any, **kwargs: Any) -> ChatResult:
-        RECEIVED.append(list(messages))
-        return super()._generate(messages, *args, **kwargs)
-
-
-_ids = itertools.count()
-
-
-def call(tool: str, **args: Any) -> AIMessage:
-    """One move: a new message each time, with its own tool-call id, as a real model sends."""
-    tool_call = {"name": tool, "args": args, "id": f"{tool}-{next(_ids)}", "type": "tool_call"}
-    return AIMessage(content="", tool_calls=[tool_call])
-
-
-def answer(*diagnoses: tuple[str, str, str]) -> AIMessage:
-    rows = [{"disease_id": d, "disease_name": n, "reason": r} for d, n, r in diagnoses]
-    return call("FinalAnswer", diagnoses=rows)
 
 
 def agent(hpo: HPO, moves: Iterator[AIMessage]) -> Agent:
