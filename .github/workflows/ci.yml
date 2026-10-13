@@ -47,3 +47,53 @@ jobs:
 
       - name: Test
         run: uv run pytest
+
+  # The container image: built, started, and asked a question over HTTP.
+  # There is no model key here, so the service answers from its tools alone
+  # (its fallback) — which is what makes this check free: the image, the
+  # knowledge baked into it and the whole HTTP path are exercised end to end
+  # without a paid call. A change that breaks the image cannot merge.
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The build downloads the pinned knowledge and verifies every sha256.
+      - name: Build
+        run: docker build --build-arg VERSION="${GITHUB_SHA::7}" -t raredx:ci .
+
+      - name: Start
+        run: docker run -d --name raredx -p 127.0.0.1:8000:8000 raredx:ci
+
+      - name: Wait until ready
+        run: |
+          for _ in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8000/readyz; then exit 0; fi
+            sleep 2
+          done
+          exit 1
+
+      # Ectopia lentis, arachnodactyly, aortic root aneurysm: the textbook triad
+      # of Marfan syndrome. The no-model ranking must have it among its ten.
+      - name: Ask a question
+        run: |
+          curl -sf -X POST http://127.0.0.1:8000/v1/diagnose \
+            -H 'content-type: application/json' \
+            -d '{"hpo_ids": ["HP:0001083", "HP:0001166", "HP:0002616"]}' > answer.json
+          python3 - <<'PY'
+          import json, os
+
+          answer = json.load(open("answer.json"))
+          names = [d["disease_name"] for d in answer["diagnoses"]]
+          print(answer["mode"], "|", answer["fallback_reason"], "|", names[:3])
+          assert answer["mode"] == "fallback", answer["mode"]
+          assert "Marfan syndrome" in names, names
+          assert all(d["evidence"]["match"]["explained"] for d in answer["diagnoses"][:3])
+          assert answer["system"]["code"] == os.environ["GITHUB_SHA"][:7], answer["system"]["code"]
+          PY
+
+      - name: Container log
+        if: always()
+        run: docker logs raredx

@@ -1,0 +1,10 @@
+# What `docker build` may not read. An allow-list: everything is kept out, then
+# the few things the image is built from are let in. A new file — a .env, a
+# database, a notebook with outputs — is out by default.
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!src/
+!evals/
+**/__pycache__/
