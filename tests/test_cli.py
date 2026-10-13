@@ -150,3 +150,9 @@ def test_a_key_left_empty_is_a_missing_key(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(settings, "llm_api_key", SecretStr("  "))  # .env.example, not filled in
     with pytest.raises(llm.MissingAPIKey, match="DEEPSEEK_API_KEY"):
         llm.chat_model(settings)
+
+
+def test_lirical_says_what_to_run_when_it_is_not_set_up(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["data", "lirical", "--data-dir", str(tmp_path)])
+    assert result.exit_code == 1
+    assert "raredx data fetch lirical hpo-json" in result.output

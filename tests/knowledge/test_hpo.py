@@ -165,3 +165,32 @@ def test_terms_for_findings_are_found_by_name_whatever_the_case(hpo: HPO) -> Non
     assert hpo.search("hearing", limit=1) == [("HP:0000365", "Hearing impairment")]
     assert hpo.search("recessive") == []  # inheritance is not a finding
     assert hpo.search("onset") == [] and hpo.search("  ") == []
+
+
+def test_the_annotations_are_written_for_another_program_under_the_same_mask(
+    hpo: HPO, tmp_path: Path
+) -> None:
+    def written(*masked: str) -> list[tuple[str, str, str]]:
+        target = tmp_path / "phenotype.hpoa"
+        hpo.write_annotations(target, frozenset(masked))
+        rows = [line.split("\t") for line in target.read_text().splitlines()]
+        return [(r[0], r[3], r[4]) for r in rows if r[0][:5] in ("OMIM:", "ORPHA")]
+
+    published = (FIXTURE / "phenotype.hpoa").read_text()
+    hpo.write_annotations(tmp_path / "as-published.hpoa")
+    assert (tmp_path / "as-published.hpoa").read_text() == published  # nothing masked
+
+    everything = written()
+    # PMID:1002: its own lines go, the NOT line too; the line OMIM also supports stays
+    masked = written("PMID:1002")
+    assert set(everything) - set(masked) == {
+        ("OMIM:690002", "HP:0000407", "PMID:1002"),
+        ("OMIM:690002", "HP:0000786", "PMID:1002"),
+    }
+    assert ("OMIM:690002", "HP:0000510", "PMID:1002;OMIM:690002") in masked
+    # PMID:1004 is all that is known of OMIM:690004: the disease is not in the file
+    assert "OMIM:690004" not in {r[0] for r in written("PMID:1004")}
+    # PMID:1005: OMIM:690005 keeps the feature another paper reports
+    assert [r for r in written("PMID:1005") if r[0] == "OMIM:690005"] == [
+        ("OMIM:690005", "HP:0000407", "PMID:1006")
+    ]

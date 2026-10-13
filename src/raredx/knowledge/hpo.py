@@ -195,7 +195,8 @@ class HPO:
 
     def __init__(self, folder: Path, release: str) -> None:
         self.release = release
-        self._lines, self.names = _annotations(folder / ANNOTATIONS)
+        self._annotations_file = folder / ANNOTATIONS
+        self._lines, self.names = _annotations(self._annotations_file)
         self.genes = _genes(folder / GENES)
         # Each gene's diseases, those with phenotype annotations only: the others have no
         # name or profile here, so nothing can be said or scored about them.
@@ -261,6 +262,21 @@ class HPO:
             for disease in affected
             if not any(not absent(line.frequency) for line in self.lines(disease, "P", masked))
         }
+
+    def write_annotations(self, target: Path, masked: frozenset[str] = frozenset()) -> None:
+        """The release's phenotype.hpoa, for another program to read under the same mask:
+        without the lines resting only on masked sources, and without any line of a
+        disease known only from them — to that program too, such a disease does not
+        exist. With nothing masked, the file as published."""
+        hidden = self.known_only_from(masked)
+        with self._annotations_file.open(newline="") as source, target.open("w", newline="") as out:
+            for line in source:
+                if masked and not line.startswith("#"):
+                    cells = line.split("\t")
+                    refs = {r.strip() for r in cells[4].split(";") if r.strip()}
+                    if cells[0] in hidden or (refs and not refs - masked):
+                        continue
+                out.write(line)
 
     def cites(self, disease: str, reference: str) -> bool:
         """Whether HPO's annotation of the disease cites this reference."""

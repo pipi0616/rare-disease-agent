@@ -133,6 +133,32 @@ def index(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.
     typer.echo(f"ok  {folder}: {len(passages)} passages")
 
 
+@data_app.command("lirical")
+def setup_lirical(
+    data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir
+) -> None:
+    """Set LIRICAL up for comparison runs: unpack the fetched release, let it download
+    its gene and transcript data (about 350 MB), put the pinned HPO release in."""
+    from raredx.baselines import lirical
+
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    tool, ontology = registry["lirical"], registry["hpo-json"]
+    distribution = sources.raw_dir(tool, data_dir) / next(iter(tool.files))
+    hp_json = sources.raw_dir(ontology, data_dir) / lirical.ONTOLOGY
+    if not distribution.exists() or not hp_json.exists():
+        _fail("LIRICAL is not downloaded — run `raredx data fetch lirical hpo-json` first")
+    try:
+        java = lirical.find_java(settings.java)
+    except lirical.JavaNotFound as e:
+        _fail(str(e))
+    folder = sources.processed_dir(tool, data_dir)
+    info = lirical.setup(distribution, hp_json, folder, java)
+    typer.echo(
+        f"ok  {folder}  (LIRICAL {info['lirical']}, HPO {ontology.version}, "
+        f"{info['gene_rows_dropped']} repeated gene rows dropped)"
+    )
+
+
 @data_app.command()
 def stats(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir) -> None:
     """Summarise the processed cases."""
@@ -203,6 +229,7 @@ SYSTEMS = (
     "similar-patients",
     "disease-texts",
     "gene-rank",
+    "lirical",
     "fixed-pipeline",
     "agent",
     "seeded-agent",
@@ -336,6 +363,16 @@ def _system(
         if not with_genes:
             _fail("gene-rank ranks candidate genes: run it with --with-genes")
         return GeneRank(RankCandidateGenes(_knowledge(evals_dir, data_dir)))
+    if name == "lirical":
+        from raredx.baselines import lirical
+
+        registry = sources.load_sources(evals_dir / "datasets.toml")
+        folder = sources.processed_dir(registry["lirical"], data_dir)
+        knowledge = _knowledge(evals_dir, data_dir)
+        try:
+            return lirical.Lirical(knowledge, folder, lirical.find_java(settings.java))
+        except (lirical.LiricalNotSetUp, lirical.JavaNotFound) as e:
+            _fail(str(e))
     if name == "fixed-pipeline":
         from raredx.baselines.fixed_pipeline import FixedPipeline
         from raredx.tools.check_match import CheckMatch

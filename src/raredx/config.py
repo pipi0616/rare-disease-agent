@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     llm_price_cached_input: float = 0.006
     llm_price_output: float = 1.20
 
+    # The `java` that runs LIRICAL (comparison runs only), version 17 or later. Unset:
+    # the one on PATH, or a Homebrew OpenJDK.
+    java: str | None = None
+
     # The HTTP service (`raredx serve`).
     # When set, every /v1 request must carry it as X-API-Key. A secret: .env only.
     service_api_key: SecretStr | None = None
