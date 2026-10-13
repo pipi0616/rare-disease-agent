@@ -8,7 +8,7 @@ ranked candidate diseases and genes with cited evidence. Evaluated on public,
 leakage-controlled case collections against classical, fixed-pipeline and
 single-call baselines.
 
-**Status:** the agent, evaluated and ablated, with seven tools and the baselines it is measured against. Tools:
+**Status:** the agent, evaluated on a held-out set and served over HTTP, with seven tools and the baselines it is measured against. Tools:
 `rank_diseases` (every OMIM disease ranked against the patient's phenotype),
 `lookup_disease` (one disease's features with their frequencies, inheritance,
 onset, genes and sources, sized for a model to read), `check_match` (the
@@ -182,6 +182,67 @@ and `evals/splits/` (frozen case-ID manifests):
 | `heldout` | 4,360 | the full held-out set, never used in development |
 | `heldout-papers` | 840, one per held-out paper | the final run, once (`docs/heldout_plan.md`) |
 
+## As a service
+
+The agent behind an HTTP API (FastAPI), with a demo page that is one client of it:
+
+```bash
+uv run raredx serve     # the API on http://127.0.0.1:8000 — interactive reference at /docs
+uv run raredx demo      # the demo page (Streamlit) on http://127.0.0.1:8501
+docker compose up --build   # or all of it in containers: API, demo page, MLflow server
+```
+
+![The demo page: a published patient, the agent's answer, and the evidence for its first diagnosis](docs/img/demo.png)
+
+```bash
+curl -X POST http://127.0.0.1:8000/v1/diagnose -H 'content-type: application/json' \
+  -d '{"hpo_ids": ["HP:0001083", "HP:0001166", "HP:0002616"], "sex": "male"}'
+```
+
+| endpoint | |
+|---|---|
+| `POST /v1/diagnose` | up to ten diseases, each with the agent's reason and the evidence it rests on (findings explained and not, frequencies, sources) |
+| `POST /v1/diagnose/stream` | the same as server-sent events: each step the agent takes, as it takes it, then the answer |
+| `GET /v1/system` | what is serving: model, prompt version, tools, knowledge release, code commit |
+| `GET /v1/terms?q=`, `GET /v1/examples` | HPO terms by name; published patients to try |
+| `GET /healthz`, `GET /readyz` | liveness and readiness; neither calls the model |
+
+What the service is built to guarantee (`src/raredx/service/`):
+
+- **What answers is what was measured.** The service calls the evaluated
+  agent's `predict` unchanged, built as the evaluation built it — the agent of
+  the phenotype track for a request without candidate genes, of the genotype
+  track for one with them — and, by default, over the patient bank the
+  evaluation used. Its steps are watched from outside, through LangChain's
+  callback mechanism; the agent's code is not touched.
+- **A failing model does not fail the request.** The no-model ranking is
+  computed first for every request (about 0.3 s). If the model API fails, gives no
+  answer, or the deadline passes, that ranking is the answer, and the answer
+  says so (`mode: "fallback"`, with the reason). Its quality is measured too:
+  32.1% top-1 against the agent's 42.4% on the held-out set. A failure of the
+  service's own code is not hidden the same way: it is a 500 with a request id.
+- **Only coded data goes in.** A request is HPO ids, sex, gene symbols and
+  PubMed ids, each matched against a pattern; any other field is refused. No
+  free text means no name or date of birth can reach a log, a trace or the
+  model provider by mistake. The log line of a request holds counts and ids only.
+- **Every request is one MLflow trace**, shaped like an evaluation's — the
+  question in, the candidates out, each model and tool call a span — so a
+  request in production can be read, replayed and judged with the tools built
+  for evaluation runs. The answer carries the trace id.
+- **Bounded.** A concurrency limit (503 with `Retry-After` beyond it), a
+  deadline checked before each model call, an optional API key, and a streaming
+  client that goes away stops the agent before its next model call.
+
+The image holds the code, the locked dependencies and the pinned knowledge
+(downloaded and sha256-verified during the build), and no secret: the model
+key comes from the environment at run time. CI builds the image, starts it
+without a key and asks it a question over HTTP — the whole path, free.
+
+The published patients offered as examples are sent as the evaluation sent
+them (`exclude_sources`: their own paper left out of the knowledge), so the
+demo shows the system under the conditions its numbers come from — including
+one case no system can answer.
+
 ## Tools over MCP
 
 The tools are served over the Model Context Protocol, the standard way AI
@@ -233,10 +294,13 @@ src/raredx/     all application code — an installed package, no path hacks
                   pipeline, one LLM call
   llm.py          the model client (OpenAI SDK, MLflow autologging)
   agent.py        the agent: LangChain's create_agent over the tools, with its bounds
+  service/        the agent as an HTTP service: API, event stream, fallback, client, demo page
   mcp_server.py   the tools over MCP, for any host or agent framework
   mlflow_setup.py process-wide MLflow settings, applied before mlflow loads
 evals/          dataset registry and frozen manifests — what gets evaluated
 tests/          pytest suite; one test per behaviour, no network, no real data
 docs/           plan and design notes; start with docs/00_plan.md
 docs/notebook/  step-by-step engineering notebooks (Chinese): what each step did and why
+Dockerfile      the service as an image: code, locked dependencies, pinned knowledge
+compose.yaml    API + demo page + MLflow tracking server, on one machine
 ```
