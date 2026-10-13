@@ -150,7 +150,8 @@ and `evals/splits/` (frozen case-ID manifests):
 | `dev-200` | 200, one per source paper | every change |
 | `design` | 6,014 | confirming a change at full size |
 | `ci-20` | 20 of dev-200 | the regression check in CI |
-| `heldout` | 4,360 | the final run, once |
+| `heldout` | 4,360 | the full held-out set, never used in development |
+| `heldout-papers` | 840, one per held-out paper | the final run, once (`docs/heldout_plan.md`) |
 
 ## Tools over MCP
 

@@ -111,3 +111,20 @@ def test_gene_rank_needs_the_genotype_track(tmp_path: Path) -> None:
 
     with pytest.raises(typer.Exit):
         _system("gene-rank", [], EVALS, tmp_path)
+
+
+def test_the_heldout_sample_needs_final_too(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "eval",
+            "run",
+            "--system",
+            "oracle",
+            "--split",
+            "heldout-papers",
+            "--data-dir",
+            str(tmp_path),
+        ],
+    )
+    assert result.exit_code == 1 and "--final" in result.output
