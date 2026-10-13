@@ -51,6 +51,14 @@ def test_dev_takes_one_case_per_paper_from_design_only(store: list[Case]) -> Non
     assert all(c.split == "design" for c in dev)
 
 
+def test_the_final_run_takes_one_case_from_every_heldout_paper(store: list[Case]) -> None:
+    heldout = [c for c in store if c.split == "heldout"]
+    sample = splits.sample_per_paper(heldout)
+    assert {c.pmid for c in sample} == {c.pmid for c in heldout}
+    assert len(sample) == 100 and all(c.split == "heldout" for c in sample)
+    assert sample == splits.sample_per_paper(list(reversed(heldout)))  # fixed by the seed
+
+
 def test_sampling_is_fixed_by_the_seed(store: list[Case]) -> None:
     assert splits.build(store) == splits.build(list(reversed(store)))
 

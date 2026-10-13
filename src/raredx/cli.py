@@ -467,7 +467,7 @@ def run_system(
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
     """Evaluate a system on a manifest with MLflow; the run and every answer are recorded."""
-    if split == "heldout" and not final:
+    if split.startswith("heldout") and not final:
         _fail("heldout is the final exam: run it once, with --final, when the design is frozen")
     left_out = tuple(sorted(set(without or [])))
     unknown = [t for t in left_out if t not in EXTRA_TOOLS]
@@ -503,7 +503,10 @@ def run_system(
         from raredx.evals import candidates
 
         knowledge = _knowledge(evals_dir, data_dir)
+        without_gene = [c.id for c in selected if c.gene is None]
+        selected = [c for c in selected if c.gene is not None]  # nothing to sequence otherwise
         genes = {c.id: candidates.candidate_genes(c, knowledge) for c in selected}
+        params["cases_without_a_causal_gene_left_out"] = len(without_gene)
         label = f"{split}+genes"
         dataset_sha256 = hashlib.sha256(f"{manifest_sha256} {candidates.SPEC}".encode()).hexdigest()
         params |= {"label": label, "track": "phenotype+genes", "candidates": candidates.SPEC}
@@ -579,7 +582,9 @@ def score_run(
     manifest = _manifest(evals_dir, params["manifest"])
     from raredx.evals.harness import IncompleteRun, ManifestMismatch
 
-    expected = len(splits.read(manifest))
+    expected = len(splits.read(manifest)) - int(
+        params.get("cases_without_a_causal_gene_left_out", 0)
+    )
     try:
         new_id, summary, _ = harness.rescore(run_id, sources.sha256_of(manifest), expected)
     except (ManifestMismatch, IncompleteRun) as e:
