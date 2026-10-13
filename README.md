@@ -91,8 +91,18 @@ disease, sorted by symbol — genes only, uniform decoys, both stated
 simplifications. With that list, ranking the genes by phenotype alone, no
 model, gets the confirmed disease first in 62.0% of dev-200 cases and in the
 top 10 in 78.5%; the ceiling is 80%, since 40 cases' diseases are known only
-from their own paper, whose gene–disease link is masked with it. It is
-reported apart from the phenotype-only numbers above, never as a gain.
+from their own paper, whose gene–disease link is masked with it. The agent
+alone ties that ranking (62.5%) but is right on different cases, so its
+answer is fused with the gene ranking by reciprocal rank (k = 60, untuned):
+67.0% top-1 and 78.0% top-10, replayed on the recorded runs — 13 cases to 4
+against the agent alone (p = 0.049), 11 to 1 against the gene ranking alone
+(p = 0.006). The track is reported apart from the phenotype-only numbers
+above, never as a gain.
+
+Findings recorded as absent in a patient are not given to any system: they
+count against the right disease more often than a wrong one (14 cases to 9
+among dev-200's near misses), because curators tick them off the true
+disease's own feature table — a leak, so the loader drops them.
 
 ## Run
 
