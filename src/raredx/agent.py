@@ -24,12 +24,17 @@ turns go to what the tools cannot do — a disease they missed, found by name an
 checked. A list shorter than ten is filled from the tools' order; those entries
 say so in their reason.
 
+With candidate genes from sequencing, the agent's ranking is fused with the
+candidate-gene ranking by reciprocal rank (`fuse`): on dev-200 the two were
+right on different cases, and together beat either alone (chapter 20).
+
 The tools run in this process, so the evaluation's mask reaches them exactly as
 it reaches the fixed pipeline's. The prompts are versioned like the baselines'.
 """
 
 import functools
 import inspect
+from collections import defaultdict
 from collections.abc import Callable, Sequence
 from typing import Any
 
@@ -48,6 +53,7 @@ from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import BaseModel, Field, ValidationError
 
 from raredx.baselines.fixed_pipeline import SHOWN, candidates_block
+from raredx.baselines.gene_rank import GeneRank
 from raredx.baselines.llm_direct import user_prompt
 from raredx.baselines.phenotype_rank import candidate
 from raredx.baselines.rank_then_check import RankThenCheck
@@ -135,12 +141,38 @@ def system_prompt(tools: list[str], *, seeded: bool = False) -> str:
 
 
 FILLED = "Not ranked by the agent: filled in from the phenotype tools' order."
+FUSED = "Not ranked by the agent: a candidate gene's disease, from the gene ranking."
+RRF_K = 60  # the usual constant of reciprocal-rank fusion; not tuned
 
 
 LAST_TURN = (
     "Your budget is spent: this is your last turn. Give your final answer now, with the "
     "FinalAnswer tool, from the evidence you have."
 )
+
+
+def fuse(agent: list[Candidate], genes: list[Candidate]) -> list[Candidate]:
+    """The agent's ranking and the candidate-gene ranking as one, by reciprocal rank:
+    a disease both rank high comes first. An entry keeps the agent's reason and the
+    gene ranking's gene; a disease only the gene ranking has says so in its reason."""
+    score: dict[str, float] = defaultdict(float)
+    for ranking in (agent, genes):
+        for rank, c in enumerate(ranking):
+            if c.disease_id:
+                score[c.disease_id] += 1 / (RRF_K + rank)
+    by_agent = {c.disease_id: c for c in agent}
+    by_genes = {c.disease_id: c for c in genes}
+    fused = []
+    for disease_id in sorted(score, key=lambda d: (-score[d], d))[:10]:
+        ranked, gene = by_agent.get(disease_id), by_genes.get(disease_id)
+        if ranked is None:
+            assert gene is not None
+            fused.append(gene.model_copy(update={"reason": FUSED}))
+        elif gene is not None:
+            fused.append(ranked.model_copy(update={"gene": gene.gene or ranked.gene}))
+        else:
+            fused.append(ranked)
+    return fused
 
 
 class Diagnosis(BaseModel):
@@ -216,6 +248,9 @@ class Agent:
         self.lookup = lookup
         tools: list[Any] = [rank, check, lookup, FindDisease(hpo), *extra_tools]
         self.extra_tools = list(extra_tools)
+        self.gene_rank = next(
+            (GeneRank(t) for t in extra_tools if t.name == "rank_candidate_genes"), None
+        )
         self.tool_names = [t.name for t in tools]
         unknown = [n for n in self.tool_names if n not in GUIDES]
         if unknown:
@@ -247,6 +282,8 @@ class Agent:
         for tool in self.extra_tools:
             if hasattr(tool, "bank_name"):
                 params["patient_bank"] = tool.bank_name
+        if self.gene_rank is not None:
+            params["fusion"] = f"reciprocal rank (k={RRF_K}) with the candidate-gene ranking"
         return params
 
     def predict(self, question: Question) -> list[Candidate]:
@@ -285,4 +322,6 @@ class Agent:
                     break
                 if match.disease_id not in listed:
                     candidates.append(candidate(match).model_copy(update={"reason": FILLED}))
+        if self.gene_rank is not None and question.candidate_genes:
+            candidates = fuse(candidates, self.gene_rank.predict(question))
         return candidates
