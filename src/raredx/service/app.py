@@ -99,9 +99,10 @@ def create_app(
         title="raredx",
         version=system.service_version,
         description=DESCRIPTION,
-        # MLflow records each request as one trace, rooted at the question (diagnoser.py).
-        # FastAPI's own OpenTelemetry spans would wrap that root in an HTTP span, trace
-        # every health check, and export wherever OTEL_* variables happen to point.
+        # Tracing here is MLflow's alone: one trace per request, rooted at the question
+        # (diagnoser.py). FastAPI's own OpenTelemetry instrumentation switches itself on
+        # when the environment configures an OTel provider or exporter (OTEL_* variables),
+        # and would then export request data wherever those point. Off, explicitly.
         telemetry={"tracing": False, "metrics": False, "logs": False, "auto_configure": False},
     )
     slots = threading.BoundedSemaphore(max_concurrent)
