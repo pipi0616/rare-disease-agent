@@ -79,3 +79,9 @@ def test_the_sign_test_counts_only_the_cases_the_systems_disagree_on() -> None:
     assert scoring.sign_test(1, 11) == scoring.sign_test(11, 1)  # either order
     assert scoring.sign_test(5, 5) == 1.0  # an even split is no evidence either way
     assert scoring.sign_test(0, 0) == 1.0  # no disagreement, nothing to test
+
+
+def test_a_tiny_p_value_is_not_printed_as_zero() -> None:
+    assert scoring.p_value(4.04e-09) == "p < 0.001"
+    assert scoring.p_value(0.0131) == "p = 0.013"
+    assert scoring.p_value(1.0) == "p = 1.000"

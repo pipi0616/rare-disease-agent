@@ -623,7 +623,7 @@ def compare_runs(
     typer.echo(f"  only {name_a} ({run_a[:8]}) right: {only_a:>4}")
     typer.echo(f"  only {name_b} ({run_b[:8]}) right: {only_b:>4}")
     typer.echo(f"  both right: {both}   neither: {len(hits_a) - both - only_a - only_b}")
-    typer.echo(f"  sign test, two-sided: p = {scoring.sign_test(only_a, only_b):.3f}")
+    typer.echo(f"  sign test, two-sided: {scoring.p_value(scoring.sign_test(only_a, only_b))}")
 
 
 @eval_app.command("runs")
