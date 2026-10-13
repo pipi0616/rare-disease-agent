@@ -22,7 +22,36 @@ sequenced, `rank_candidate_genes` (candidate genes ranked by how well their
 diseases match the phenotype). The agent gets the four core tools and
 `find_similar_patients` (and `rank_candidate_genes` with sequencing data);
 the text search, which the ablation found worth nothing, is served over MCP
-and given to the agent only with `--with-texts`. On the 200-case dev set
+and given to the agent only with `--with-texts`.
+
+**Held-out result (v1.0).** One case from each of 840 papers that share no
+paper with anything used in development; one run per system, on a tagged
+version, under a plan committed beforehand (`docs/heldout_plan.md`). Recall
+of the confirmed disease, 95% intervals:
+
+| system | top-1 | top-10 |
+|---|---|---|
+| **final agent** | **42.4%** [39.1–45.8] | **62.0%** [58.7–65.2] |
+| fixed pipeline | 36.8% [33.6–40.1] | 51.5% [48.2–54.9] |
+| rank, then check (no model) | 32.1% [29.1–35.4] | 51.5% [48.2–54.9] |
+| nearest published patients (no model) | 27.9% [24.9–31.0] | 50.2% [46.9–53.6] |
+| phenotype similarity alone (no model) | 17.5% [15.1–20.2] | 44.4% [41.1–47.8] |
+| a single call to `deepseek-flash`, no tools | 14.3% [12.1–16.8] | 29.0% [26.1–32.2] |
+| *with simulated sequencing:* **final agent** | **65.9%** [62.6–69.0] | **81.4%** [78.6–83.9] |
+| *with simulated sequencing:* gene ranking (no model) | 59.5% [56.1–62.7] | 80.0% [77.1–82.5] |
+
+The pre-registered primary question — is the agent better than the fixed
+pipeline at first place — holds: paired on the same cases, 57 to 10
+(sign test p = 4 × 10⁻⁹); in the top ten, 94 to 6. With sequencing, 59 to 5
+against the gene ranking. All eight runs were valid on the first attempt (no
+model-API failures; the leak audit clean over more than 50,000 tool outputs
+per agent run), and on the 122 cases strict masking makes unanswerable every
+tool-using system scores zero in the top ten, as it should; on the other 718
+the agent reaches 49.6% top-1 and 72.6% top-10. I had predicted the lead
+would shrink from the dev set's; it did not. Not yet done: comparison with
+Exomiser, LIRICAL, general-purpose LLMs and DeepRare on the same cases.
+
+During development, on the 200-case dev set
 (recall of the confirmed disease, 95% intervals):
 
 | system | top-1 | top-10 |
