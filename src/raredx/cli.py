@@ -230,6 +230,7 @@ SYSTEMS = (
     "disease-texts",
     "gene-rank",
     "lirical",
+    "deeprare",
     "fixed-pipeline",
     "agent",
     "seeded-agent",
@@ -378,6 +379,20 @@ def _system(
         try:
             return lirical.Lirical(knowledge, folder, lirical.find_java(settings.java))
         except (lirical.LiricalNotSetUp, lirical.JavaNotFound) as e:
+            _fail(str(e))
+    if name == "deeprare":
+        from raredx.baselines.deeprare import DeepRare, DeepRareNotSetUp
+
+        def secret(value: Any) -> str:
+            return str(value.get_secret_value()) if value is not None else ""
+
+        keys = {
+            "DEEPSEEK_API_KEY": secret(settings.llm_api_key),
+            "OPENROUTER_API_KEY": secret(settings.openrouter_api_key),
+        }
+        try:
+            return DeepRare(_knowledge(evals_dir, data_dir), settings.deeprare_dir, keys)
+        except DeepRareNotSetUp as e:
             _fail(str(e))
     if name == "fixed-pipeline":
         from raredx.baselines.fixed_pipeline import FixedPipeline

@@ -46,6 +46,8 @@ class Settings(BaseSettings):
     llm_price_cached_input: float = 0.006
     llm_price_output: float = 1.20
 
+    # DeepRare's checkout, with its own environment in .venv (comparison runs only).
+    deeprare_dir: Path = Path("third_party/DeepRare")
     # The `java` that runs LIRICAL (comparison runs only), version 17 or later. Unset:
     # the one on PATH, or a Homebrew OpenJDK.
     java: str | None = None
