@@ -23,6 +23,10 @@ services:
     environment:
       # A tracking server instead of a local file: the one setting that changes.
       RAREDX_MLFLOW_TRACKING_URI: http://mlflow:5000
+      # This deployment is a demo, and reads notes (POST /v1/terms/from-note): the ones
+      # written for it from published patients. Never a real patient's: the provider
+      # behind the model API key would receive it.
+      RAREDX_SERVICE_READ_NOTES: "true"
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:

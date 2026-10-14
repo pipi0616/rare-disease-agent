@@ -1,18 +1,25 @@
 """The demo page: a form over the API, and the agent's steps as they happen.
 
+Three ways in: a published patient's findings; HPO terms of one's own; or, where
+the service reads notes, a clinical note — read into terms, which the user
+checks before they are sent.
+
 Run with `raredx demo` (Streamlit), beside a running `raredx serve`. The page
 holds no logic of its own: it calls the service through the typed client, as
 another team's front end would, and shows what comes back. Everything on it is
 in the API's answer.
 """
 
+import html
 import os
 import re
+from typing import Any
 
 import httpx2
 import streamlit as st
 from pydantic import ValidationError
 
+from raredx.phenotyping.reader import Finding as NoteFinding
 from raredx.service.client import Client, ServiceError
 from raredx.service.schemas import (
     DISCLAIMER,
@@ -20,12 +27,22 @@ from raredx.service.schemas import (
     DiagnoseResponse,
     Diagnosis,
     Example,
+    NoteResponse,
     Step,
     SystemInfo,
 )
 
 API_URL = os.environ.get("RAREDX_API_URL", "http://127.0.0.1:8000")
 OWN = "Enter a patient"
+NOTE = "Start from a clinical note"
+BLANK = "a blank page"
+# How a finding's words are marked in the note: the patient has it, the note denies it,
+# a relative has it.
+MARKED = {
+    "present": "background:#c3f0ca",
+    "absent": "background:#e5e7eb;text-decoration:line-through",
+    "family": "background:#cfe4ff",
+}
 MARK = {"tools": "🧰", "model": "🧠", "tool": "🔎", "answer": "✅", "fallback": "⚠️"}
 
 # The held-out evaluation of v1.0 (docs/heldout_plan.md, section 8): 840 cases, one per paper.
@@ -59,6 +76,12 @@ def sidebar(system: SystemInfo) -> None:
                 f"- Knowledge: HPO {agent['hpo_release']}\n"
                 f"- Patient bank: {agent.get('patient_bank', 'none')}"
             )
+        if system.note_reader:
+            reader = system.note_reader
+            st.markdown(
+                f"- Notes read by: `{reader['model']}`, prompt `{reader['prompt_version']}`, "
+                f"terms from HPO {reader['hpo_release']}"
+            )
         st.caption(f"service {system.service_version} · code {system.code}")
         st.subheader("Measured")
         st.markdown(MEASURED)
@@ -72,6 +95,11 @@ def sidebar(system: SystemInfo) -> None:
 
 def _forget_answer() -> None:
     st.session_state.pop("answer", None)
+
+
+def _forget_note() -> None:
+    _forget_answer()
+    st.session_state.pop("note", None)
 
 
 def _add_term(hpo_id: str) -> None:
@@ -137,6 +165,88 @@ def own_request() -> DiagnoseRequest | None:
     except ValidationError as e:
         st.error("; ".join(f"{'.'.join(map(str, x['loc']))}: {x['msg']}" for x in e.errors()))
         return None
+
+
+def marked(text: str, findings: list[NoteFinding]) -> str:
+    """The note as HTML, each finding's words marked by what the note says of them.
+    Every part of the note is escaped: whatever is pasted is shown as text."""
+    spans = sorted((f.start, f.end, f.status) for f in findings if f.start is not None and f.end)
+    parts, at = [], 0
+    for start, end, status in spans:
+        if start < at:  # inside words already marked
+            continue
+        parts.append(html.escape(text[at:start]))
+        style = f"{MARKED[status]};color:#111;border-radius:4px;padding:1px 3px"
+        parts.append(f'<span style="{style}">{html.escape(text[start:end])}</span>')
+        at = end
+    parts.append(html.escape(text[at:]))
+    return f"<div style='white-space:pre-wrap;line-height:1.9'>{''.join(parts)}</div>"
+
+
+def note_request(examples: list[Example]) -> tuple[DiagnoseRequest | None, Example | None]:
+    """A note, read into terms the user checks; the request they make, and the published
+    patient the note was written from, if it was."""
+    noted = {f"{e.title} · {e.source}": e for e in examples if e.note}
+    start = st.radio("Start from", [*noted, BLANK], horizontal=True, on_change=_forget_note)
+    example = noted.get(start)
+    text = (
+        st.text_area(
+            "Clinical note", value=example.note if example else "", height=230, key=f"text-{start}"
+        )
+        or ""
+    )
+    st.caption(
+        ("Written for this demo from the published patient's findings, in a clinician's "
+         "words: not a real note. " if example else "")
+        + "The note is sent to the model provider to be read, and kept nowhere by the "
+        "service. Never paste a real patient's note here."
+    )  # fmt: skip
+    if st.button(
+        "Read the note", key="read_note", disabled=not text.strip(), on_click=_forget_answer
+    ):
+        with st.spinner("Reading the note …"):
+            try:
+                read = client().read_note(text)
+            except ServiceError as e:
+                st.error(f"Refused ({e.status_code}): {e.detail}")
+                return None, example
+        st.session_state["note"] = (text, read.model_dump_json())
+    if "note" not in st.session_state:
+        return None, example
+    read_text, answer = st.session_state["note"]
+    read = NoteResponse.model_validate_json(answer)
+    st.markdown(marked(read_text, read.findings), unsafe_allow_html=True)
+    st.caption(
+        "Marked: what the patient has · ~~what the note denies~~ · what a relative has. "
+        f"Read with {read.usage.model_calls} model calls in {read.usage.seconds:.1f} s, "
+        f"about ${read.usage.cost_usd_estimate:.4f}. {read.notice}"
+    )
+    rows: list[dict[str, Any]] = [
+        {
+            "Send": f.status == "present" and f.hpo_id is not None,
+            "The note says": {"present": "has it", "absent": "denies it", "family": "a relative"}[
+                f.status
+            ],
+            "Term": f.label or f"— ({f.uncoded})",
+            "HPO": f.hpo_id or "",
+            "In the note's words": f.quote,
+            "Coded by": f.coded_by or "",
+        }
+        for f in read.findings
+    ]
+    edited = st.data_editor(
+        rows,
+        hide_index=True,
+        disabled=["The note says", "Term", "HPO", "In the note's words", "Coded by"],
+        key=f"terms-{answer[:40]}",
+    )
+    chosen = list(dict.fromkeys(r["HPO"] for r in edited if r["Send"] and r["HPO"]))
+    st.caption(f"{len(chosen)} terms ticked: they are what is sent to diagnose, codes only.")
+    if not chosen:
+        return None, example
+    sex = example.request.sex if example else "unknown"
+    excluded = [example.source] if example else []  # as in the evaluation: its paper left out
+    return DiagnoseRequest(hpo_ids=chosen, sex=sex, exclude_sources=excluded), example
 
 
 def show_step(step: Step) -> None:
@@ -278,9 +388,13 @@ def main() -> None:
     sidebar(system)
 
     labels = {f"Example {i} · {e.title}": e for i, e in enumerate(examples, 1)}
-    choice = st.selectbox("Patient", [*labels, OWN], on_change=_forget_answer)
+    ways = [NOTE] if system.note_reader else []
+    choice = st.selectbox("Patient", [*ways, *labels, OWN], on_change=_forget_note)
     example = labels.get(choice)
-    request = example_request(example) if example else own_request()
+    if choice == NOTE:
+        request, example = note_request(examples)
+    else:
+        request = example_request(example) if example else own_request()
 
     if st.button("Diagnose", key="diagnose", type="primary", disabled=request is None) and request:
         answer = ask(request)

@@ -1,6 +1,7 @@
 """The demo page, run by Streamlit's own test harness against the service in process:
 page, client, HTTP layer and agent together, with a scripted model."""
 
+import json
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,9 @@ from conftest import ScriptedModel, answer
 from raredx.agent import Agent
 from raredx.data.cases import Case
 from raredx.knowledge.hpo import HPO
+from raredx.knowledge.text_index import TextIndex
+from raredx.phenotyping.reader import Finding as NoteFinding
+from raredx.phenotyping.reader import Label, NoteReader
 from raredx.service import demo, examples
 from raredx.service.app import create_app
 from raredx.service.client import Client
@@ -25,6 +29,7 @@ from raredx.tools.rank_candidate_genes import RankCandidateGenes
 
 PAGE = str(Path(demo.__file__))
 SNHL, AMENORRHEA = "HP:0000407", "HP:0000786"
+SNHL_NAME = "Sensorineural hearing impairment"
 FITS = ("OMIM:690001", "Hearing-ovarian syndrome", "explains both findings")
 
 
@@ -34,7 +39,7 @@ def page(
 ) -> Iterator[Callable[..., AppTest]]:
     """The page over a service with one example patient and a scripted model (or none)."""
 
-    def build(*moves: Any) -> AppTest:
+    def build(*moves: Any, reader: Any = None) -> AppTest:
         agent = with_genes = None
         if moves:
             model = ScriptedModel(messages=iter(moves))
@@ -54,6 +59,7 @@ def page(
         app = create_app(
             Diagnoser(hpo, agent=agent, agent_with_genes=with_genes),
             examples=examples.load([case], hpo),
+            reader=reader,
         )
         http = TestClient(app)
         monkeypatch.setattr(raredx.service.client, "Client", lambda *a, **k: Client(http=http))
@@ -127,3 +133,43 @@ def test_the_page_says_so_when_the_service_is_not_there(
     assert not at.exception
     assert "is not answering (ConnectError)" in texts(at.error)
     assert "raredx serve" in texts(at.error)
+
+
+def test_a_note_is_read_marked_checked_and_diagnosed(
+    page: Callable[..., AppTest], hpo: HPO, term_index: TextIndex[Label], fake_llm: Any
+) -> None:
+    read = json.dumps(
+        {
+            "findings": [
+                {"quote": "Deaf since birth", "finding": SNHL_NAME, "status": "present"},
+                {"quote": "seizures", "finding": "Seizure", "status": "absent"},
+                {
+                    "quote": "rod-cone dystrophy",
+                    "finding": "Rod-cone dystrophy",
+                    "status": "family",
+                },
+            ]
+        }
+    )
+    reader = NoteReader(fake_llm(read), "fake-model", hpo, term_index)
+    at = page(answer(FITS), reader=reader).run()
+    assert at.selectbox[0].options[0] == demo.NOTE  # where the service reads notes, first
+    assert "prompt `note-v3`" in texts(at.sidebar.markdown)
+    at.radio[0].set_value(demo.BLANK).run()
+    note = "Deaf since birth; no seizures. Her sister has rod-cone dystrophy."
+    at.text_area(key=f"text-{demo.BLANK}").input(note).run()
+    at.button(key="read_note").click().run()
+    assert not at.exception
+    shown = texts(at.markdown)
+    assert ">Deaf since birth</span>" in shown and "line-through" in shown
+    assert "1 terms ticked" in texts(at.caption)  # only what the patient has
+    at.button(key="diagnose").click().run()
+    assert not at.exception
+    [ranked] = [d.value for d in at.dataframe if "OMIM" in d.value.columns]  # after the terms
+    assert ranked["OMIM"][0] == "OMIM:690001"
+
+
+def test_a_note_is_shown_as_text_whatever_is_pasted() -> None:
+    finding = NoteFinding(quote="<b>x</b>", start=0, end=8, finding="X", status="present")
+    shown = demo.marked("<b>x</b> and <script>", [finding])
+    assert "<b>" not in shown and "<script>" not in shown and "&lt;b&gt;x&lt;/b&gt;" in shown

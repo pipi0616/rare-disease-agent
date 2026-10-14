@@ -201,6 +201,11 @@ class Example(BaseModel):
     confirmed_gene: str | None
     source: str
     in_evaluation: str = Field(description="What the held-out evaluation recorded for it")
+    note: str | None = Field(
+        default=None,
+        description="A clinical note written for the demo from the published findings, in a "
+        "clinician's words: not a real note",
+    )
 
 
 class Problem(BaseModel):

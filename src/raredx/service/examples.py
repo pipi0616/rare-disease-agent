@@ -7,6 +7,10 @@ offered as the request the evaluation made for it: its own paper left out of
 the knowledge, and — optionally — the simulated sequencing of the genotype
 track. With the patient bank of the evaluation, the service then answers an
 example under the conditions it was measured in.
+
+Two examples also come as a clinical note (notes/, beside this file), written
+for the demo from the patient's published findings in the words a clinician
+might use — not a real note — to try reading a note into terms.
 """
 
 from importlib.resources import files
@@ -17,6 +21,7 @@ from raredx.knowledge.hpo import HPO
 from raredx.service.schemas import DiagnoseRequest, Example, Finding, Sex
 
 LISTED = "examples.tsv"
+NOTES = "notes"
 SEX: dict[str | None, Sex] = {"FEMALE": "female", "MALE": "male"}
 
 
@@ -35,10 +40,12 @@ def load(cases: list[Case], hpo: HPO) -> list[Example]:
         case = by_id.get(case_id)
         if case is None:
             continue
+        written = files("raredx.service").joinpath(NOTES, f"{case.id}.txt")
         examples.append(
             Example(
                 id=case.id,
                 title=title,
+                note=written.read_text(encoding="utf-8") if written.is_file() else None,
                 request=DiagnoseRequest(
                     hpo_ids=case.hpo_ids,
                     sex=SEX.get(case.sex, "unknown"),

@@ -141,7 +141,9 @@ LONGEST_NAME = 12  # words in the longest name looked for in a text
 
 def name_matches(text: str, hpo: HPO) -> list[tuple[int, int, frozenset[str]]]:
     """Every HPO name or exact synonym (not abbreviations) written in the text, as
-    (start, end, terms): scanning word by word, the longest name first."""
+    (start, end, terms): scanning word by word, the longest name first. A name does not
+    begin or end inside a hyphenated word: "tonic-clonic seizure" holds no "clonic
+    seizure"."""
     names = _exact_names(hpo, abbreviations=False)
     words = list(re.finditer(r"\w+", text))
     lowered = [w[0].lower() for w in words]
@@ -149,8 +151,9 @@ def name_matches(text: str, hpo: HPO) -> list[tuple[int, int, frozenset[str]]]:
     while i < len(words):
         for n in range(min(LONGEST_NAME, len(words) - i), 0, -1):
             ids = names.get(" ".join(lowered[i : i + n]))
-            if ids:
-                found.append((words[i].start(), words[i + n - 1].end(), ids))
+            start, end = words[i].start(), words[i + n - 1].end()
+            if ids and text[start - 1 : start] != "-" and text[end : end + 1] != "-":
+                found.append((start, end, ids))
                 i += n
                 break
         else:
@@ -285,7 +288,8 @@ class NoteReader:
             "hpo_release": self.hpo.release,
             "term_index": f"{len(self.index.passages)} names and synonyms; "
             f"{BY_FINDING}+{BY_WORDS} candidates per finding",
-            "dictionary": "names and exact synonyms, no abbreviations; checked by the model",
+            "dictionary": "names and exact synonyms, no abbreviations, whole hyphenated words; "
+            "checked by the model",
         }
 
     def _ask[M: BaseModel](self, system: str, user: str, reply: type[M], tally: Tally | None) -> M:
@@ -545,7 +549,7 @@ class DictionaryReader:
         return {
             "reader": self.name,
             "hpo_release": self.hpo.release,
-            "dictionary": "names and exact synonyms, no abbreviations",
+            "dictionary": "names and exact synonyms, no abbreviations, whole hyphenated words",
         }
 
     @mlflow.trace(name="dictionary", span_type=SpanType.PARSER)

@@ -63,6 +63,11 @@ def test_names_are_matched_longest_first_without_abbreviations(hpo: HPO) -> None
     ]  # "RCD" is an abbreviation: in running text it may mean something else
 
 
+def test_a_name_is_not_found_inside_a_hyphenated_word(hpo: HPO) -> None:
+    text = "Pre-seizures, seizures-like and post-hearing loss; then seizures."
+    assert [text[a:b] for a, b, _ in name_matches(text, hpo)] == ["seizures"]
+
+
 def test_the_dictionary_reader_codes_every_name_it_finds(hpo: HPO) -> None:
     findings = DictionaryReader(hpo).read("Hearing loss and seizures.")
     assert [(f.quote, f.hpo_id, f.coded_by) for f in findings] == [
