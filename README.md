@@ -24,6 +24,36 @@ diseases match the phenotype). The agent gets the four core tools and
 the text search, which the ablation found worth nothing, is served over MCP
 and given to the agent only with `--with-texts`.
 
+**How the parts fit.** A note is read into HPO terms (`/v1/terms/from-note`), a
+person checks them, and the codes go to the diagnosis service (`/v1/diagnose`),
+which ranks diseases without a model first — its answer if the model fails — and
+then lets the agent investigate with its tools. Every request is one MLflow trace,
+and the evaluation harness runs the very agent the service serves, with each case's
+own paper masked from its knowledge.
+
+```mermaid
+flowchart TB
+    note["Clinical note, free text"] --> reader
+    subgraph reader["Note reader"]
+        direction LR
+        r1["LLM lists each finding<br/>with the note's words<br/>and its status"] --> r2["HPO term search<br/>Qdrant hybrid<br/>BGE + BM25"]
+        r2 --> r3["LLM picks a term<br/>among the candidates only"]
+        r4["Dictionary pass<br/>HPO names in the note"] --> r3
+    end
+    reader --> check["A clinician checks the terms"]
+    check --> api
+    coded["Or HPO terms directly<br/>+ candidate genes"] --> api
+    subgraph api["Diagnosis service (FastAPI)"]
+        direction LR
+        f["No-model ranking first<br/>the fallback"] --> agent["Agent<br/>LangChain create_agent<br/>deepseek-flash, ≤ 8 calls"]
+        agent <--> tools["Tools, also over MCP<br/>rank_diseases · check_match<br/>lookup_disease · find_disease<br/>find_similar_patients<br/>rank_candidate_genes"]
+        tools --- kb[("Pinned knowledge<br/>HPO 2026-09-01<br/>6,014 published patients")]
+    end
+    api --> out["Up to ten diseases, each with<br/>its reason, evidence and sources"]
+    api -.->|traces| mlflow[("MLflow<br/>traces · evaluation runs")]
+    harness["Evaluation harness · mlflow.genai.evaluate<br/>runs this same agent, each case's paper masked<br/>leak audit on every tool output"] --> mlflow
+```
+
 **Held-out result (v1.0).** One case from each of 840 papers that share no
 paper with anything used in development; one run per system, on a tagged
 version, under a plan committed beforehand (`docs/heldout_plan.md`). Recall
