@@ -4,6 +4,8 @@
     GET  /readyz               it can answer: which knowledge is loaded (readiness)
     GET  /v1/system            what is serving: model, prompt, tools, knowledge, limits
     GET  /v1/terms?q=          HPO terms by name, for a form's search box
+    POST /v1/terms/from-note   a clinical note read into HPO terms, for a person to check
+                               (only where the deployment takes notes: see privacy.py)
     GET  /v1/examples          published patients to try
     POST /v1/diagnose          one answer, as JSON
     POST /v1/diagnose/stream   the same as server-sent events: each step, then the answer
@@ -20,7 +22,8 @@ model needs:
   in the answer, the response header and the log line;
 - one log line per answer, as JSON, with what an operator needs (mode, seconds,
   tokens, cost, trace id) and none of the patient's findings;
-- when a streaming client goes away, the agent stops before its next model call.
+- when a streaming client goes away, the agent stops before its next model call;
+- a note's text is in no log line and no trace: only its length and the codes found.
 
 Neither health check calls the model: it is a paid, third-party call, and its
 failure does not stop the service from answering (see diagnoser.py).
@@ -33,24 +36,35 @@ import queue
 import re
 import secrets
 import threading
+import time
 from collections.abc import Awaitable, Callable, Iterator, Sequence
+from contextlib import contextmanager
 from typing import Annotated, Any
 from uuid import uuid4
 
+import mlflow
+import openai
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, Response, Security
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from fastapi.sse import EventSourceResponse, ServerSentEvent
+from mlflow.entities import SpanType
 
+from raredx.llm import BudgetExceeded, Tally
+from raredx.phenotyping.reader import NoteReader, UnreadableReply, terms
+from raredx.service import privacy
 from raredx.service.diagnoser import Diagnoser, NoFinding, UnknownTerms
 from raredx.service.schemas import (
     DISCLAIMER,
     DiagnoseRequest,
     DiagnoseResponse,
     Example,
+    NoteRequest,
+    NoteResponse,
     Problem,
     SystemInfo,
     Term,
+    Usage,
 )
 
 logger = logging.getLogger("raredx.service")
@@ -93,8 +107,13 @@ def create_app(
     examples: Sequence[Example] = (),
     api_key: str | None = None,
     max_concurrent: int = 4,
+    reader: NoteReader | None = None,
 ) -> FastAPI:
+    """`reader`: what reads a note at /v1/terms/from-note; without it, no note is taken."""
     system = diagnoser.system()
+    if reader is not None:
+        system = system.model_copy(update={"note_reader": reader.config()})
+        privacy.install()
     app = FastAPI(
         title="raredx",
         version=system.service_version,
@@ -129,13 +148,9 @@ def create_app(
         if api_key is not None and not (key and secrets.compare_digest(key, api_key)):
             raise HTTPException(401, "missing or wrong X-API-Key")
 
-    def admitted(body: DiagnoseRequest) -> Iterator[DiagnoseRequest]:
-        """A request the service will work on: its terms are known, and there is room.
-        The room is given back when the response has ended."""
-        try:
-            diagnoser.findings(body)
-        except (UnknownTerms, NoFinding) as e:
-            raise HTTPException(422, str(e)) from e
+    @contextmanager
+    def room() -> Iterator[None]:
+        """One of the `max_concurrent` places, or 503 with a Retry-After."""
         if not slots.acquire(blocking=False):
             raise HTTPException(
                 503,
@@ -143,9 +158,19 @@ def create_app(
                 headers={"Retry-After": str(RETRY_AFTER_SECONDS)},
             )
         try:
-            yield body
+            yield
         finally:
             slots.release()
+
+    def admitted(body: DiagnoseRequest) -> Iterator[DiagnoseRequest]:
+        """A request the service will work on: its terms are known, and there is room.
+        The room is given back when the response has ended."""
+        try:
+            diagnoser.findings(body)
+        except (UnknownTerms, NoFinding) as e:
+            raise HTTPException(422, str(e)) from e
+        with room():
+            yield body
 
     @app.get("/healthz", tags=["health"])
     def healthz() -> dict[str, str]:
@@ -180,6 +205,76 @@ def create_app(
     ) -> list[Term]:
         """HPO terms for findings whose name contains the text."""
         return [Term(hpo_id=i, label=name) for i, name in diagnoser.hpo.search(q, limit)]
+
+    if reader is not None:
+
+        @v1.post(
+            "/terms/from-note",
+            responses={502: {"model": Problem, "description": "The model could not read it"}},
+        )
+        def terms_from_note(body: NoteRequest, request: Request) -> NoteResponse:
+            """Read a clinical note into HPO terms: each finding with the words of the note
+            it rests on, whether the patient has it, the note denies it or a relative has
+            it, and its term. For a person to check, then send to /v1/diagnose. The note
+            goes to the model provider, and is kept nowhere here: not in a log line, not in
+            a trace."""
+            request_id = request.state.request_id
+            started, tally = time.monotonic(), Tally()
+            with room(), mlflow.start_span(name="note", span_type=SpanType.CHAIN) as span:
+                try:
+                    with privacy.private():
+                        findings = reader.read(body.text, tally)
+                except (openai.APIError, BudgetExceeded) as e:
+                    raise HTTPException(
+                        502, f"the model could not be reached: {type(e).__name__}"
+                    ) from None
+                except UnreadableReply as e:
+                    raise HTTPException(502, str(e)) from None
+                present = terms(findings)
+                span.set_inputs({"characters": len(body.text)})
+                span.set_outputs({
+                    "present": present,
+                    "absent": terms(findings, "absent"),
+                    "family": terms(findings, "family"),
+                    "not_coded": sum(f.hpo_id is None for f in findings),
+                })  # fmt: skip
+                mlflow.update_current_trace(client_request_id=request_id, tags={"kind": "note"})
+                trace_id = span.trace_id
+            price_in, price_cached, price_out = diagnoser.prices
+            uncached = tally.input_tokens - tally.cached_input_tokens
+            cost = (
+                uncached * price_in
+                + tally.cached_input_tokens * price_cached
+                + tally.output_tokens * price_out
+            ) / 1e6
+            usage = Usage(
+                seconds=round(time.monotonic() - started, 2),
+                model_calls=tally.model_calls,
+                input_tokens=tally.input_tokens,
+                cached_input_tokens=tally.cached_input_tokens,
+                output_tokens=tally.output_tokens,
+                cost_usd_estimate=round(cost, 6),
+            )
+            logger.info(
+                json.dumps(
+                    {
+                        "event": "note",
+                        "request_id": request_id,
+                        "characters": len(body.text),
+                        "n_findings": len(findings),
+                        "n_present": len(present),
+                        **usage.model_dump(),
+                        "trace_id": trace_id,
+                    }
+                )  # fmt: skip
+            )
+            return NoteResponse(
+                request_id=request_id,
+                findings=findings,
+                hpo_ids=present,
+                usage=usage,
+                trace_id=trace_id,
+            )
 
     @v1.get("/examples")
     def get_examples() -> list[Example]:

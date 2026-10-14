@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from raredx.knowledge.hpo import HPO
-from raredx.knowledge.text_index import Embedder, TextIndex
+from raredx.knowledge.text_index import TextIndex
 from raredx.llm import Tally
 from raredx.phenotyping.reader import (
     DictionaryReader,
@@ -19,14 +19,6 @@ from raredx.phenotyping.reader import (
     name_matches,
     terms,
 )
-
-
-@pytest.fixture(scope="module")
-def term_index(hpo: HPO, word_embedder: Embedder) -> TextIndex[Label]:
-    """The miniature release's names and synonyms, indexed with WordEmbedder."""
-    names = labels(hpo)
-    dense, sparse = word_embedder.passages([n.text for n in names])
-    return TextIndex(names, dense, sparse, word_embedder, {"sources": "test terms"})
 
 
 def mentions(*rows: tuple[str, str, str]) -> str:

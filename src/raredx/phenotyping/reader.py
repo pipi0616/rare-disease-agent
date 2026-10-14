@@ -23,13 +23,14 @@ each finding's candidates as a retriever span.
 
 import functools
 import re
+from collections.abc import Callable
 from typing import Any, Literal
 
 import mlflow
 from mlflow.entities import SpanType
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from raredx.knowledge.hpo import HPO
 from raredx.knowledge.text_index import TextIndex
@@ -41,6 +42,20 @@ CodedBy = Literal["name", "model", "dictionary"]
 PROMPT_VERSION = "note-v3"
 DIRECT_PROMPT_VERSION = "note-direct-v1"
 BY_FINDING, BY_WORDS = 8, 4  # candidate terms searched for with each, before merging
+
+
+class UnreadableReply(Exception):
+    """The model's reply was not in the required format, even when asked again. The
+    reply is not in the message: it quotes the note."""
+
+
+def _parsed[M: BaseModel](reply: type[M]) -> Callable[[str | None], M]:
+    """The parser of a reply: the model's JSON, validated as `reply`."""
+
+    def parse(content: str | None) -> M:
+        return reply.model_validate_json(content or "")
+
+    return parse
 
 
 class Finding(BaseModel):
@@ -278,14 +293,12 @@ class NoteReader:
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ]
-        return ask_json(
-            self.api,
-            self.model,
-            messages,
-            lambda content: reply.model_validate_json(content or ""),
-            budget=self.budget,
-            tally=tally,
-        )
+        try:
+            return ask_json(
+                self.api, self.model, messages, _parsed(reply), budget=self.budget, tally=tally
+            )
+        except (ValidationError, ValueError):
+            raise UnreadableReply("the model's reply was not in the required format") from None
 
     @mlflow.trace(name="candidate terms", span_type=SpanType.RETRIEVER)
     def candidates(self, finding: str, quote: str) -> list[tuple[str, str]]:
@@ -487,14 +500,17 @@ class DirectReader:
             {"role": "system", "content": DIRECT_PROMPT},
             {"role": "user", "content": text},
         ]
-        reply = ask_json(
-            self.api,
-            self.model,
-            messages,
-            lambda c: _DirectReply.model_validate_json(c or ""),
-            budget=self.budget,
-            tally=tally,
-        )
+        try:
+            reply = ask_json(
+                self.api,
+                self.model,
+                messages,
+                _parsed(_DirectReply),
+                budget=self.budget,
+                tally=tally,
+            )
+        except (ValidationError, ValueError):
+            raise UnreadableReply("the model's reply was not in the required format") from None
         findings = []
         for d in reply.findings:
             where = locate(d.quote, text)

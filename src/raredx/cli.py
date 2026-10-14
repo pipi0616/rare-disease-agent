@@ -25,7 +25,8 @@ if TYPE_CHECKING:
 
     from raredx.evals.harness import Harness
     from raredx.knowledge.hpo import HPO
-    from raredx.phenotyping.reader import Reader
+    from raredx.llm import Budget
+    from raredx.phenotyping.reader import NoteReader, Reader
     from raredx.tools.find_similar_patients import FindSimilarPatients
     from raredx.tools.rank_diseases import RankDiseases
     from raredx.tools.search_disease_texts import SearchDiseaseTexts
@@ -914,8 +915,7 @@ def _reader(
     """One of the readers that turn a note into HPO terms; a clear message if it
     cannot be built."""
     from raredx import llm
-    from raredx.knowledge.text_index import INFO, FastEmbedder, TextIndex
-    from raredx.phenotyping.reader import DictionaryReader, DirectReader, Label, NoteReader
+    from raredx.phenotyping.reader import DictionaryReader, DirectReader
 
     if name not in READERS:
         _fail(f"unknown reader {name!r}; choose one of: {', '.join(READERS)}")
@@ -926,6 +926,15 @@ def _reader(
     budget = llm.Budget(budget_usd, prices) if budget_usd is not None else None
     if name == "model-direct":
         return DirectReader(_model_client(), settings.llm_model, knowledge, budget=budget)
+    return _note_reader(evals_dir, data_dir, budget)
+
+
+def _note_reader(evals_dir: Path, data_dir: Path, budget: "Budget | None" = None) -> "NoteReader":
+    """Ours: the model reads, the ontology codes."""
+    from raredx.knowledge.text_index import INFO, FastEmbedder, TextIndex
+    from raredx.phenotyping.reader import Label, NoteReader
+
+    knowledge = _knowledge(evals_dir, data_dir)
     folder = _term_index_dir(data_dir, knowledge.release)
     if not (folder / INFO).exists():
         _fail(f"{folder} has no term index — run `raredx data hpo-index` first")
@@ -1089,12 +1098,18 @@ def _service(data_dir: Path, evals_dir: Path) -> "FastAPI":
         ),
         code=settings.build_version or code_version(),
     )
+    reader = None
+    if settings.service_read_notes and agent is not None:
+        reader = _note_reader(evals_dir, data_dir)
+    elif settings.service_read_notes:
+        typer.echo("no model API key: notes cannot be read", err=True)
     key = settings.service_api_key
     return create_app(
         diagnoser,
         examples=examples.load(cases, knowledge),
         api_key=key.get_secret_value() if key else None,
         max_concurrent=settings.service_max_concurrent,
+        reader=reader,
     )
 
 

@@ -19,6 +19,7 @@ from raredx.data.cases import Case
 from raredx.knowledge import texts
 from raredx.knowledge.hpo import HPO, load
 from raredx.knowledge.text_index import TextIndex
+from raredx.phenotyping.reader import Label, labels
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -134,6 +135,14 @@ def text_index() -> TextIndex[texts.Passage]:
     embedder = WordEmbedder()
     dense, sparse = embedder.passages([p.text for p in passages])
     return TextIndex(passages, dense, sparse, embedder, {"sources": "test texts"})
+
+
+@pytest.fixture(scope="session")
+def term_index(hpo: HPO, word_embedder: WordEmbedder) -> TextIndex[Label]:
+    """The miniature release's names and synonyms, indexed with WordEmbedder."""
+    names = labels(hpo)
+    dense, sparse = word_embedder.passages([n.text for n in names])
+    return TextIndex(names, dense, sparse, word_embedder, {"sources": "test terms"})
 
 
 class FakeLLM:

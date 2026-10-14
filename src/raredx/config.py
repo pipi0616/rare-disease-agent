@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     # answers is what was measured. "all": every published patient — more to find,
     # and a configuration no evaluation has scored.
     service_patient_bank: Literal["evaluated", "all"] = "evaluated"
+    # Whether the service reads clinical notes (POST /v1/terms/from-note). Off unless a
+    # deployment says so: a note goes to the model provider, which then needs an
+    # agreement covering patient data — or the model runs in-house.
+    service_read_notes: bool = False
     # The commit a container image was built from; a checkout reads it from git instead.
     build_version: str | None = None
 

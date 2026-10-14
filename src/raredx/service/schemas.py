@@ -1,9 +1,14 @@
 """What the service takes and returns: the API's contract.
 
-A request is coded data only — HPO term ids, sex, gene symbols, PubMed ids —
-each checked against a pattern, and any other field is refused. There is no
-free-text field, so a name, a date of birth or a clinical note cannot be sent
-by mistake: what never enters cannot reach a log, a trace or the model provider.
+A request to diagnose is coded data only — HPO term ids, sex, gene symbols,
+PubMed ids — each checked against a pattern, and any other field is refused. It
+has no free-text field, so a name, a date of birth or a clinical note cannot be
+sent with it by mistake: what never enters cannot reach a log, a trace or the
+model provider.
+
+A clinical note has an endpoint of its own, which a deployment switches on
+(NoteRequest): it is read into terms for a person to check, then sent on as
+codes. The note goes to the model provider, and is kept nowhere here.
 
 An answer says how it was produced: by the agent or by the fallback, with which
 model, prompt and knowledge, and under which trace the whole of it is recorded.
@@ -13,12 +18,14 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
+from raredx.phenotyping.reader import Finding as NoteFinding
 from raredx.tools.check_match import MatchReport
 from raredx.tools.ids import HpoId
 
 MAX_TERMS = 100  # the longest case in Phenopacket Store 0.1.27 has 66
 MAX_GENES = 200  # a filtered exome leaves tens of candidates
 MAX_EXCLUDED = 20
+MAX_NOTE_CHARACTERS = 20_000  # ID-68's longest note has about 3,000
 
 GeneSymbol = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9][A-Za-z0-9.-]{0,24}$")]
 Pmid = Annotated[str, StringConstraints(pattern=r"^PMID:\d{1,9}$")]
@@ -118,6 +125,11 @@ class SystemInfo(BaseModel):
     agent_with_genes: dict[str, Any] | None
     fallback: dict[str, Any]
     limits: dict[str, Any]
+    note_reader: dict[str, Any] | None = Field(
+        default=None,
+        description="What reads a note at /v1/terms/from-note, as its evaluation recorded it; "
+        "null when this service takes no notes",
+    )
 
 
 Mode = Literal["agent", "fallback"]
@@ -139,6 +151,39 @@ class DiagnoseResponse(BaseModel):
 class Term(BaseModel):
     hpo_id: str
     label: str
+
+
+NOTE_NOTICE = (
+    "Read by a model, for a person to check: each term with the words of the note it "
+    "rests on. The note was sent to the model provider, and is kept nowhere here."
+)
+
+
+class NoteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(
+        min_length=1,
+        max_length=MAX_NOTE_CHARACTERS,
+        description="A clinical note in English. Never a real patient's unless the provider "
+        "the service uses is covered by an agreement for such data",
+        examples=[
+            "Eight-year-old girl, floppy at birth, with seizures since infancy. "
+            "No hearing loss. Her brother has cataracts."
+        ],  # fmt: skip
+    )
+
+
+class NoteResponse(BaseModel):
+    request_id: str
+    findings: list[NoteFinding]
+    hpo_ids: list[str] = Field(
+        description="The terms of the findings the patient has: once checked, what to send "
+        "to /v1/diagnose"
+    )
+    usage: Usage
+    trace_id: str | None = Field(description="Its trace: the steps and their timings, no text")
+    notice: str = NOTE_NOTICE
 
 
 class Example(BaseModel):
