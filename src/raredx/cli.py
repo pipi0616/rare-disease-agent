@@ -568,10 +568,6 @@ def run_system(
         budget_usd,
     )
     billed = getattr(chosen, "provider", None) == "openrouter"
-    if billed:
-        from raredx import llm
-
-        spent_before = llm.openrouter_spent(settings)
     recorded = getattr(chosen, "evidence", None)
     if isinstance(recorded, dict) and {c.id for c in selected} - set(recorded):
         _fail(f"run {from_run} has no record of some cases in {split}: replay the same manifest")
@@ -619,8 +615,8 @@ def run_system(
     usage = harness.usage(run_id)
     tokens_in, tokens_out = usage["usage/input_tokens"], usage["usage/output_tokens"]
     cached = usage["usage/cached_input_tokens"]
-    if billed:  # what the account was charged, not an estimate at DeepSeek's prices
-        usage["usage/cost_usd_billed"] = round(llm.openrouter_spent(settings) - spent_before, 4)
+    if billed:  # what OpenRouter said each call cost, summed; not an estimate
+        usage["usage/cost_usd_billed"] = round(chosen.budget.spent, 4)  # type: ignore[attr-defined]
         harness.log_metrics(run_id, usage)
     elif tokens_in or tokens_out:
         cost = (

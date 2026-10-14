@@ -36,8 +36,10 @@ class Budget:
     """A spending cap for one run, in US dollars, checked before every model call.
 
     A cap checked between runs cannot stop one run that costs more than expected;
-    this one stops the run itself. OpenRouter reports what each call cost; calls in
-    flight when the cap is reached still finish, so a run can go over by a few calls.
+    this one stops the run itself. OpenRouter reports what each call cost, in its
+    answer; that sum is also the run's bill (the account's own total settles minutes
+    later). Calls in flight when the cap is reached still finish, so a run can go over
+    by a few calls.
     """
 
     def __init__(self, usd: float) -> None:
@@ -96,20 +98,6 @@ def openrouter_client(settings: Settings) -> OpenAI:
 
     mlflow.openai.autolog()
     return OpenAI(base_url=settings.openrouter_base_url, api_key=key, timeout=180, max_retries=2)
-
-
-def openrouter_spent(settings: Settings) -> float:
-    """What the OpenRouter account has spent in all, in US dollars, as it reports it."""
-    import httpx2
-
-    key = settings.openrouter_api_key.get_secret_value() if settings.openrouter_api_key else ""
-    response = httpx2.get(
-        f"{settings.openrouter_base_url}/credits",
-        headers={"Authorization": f"Bearer {key}"},
-        timeout=30,
-    )
-    response.raise_for_status()
-    return float(response.json()["data"]["total_usage"])
 
 
 def chat_model(
