@@ -145,6 +145,33 @@ groups are small and cases cluster by disease, so no test is made of it. Of the
 327 unclassed diseases, 290 have no exact Orphanet counterpart at all, and a
 quarter of their cases cannot be answered once their own paper is masked.
 
+**Reading a clinical note.** A note is read into HPO terms before it is
+diagnosed (`src/raredx/phenotyping/`): the model lists each finding with the
+note's own words and whether the patient has it, the note denies it or a relative
+has it; it never writes an id — exact names are coded directly, the rest chosen
+among candidates a hybrid search over HPO's names and synonyms offers — and a
+dictionary pass it checks in context. Tested once, under a plan committed
+beforehand (`docs/phenotyping_plan.md`), against hand-annotated public text,
+document-level micro F1:
+
+| | ID-68 (68 clinical notes) | GSC-2024 (206 abstracts) |
+|---|---|---|
+| **this reader** | 71.7% (P 64.7, R 80.3) | **71.5%** |
+| a dictionary of HPO names | **72.3%** (P 89.9, R 60.5) | 58.6% |
+| the model writing HPO ids itself | 55.3% | 47.3% |
+| AutoPCR, published (HPO 2024) | 80.3% | 83.5% |
+
+The pre-registered primary claim — better than both baselines on the clinical
+notes — **failed**: paired per note, the reader beats the model writing ids
+(58 notes to 5, p < 0.001) but not the dictionary (29 to 38, p = 0.33). On the
+abstracts it beats both (122 to 31, 160 to 11). The two trade recall for
+precision: looked at afterwards, half of the 347 terms counted against the reader
+on ID-68 are findings the annotators did not annotate ("floppy", "IQ was
+estimated to be 20-30"), and the dictionary cannot tell a denied finding from a
+present one. Which costs a diagnosis more was not measured: no public notes come
+with confirmed diagnoses. The service offers the reader's terms for a person to
+check, each with the note's words.
+
 During development, on the 200-case dev set
 (recall of the confirmed disease, 95% intervals):
 
