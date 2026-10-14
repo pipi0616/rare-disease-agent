@@ -60,3 +60,6 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [22](22_service.ipynb) | 做成服务：接口、实时看 agent 的每一步、模型故障时自动降级、留记录、演示页面、容器 |
 | [23](23_compare_lirical.ipynb) | 和别人比：现成工具 LIRICAL 在同样的题、同样的遮挡下考一次；泄露到底值多少分 |
 | [24](24_compare_llms.ipynb) | 和通用大模型比：GPT、Claude、Gemini 最强的模型直接问，够不够；花钱的上限、小考、补问 |
+| [25](25_compare_deeprare.ipynb) | 和 DeepRare 比：同一个模型，两种 agent 设计；两种判法、它读到病人论文了吗、慢在哪 |
+| [26](26_note_to_hpo.ipynb) | 读病历：医生写的字变成 HPO 编号；公开语料上评测（主要结论没成立，照实报告）；病历不留底 |
+| [27](27_delivery.ipynb) | 交付：架构图、按罕见程度拆开看、自动录屏、结果报告页、README 第一屏、求职材料 |
