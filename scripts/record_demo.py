@@ -104,8 +104,8 @@ def main() -> None:
     subprocess.run([*ffmpeg, *h264, str(mp4)], check=True)
     # A GIF plays inline in a README: fewer frames, smaller, its own 64-colour palette.
     palette = (
-        "fps=6,scale=800:-1:flags=lanczos,split[a][b];"
-        "[a]palettegen=max_colors=64[p];[b][p]paletteuse=dither=bayer"
+        "fps=5,scale=760:-1:flags=lanczos,split[a][b];"
+        "[a]palettegen=max_colors=48[p];[b][p]paletteuse=dither=bayer"
     )
     subprocess.run([*ffmpeg, "-vf", palette, str(gif)], check=True)
     webm.unlink()

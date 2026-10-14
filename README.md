@@ -2,13 +2,32 @@
 
 [![CI](https://github.com/pipi0616/rare-disease-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/pipi0616/rare-disease-agent/actions/workflows/ci.yml)
 
-An agent that takes a patient's clinical findings (free text or HPO terms,
-optionally with candidate variants), decides what to look up, and returns
-ranked candidate diseases and genes with cited evidence. Evaluated on public,
-leakage-controlled case collections against classical, fixed-pipeline and
-single-call baselines.
+An agent that takes a patient's findings — a clinical note, or HPO terms, and
+optionally the genes left after sequencing — decides what to look up, and returns
+up to ten candidate diseases, each with its reason and the evidence it rests on,
+with sources.
 
-**Status:** the agent, evaluated on a held-out set and served over HTTP, with seven tools and the baselines it is measured against. Tools:
+![A clinical note pasted, read into HPO terms, checked, and diagnosed: the published diagnosis comes first](docs/img/demo-note.gif)
+
+*A note written for the demo from a published patient's findings (galactosemia):
+read into terms in about 5 s, then the agent's answer in about 14 s — the
+published diagnosis first — for about half a US cent in all.
+[Video (MP4)](docs/img/demo-note.mp4).*
+
+| 200 held-out cases, each case's own paper masked | confirmed disease ranked first | paired against the agent (cases each gets right alone) |
+|---|---|---|
+| **this agent** (`deepseek-flash` with tools) | **43.0%** | |
+| GPT-6.1, asked directly | 33.0% | 37 : 17 (p = 0.009) |
+| LIRICAL, an established tool | 28.0% | 34 : 4 (p < 0.001) |
+| Gemini 4, asked directly | 27.0% | 46 : 14 (p < 0.001) |
+| DeepRare, on the same model — judged by its own LLM scoring, as the agent (42.5%) | 27.5% | 48 : 18 (p < 0.001) |
+| Claude Sonnet 5.5, asked directly | 23.5% | 52 : 13 (p < 0.001) |
+
+Each comparison follows a plan committed before its run, on a fixed version of
+the system; below are the details, the conditions that were not equal, and the
+one pre-registered claim that failed (reading notes).
+
+**Status:** the agent, evaluated on a held-out set and against LIRICAL, three frontier models and DeepRare; served over HTTP, reading clinical notes as well as HPO terms; with seven tools and the baselines it is measured against. Tools:
 `rank_diseases` (every OMIM disease ranked against the patient's phenotype),
 `lookup_disease` (one disease's features with their frequencies, inheritance,
 onset, genes and sources, sized for a model to read), `check_match` (the
