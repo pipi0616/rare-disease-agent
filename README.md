@@ -74,6 +74,28 @@ comes from those — on the other 25% masking changes not one answer. A
 benchmark on public case reports that does not mask is about half leakage.
 Per-case outcomes: `docs/comparison_hits.tsv`.
 
+**Against frontier models asked directly.** Each provider's current model,
+asked once per case with the same prompt as the single-call baseline, through
+OpenRouter, on a fixed random 200 of the 840 held-out cases
+(`docs/comparison_plan_llms.md`):
+
+| held-out, 200 cases | top-1 | top-10 |
+|---|---|---|
+| **final agent** (`deepseek-flash` with tools) | **43.0%** [36.3–49.9] | **60.5%** [53.6–67.0] |
+| GPT-6.1, asked directly | 33.0% [26.9–39.8] | 49.0% [42.2–55.9] |
+| LIRICAL | 28.0% [22.2–34.6] | 47.0% [40.2–53.9] |
+| Gemini 4, asked directly | 27.0% [21.3–33.5] | 42.0% [35.4–48.9] |
+| Claude Sonnet 5.5, asked directly | 23.5% [18.2–29.8] | 38.5% [32.0–45.4] |
+| `deepseek-flash`, asked directly | 15.0% [10.7–20.6] | 25.5% [20.0–32.0] |
+
+Paired at first place the agent wins against each: 37 to 17 (GPT-6.1,
+p = 0.009), 52 to 13 and 46 to 14. The model inside the agent scores 15% on its
+own; the tools and the workflow take it past every frontier model, at a lower
+cost per case. Every billed run carries a per-call spending cap; two runs that
+lost cases to the provider (a new account's rate limit, dropped connections)
+were completed by asking only those cases again (`--fill-in`). Per-case
+outcomes: `docs/comparison_llm_hits.tsv`.
+
 During development, on the 200-case dev set
 (recall of the confirmed disease, 95% intervals):
 

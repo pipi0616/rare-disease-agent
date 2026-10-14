@@ -59,3 +59,4 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [21](21_heldout.ipynb) | 正式评测：公司里一次正式实验怎么做、怎么记录、评测系统的架构；留出集只考一次 |
 | [22](22_service.ipynb) | 做成服务：接口、实时看 agent 的每一步、模型故障时自动降级、留记录、演示页面、容器 |
 | [23](23_compare_lirical.ipynb) | 和别人比：现成工具 LIRICAL 在同样的题、同样的遮挡下考一次；泄露到底值多少分 |
+| [24](24_compare_llms.ipynb) | 和通用大模型比：GPT、Claude、Gemini 最强的模型直接问，够不够；花钱的上限、小考、补问 |
