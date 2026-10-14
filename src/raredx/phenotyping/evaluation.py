@@ -226,3 +226,34 @@ def evaluate(
         metrics["usage/wall_seconds"] = round(time.monotonic() - started, 1)
         mlflow.log_metrics(metrics)
     return str(run.info.run_id), metrics
+
+
+def per_document(tracking_uri: str, run_id: str) -> dict[str, dict[str, float]]:
+    """Each document's scores in a recorded run — precision, recall, F1, as the scorer
+    gave them — for a paired comparison of two readers on the same documents."""
+    client = MlflowClient(tracking_uri=tracking_uri)
+    mlflow.set_tracking_uri(tracking_uri)
+    mlflow.flush_trace_async_logging()
+    experiment_id = client.get_run(run_id).info.experiment_id
+    traces = mlflow.search_traces(
+        locations=[experiment_id], run_id=run_id, return_type="list", max_results=100_000
+    )
+    scored: dict[str, dict[str, float]] = {}
+    for trace in sorted(traces, key=lambda t: t.info.request_time):  # the last attempt counts
+        doc_id = trace.data.spans[0].inputs["document"]["id"]
+        values = {a.name: a.value for a in trace.info.assessments}
+        scored[doc_id] = {k: float(values[k]) for k in ("precision", "recall", "f1") if k in values}
+    return scored
+
+
+def paired(
+    a: dict[str, dict[str, float]], b: dict[str, dict[str, float]], measure: str = "f1"
+) -> tuple[int, int, float]:
+    """Documents where reader a scored higher, where b did, and the two-sided sign test's
+    p-value; documents where they tie do not count."""
+    from raredx.evals.scoring import sign_test
+
+    shared = a.keys() & b.keys()
+    wins = sum(a[d][measure] > b[d][measure] for d in shared)
+    losses = sum(a[d][measure] < b[d][measure] for d in shared)
+    return wins, losses, sign_test(wins, losses)

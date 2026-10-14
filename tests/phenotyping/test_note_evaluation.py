@@ -10,6 +10,8 @@ from raredx.phenotyping.corpora import Annotation, Document
 from raredx.phenotyping.evaluation import (
     evaluate,
     gold_terms,
+    paired,
+    per_document,
     reader_terms,
     scores,
     summarize,
@@ -101,4 +103,15 @@ def test_a_run_scores_every_document_and_reads_saved_readings_back(
     assert again["usage/read_back"] == 2 and again["micro/f1"] == metrics["micro/f1"]
     run = mlflow.MlflowClient(store).get_run(run_id)
     assert run.data.params["reader"] == "dictionary"
+    scored = per_document(store, run_id)
+    assert scored["a"] == {"precision": 0.5, "recall": 0.5, "f1": 0.5}
+    assert scored["b"]["f1"] == 0.0
     assert mlflow.get_experiment(run.info.experiment_id).name == "eval/notes-tiny"
+
+
+def test_two_readers_are_compared_document_by_document() -> None:
+    a = {"1": {"f1": 0.9}, "2": {"f1": 0.5}, "3": {"f1": 0.7}, "4": {"f1": 0.2}}
+    b = {"1": {"f1": 0.6}, "2": {"f1": 0.5}, "3": {"f1": 0.4}, "5": {"f1": 1.0}}
+    wins, losses, p = paired(a, b)
+    assert (wins, losses) == (2, 0)  # a tie (2) and documents only one read do not count
+    assert p == 0.5
