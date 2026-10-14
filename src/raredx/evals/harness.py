@@ -260,9 +260,20 @@ class Harness:
         )
         return list(traces)
 
+    def answers(self, run_id: str) -> list[Any]:
+        """One trace per case: the one that answered it.
+
+        MLflow's evaluate asks a case again when the model API says it is busy (HTTP
+        429), and records every attempt as a trace of its own. The case's answer is its
+        last attempt; the earlier ones are what the rate limit cost in time."""
+        last: dict[str, Any] = {}
+        for trace in sorted(self.traces(run_id), key=lambda t: t.info.request_time):
+            last[trace.data.spans[0].inputs["question"]["case_id"]] = trace
+        return list(last.values())
+
     def _check_complete(self, run_id: str, expected: int) -> None:
         """Refuse to score a run whose answers did not all reach MLflow."""
-        recorded = len(self.traces(run_id))
+        recorded = len(self.answers(run_id))
         if recorded != expected:
             raise IncompleteRun(
                 f"only {recorded} of {expected} answers were recorded in MLflow; "
@@ -270,9 +281,10 @@ class Harness:
             )
 
     def model_api_errors(self, run_id: str) -> tuple[int, str]:
-        """How many cases failed because the model API failed, and the first such error."""
+        """How many cases failed because the model API failed, and the first such error.
+        A case asked again after a rate limit, and answered, did not fail."""
         count, first = 0, ""
-        for trace in self.traces(run_id):
+        for trace in self.answers(run_id):
             errors = [
                 e.attributes
                 for span in trace.data.spans
@@ -315,7 +327,7 @@ class Harness:
         """Per case: whether the run had the confirmed disease in its top k — the
         scorer's verdict as recorded on each trace."""
         verdicts = {}
-        for trace in self.traces(run_id):
+        for trace in self.answers(run_id):
             case_id = trace.data.spans[0].inputs["question"]["case_id"]
             found = [a.value for a in trace.info.assessments if a.name == f"disease_top{k}"]
             verdicts[case_id] = bool(found[-1]) if found else False
@@ -348,7 +360,7 @@ class Harness:
                 f"the manifest changed since run {run_id}; scores would not compare"
             )
         self._use(params.get("label", params["manifest"]))
-        traces = self.traces(run_id)
+        traces = self.answers(run_id)
         if len(traces) != expected:
             raise IncompleteRun(f"run {run_id} recorded {len(traces)} of {expected} answers")
         n_gene = sum(any(a.name == "gene" for a in t.info.assessments) for t in traces)

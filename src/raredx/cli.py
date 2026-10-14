@@ -431,7 +431,7 @@ def _system(
         if not from_run:
             _fail("the judge replays a recorded agent run: give --from-run RUN_ID")
         variant, _, thinking = name.removeprefix("judge-").partition("-")
-        traces = _harness().traces(from_run)
+        traces = _harness().answers(from_run)
         evidence = {e.case_id: e for e in map(gather, traces)}
         answers = {
             t.data.spans[0].inputs["question"]["case_id"]: candidates_of(t.data.spans[0].outputs)

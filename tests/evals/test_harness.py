@@ -12,7 +12,7 @@ import httpx2
 import mlflow
 import pytest
 from mlflow.entities import Feedback, SpanType
-from openai import APIStatusError
+from openai import APIStatusError, RateLimitError
 
 from raredx.data.cases import Case
 from raredx.evals import harness as h
@@ -245,6 +245,34 @@ class OutOfCredit:
             response=httpx2.Response(402, request=httpx2.Request("POST", "https://api.test")),
             body=None,
         )
+
+
+class Busy:
+    """Rate-limited on its first attempt at each case and right on the second, as a new
+    account at a model provider is: MLflow's evaluate asks the case again."""
+
+    name = "busy"
+
+    def __init__(self) -> None:
+        self.tried: set[str] = set()
+
+    def predict(self, question: Question) -> list[Candidate]:
+        if question.case_id not in self.tried:
+            self.tried.add(question.case_id)
+            response = httpx2.Response(429, request=httpx2.Request("POST", "https://api.test"))
+            raise RateLimitError("Rate limit exceeded: new accounts", response=response, body=None)
+        return [Candidate(disease_name="Perrault syndrome 7", disease_id="OMIM:621101")]
+
+
+def test_a_case_asked_again_after_a_rate_limit_counts_once_by_its_last_attempt(
+    harness: h.Harness, cases: list[Case]
+) -> None:
+    run_id, summary = harness.evaluate(Busy(), "toy", "sha-1", cases, {"system": "busy"})
+    assert len(harness.traces(run_id)) == 6  # every attempt is recorded
+    assert len(harness.answers(run_id)) == 3  # one answer per case: the run is complete
+    assert summary.n_answered == 3
+    assert harness.hits(run_id, 1) == {"1": True, "2": True, "3": False}
+    assert harness.client.get_run(run_id).data.metrics["errors/model_api"] == 0
 
 
 def test_a_model_api_failure_is_counted_apart_from_the_systems_misses(
