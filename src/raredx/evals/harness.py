@@ -47,7 +47,8 @@ from raredx.knowledge import masking
 
 HEADLINE = ("disease_top1", "disease_top10", "gene_top10")
 
-# Exceptions of the OpenAI SDK that mean the API failed, not the system under test.
+# Exceptions that mean the model API could not be used — it failed, or the run's spending
+# cap stopped the call — not that the system under test got the case wrong.
 MODEL_API_ERRORS = frozenset(
     {
         "APIConnectionError",
@@ -57,6 +58,8 @@ MODEL_API_ERRORS = frozenset(
         "InternalServerError",
         "PermissionDeniedError",
         "RateLimitError",
+        "BudgetExceeded",  # ours: the run's spending cap stopped the call
+        "DeepRareAPIError",  # DeepRare gave no answer: a service it calls could not be reached
     }
 )
 
@@ -202,8 +205,12 @@ class Harness:
         mask_source_papers: bool = True,
         hidden_of: Callable[[str], set[str]] | None = None,
         genes: dict[str, list[str]] | None = None,
+        part: bool = False,
     ) -> tuple[str, scoring.Summary]:
         """Run the system on the manifest and record it; returns the MLflow run id and Summary.
+
+        `part`: the cases are a part of the manifest — those a run lost to the model API,
+        asked again — so they are evaluated as they are, not as the registered dataset.
 
         While the system works on a case, the case's source paper is masked from the
         knowledge its tools read (raredx.knowledge.masking). Turning that off measures
@@ -212,7 +219,11 @@ class Harness:
         A masked run is then audited (leak_audit). `hidden_of` gives, for a paper, the
         diseases known only from it; without it only the paper itself is looked for.
         """
-        data = self.dataset(manifest, manifest_sha256, cases, genes)
+        if part:
+            self._use(manifest)
+            data: Any = [record_of(c, (genes or {}).get(c.id)) for c in cases]
+        else:
+            data = self.dataset(manifest, manifest_sha256, cases, genes)
         papers = {c.id: c.pmid for c in cases}
 
         # The root span of every trace: one per question. Anything the system calls
@@ -258,19 +269,31 @@ class Harness:
         )
         return list(traces)
 
+    def answers(self, run_id: str) -> list[Any]:
+        """One trace per case: the one that answered it.
+
+        MLflow's evaluate asks a case again when the model API says it is busy (HTTP
+        429), and records every attempt as a trace of its own. The case's answer is its
+        last attempt; the earlier ones are what the rate limit cost in time."""
+        last: dict[str, Any] = {}
+        for trace in sorted(self.traces(run_id), key=lambda t: t.info.request_time):
+            last[trace.data.spans[0].inputs["question"]["case_id"]] = trace
+        return list(last.values())
+
     def _check_complete(self, run_id: str, expected: int) -> None:
         """Refuse to score a run whose answers did not all reach MLflow."""
-        recorded = len(self.traces(run_id))
+        recorded = len(self.answers(run_id))
         if recorded != expected:
             raise IncompleteRun(
                 f"only {recorded} of {expected} answers were recorded in MLflow; "
                 "the run is marked failed and was not scored — run it again"
             )
 
-    def model_api_errors(self, run_id: str) -> tuple[int, str]:
-        """How many cases failed because the model API failed, and the first such error."""
-        count, first = 0, ""
-        for trace in self.traces(run_id):
+    def lost_cases(self, run_id: str) -> dict[str, str]:
+        """The cases a run lost because the model API failed, each with its error. A case
+        asked again after a rate limit, and answered, was not lost."""
+        lost = {}
+        for trace in self.answers(run_id):
             errors = [
                 e.attributes
                 for span in trace.data.spans
@@ -278,9 +301,14 @@ class Harness:
                 if e.name == "exception" and e.attributes.get("exception.type") in MODEL_API_ERRORS
             ]
             if errors:
-                count += 1
-                first = first or str(errors[0].get("exception.message", ""))[:300]
-        return count, first
+                case_id = trace.data.spans[0].inputs["question"]["case_id"]
+                lost[case_id] = str(errors[0].get("exception.message", ""))[:300]
+        return lost
+
+    def model_api_errors(self, run_id: str) -> tuple[int, str]:
+        """How many cases failed because the model API failed, and the first such error."""
+        lost = self.lost_cases(run_id)
+        return len(lost), next(iter(lost.values()), "")
 
     def leak_audit(
         self,
@@ -313,7 +341,7 @@ class Harness:
         """Per case: whether the run had the confirmed disease in its top k — the
         scorer's verdict as recorded on each trace."""
         verdicts = {}
-        for trace in self.traces(run_id):
+        for trace in self.answers(run_id):
             case_id = trace.data.spans[0].inputs["question"]["case_id"]
             found = [a.value for a in trace.info.assessments if a.name == f"disease_top{k}"]
             verdicts[case_id] = bool(found[-1]) if found else False
@@ -346,7 +374,7 @@ class Harness:
                 f"the manifest changed since run {run_id}; scores would not compare"
             )
         self._use(params.get("label", params["manifest"]))
-        traces = self.traces(run_id)
+        traces = self.answers(run_id)
         if len(traces) != expected:
             raise IncompleteRun(f"run {run_id} recorded {len(traces)} of {expected} answers")
         n_gene = sum(any(a.name == "gene" for a in t.info.assessments) for t in traces)

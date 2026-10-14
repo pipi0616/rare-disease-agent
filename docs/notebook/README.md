@@ -56,3 +56,7 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [18](18_disease_texts.ipynb) | 第五个工具：查疾病介绍（RAG：切块、向量库、混合检索，单独评测检索） |
 | [19](19_candidate_genes.ipynb) | 第六个工具：看基因检测结果（模拟测序、按症状给基因排名、另一种考法） |
 | [20](20_final_exam.ipynb) | 大考：消融实验、agent 显著胜过固定流程、重放判断（一个负面结果）、两次意外 |
+| [21](21_heldout.ipynb) | 正式评测：公司里一次正式实验怎么做、怎么记录、评测系统的架构；留出集只考一次 |
+| [22](22_service.ipynb) | 做成服务：接口、实时看 agent 的每一步、模型故障时自动降级、留记录、演示页面、容器 |
+| [23](23_compare_lirical.ipynb) | 和别人比：现成工具 LIRICAL 在同样的题、同样的遮挡下考一次；泄露到底值多少分 |
+| [24](24_compare_llms.ipynb) | 和通用大模型比：GPT、Claude、Gemini 最强的模型直接问，够不够；花钱的上限、小考、补问 |

@@ -111,3 +111,69 @@ def test_gene_rank_needs_the_genotype_track(tmp_path: Path) -> None:
 
     with pytest.raises(typer.Exit):
         _system("gene-rank", [], EVALS, tmp_path)
+
+
+def test_the_heldout_sample_needs_final_too(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "eval",
+            "run",
+            "--system",
+            "oracle",
+            "--split",
+            "heldout-papers",
+            "--data-dir",
+            str(tmp_path),
+        ],
+    )
+    assert result.exit_code == 1 and "--final" in result.output
+
+
+def test_serve_says_to_fetch_the_knowledge_first(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["serve", "--data-dir", str(tmp_path), "--evals-dir", str(EVALS)])
+    assert result.exit_code == 1
+    assert "raredx data fetch hpo" in result.output
+
+
+def test_the_service_commands_are_listed() -> None:
+    result = runner.invoke(app, ["--help"])
+    assert "serve" in result.output and "demo" in result.output
+
+
+def test_a_key_left_empty_is_a_missing_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    from pydantic import SecretStr
+
+    from raredx import llm
+    from raredx.config import settings
+
+    monkeypatch.setattr(settings, "llm_api_key", SecretStr("  "))  # .env.example, not filled in
+    with pytest.raises(llm.MissingAPIKey, match="DEEPSEEK_API_KEY"):
+        llm.chat_model(settings)
+
+
+def test_lirical_says_what_to_run_when_it_is_not_set_up(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["data", "lirical", "--data-dir", str(tmp_path)])
+    assert result.exit_code == 1
+    assert "raredx data fetch lirical hpo-json" in result.output
+
+
+def test_a_model_billed_through_openrouter_needs_a_cap_and_only_suits_llm_direct(
+    tmp_path: Path,
+) -> None:
+    base = [
+        "eval",
+        "run",
+        "--split",
+        "ci-20",
+        "--data-dir",
+        str(tmp_path),
+        "--evals-dir",
+        str(EVALS),
+    ]
+    no_cap = runner.invoke(app, [*base, "--system", "llm-direct", "--model", "openrouter:x/y"])
+    other = runner.invoke(app, [*base, "--system", "oracle", "--model", "openrouter:x/y"])
+    for result in (no_cap, other):  # refused before any data is read or any money spent
+        assert result.exit_code == 1
+    assert "give --budget-usd" in no_cap.output
+    assert "--model applies to llm-direct only" in other.output

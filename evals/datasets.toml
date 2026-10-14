@@ -31,6 +31,30 @@ role = "knowledge: the ontology and disease annotations the phenotype tools read
 "genes_to_phenotype.txt" = "507a17bff9c49e6329fbd88b1f91734fa7e9fdea5c06304044c0892eb6ab248c"
 "genes_to_disease.txt" = "7937a1b92779dc8614e39ace623b443c7c71dd15e4de11d5e52b14e331ab5978"
 
+# LIRICAL, an established phenotype-driven diagnosis tool, run on the same cases for
+# comparison (src/raredx/baselines/lirical.py). The release as published: fetched and
+# verified like a dataset, unpacked by `raredx data lirical`, never kept in git.
+[lirical]
+version = "2.4.1"
+url = "https://github.com/TheJacksonLaboratory/LIRICAL/releases/download/v2.4.1/"
+homepage = "https://thejacksonlaboratory.github.io/LIRICAL/"
+license = "The Jackson Laboratory software license, non-commercial use only"
+role = "comparison: a published diagnosis tool, given the same question, release and mask"
+
+[lirical.files]
+"lirical-cli-2.4.1-distribution.zip" = "445cd4975e46e6656b5ae2c04785548bbb4c434664c0423332d09bdffeb32248"
+
+# The pinned HPO release in the format LIRICAL reads. Our own tools read hp.obo.
+[hpo-json]
+version = "v2026-09-01"
+url = "https://github.com/obophenotype/human-phenotype-ontology/releases/download/v2026-09-01/"
+homepage = "https://hpo.jax.org"
+license = "HPO license: free to use, cite the version used; https://hpo.jax.org/license"
+role = "comparison: the same ontology release, as JSON, for LIRICAL"
+
+[hpo-json.files]
+"hp.json" = "a7b3a012e7b4007a35a7cf8da35f2373b54cc16907f80d13d62470d31f833501"
+
 # Disease texts for the RAG tool. Neither upstream versions its download URL
 # (latest_only): the version is the release date the file states (Orphanet) or the
 # day it was fetched (MedlinePlus), and a changed upstream file fails its checksum.

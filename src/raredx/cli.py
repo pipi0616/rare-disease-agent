@@ -20,6 +20,7 @@ from raredx.evals.systems import Oracle, Popularity, System
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from fastapi import FastAPI
     from openai import OpenAI
 
     from raredx.evals.harness import Harness
@@ -132,6 +133,60 @@ def index(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.
     typer.echo(f"ok  {folder}: {len(passages)} passages")
 
 
+@data_app.command("lirical")
+def setup_lirical(
+    data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir
+) -> None:
+    """Set LIRICAL up for comparison runs: unpack the fetched release, let it download
+    its gene and transcript data (about 350 MB), put the pinned HPO release in."""
+    from raredx.baselines import lirical
+
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    tool, ontology = registry["lirical"], registry["hpo-json"]
+    distribution = sources.raw_dir(tool, data_dir) / next(iter(tool.files))
+    hp_json = sources.raw_dir(ontology, data_dir) / lirical.ONTOLOGY
+    if not distribution.exists() or not hp_json.exists():
+        _fail("LIRICAL is not downloaded — run `raredx data fetch lirical hpo-json` first")
+    try:
+        java = lirical.find_java(settings.java)
+    except lirical.JavaNotFound as e:
+        _fail(str(e))
+    folder = sources.processed_dir(tool, data_dir)
+    info = lirical.setup(distribution, hp_json, folder, java)
+    typer.echo(
+        f"ok  {folder}  (LIRICAL {info['lirical']}, HPO {ontology.version}, "
+        f"{info['gene_rows_dropped']} repeated gene rows dropped)"
+    )
+
+
+@data_app.command("deeprare-queries")
+def deeprare_queries(
+    split: Annotated[list[str], typer.Option(help="Manifests whose cases to prepare.")],
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Embed DeepRare's similar-case query for every case of these manifests, once
+    (through OpenRouter, well under a cent), so its runs need no OpenRouter."""
+    from raredx import llm
+    from raredx.baselines import deeprare
+
+    knowledge = _knowledge(evals_dir, data_dir)
+    _, cases = _processed(data_dir, evals_dir)
+    by_id = {c.id: c for c in cases}
+    texts = [
+        deeprare.query_text([knowledge.term(t)[1] for t in by_id[case_id].hpo_ids])
+        for name in split
+        for case_id, _ in splits.read(_manifest(evals_dir, name))
+    ]
+    try:
+        client = llm.openrouter_client(settings)
+    except llm.MissingAPIKey as e:
+        _fail(str(e))
+    cache = _deeprare_queries(data_dir)
+    done = deeprare.embed_queries(texts, cache, client)
+    typer.echo(f"ok  {cache}: {done} embedded now, {len(set(texts)) - done} already there")
+
+
 @data_app.command()
 def stats(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir) -> None:
     """Summarise the processed cases."""
@@ -202,6 +257,8 @@ SYSTEMS = (
     "similar-patients",
     "disease-texts",
     "gene-rank",
+    "lirical",
+    "deeprare",
     "fixed-pipeline",
     "agent",
     "seeded-agent",
@@ -280,6 +337,15 @@ def _text_search(evals_dir: Path, data_dir: Path) -> "SearchDiseaseTexts":
     return SearchDiseaseTexts(index, knowledge)
 
 
+OPENROUTER = "openrouter:"
+
+
+def _deeprare_queries(data_dir: Path) -> Path:
+    from raredx.baselines.deeprare import QUERY_EMBEDDINGS
+
+    return data_dir / "processed" / "deeprare" / QUERY_EMBEDDINGS
+
+
 # Tools an agent can be given beyond the four core ones; --without leaves one out.
 EXTRA_TOOLS = ("find_similar_patients", "search_disease_texts", "rank_candidate_genes")
 
@@ -303,7 +369,11 @@ def _system(
     with_genes: bool = False,
     from_run: str | None = None,
     with_texts: bool = False,
+    llm_model: str | None = None,
+    budget_usd: float | None = None,
 ) -> System:
+    if llm_model and name not in ("llm-direct", "llm-direct-thinking"):
+        _fail("--model applies to llm-direct only")
     if name == "oracle":
         return Oracle.from_cases(cases)
     if name == "popularity":
@@ -335,6 +405,35 @@ def _system(
         if not with_genes:
             _fail("gene-rank ranks candidate genes: run it with --with-genes")
         return GeneRank(RankCandidateGenes(_knowledge(evals_dir, data_dir)))
+    if name == "lirical":
+        from raredx.baselines import lirical
+
+        registry = sources.load_sources(evals_dir / "datasets.toml")
+        folder = sources.processed_dir(registry["lirical"], data_dir)
+        knowledge = _knowledge(evals_dir, data_dir)
+        try:
+            return lirical.Lirical(knowledge, folder, lirical.find_java(settings.java))
+        except (lirical.LiricalNotSetUp, lirical.JavaNotFound) as e:
+            _fail(str(e))
+    if name == "deeprare":
+        from raredx.baselines.deeprare import DeepRare, DeepRareNotSetUp
+
+        def secret(value: Any) -> str:
+            return str(value.get_secret_value()) if value is not None else ""
+
+        keys = {
+            "DEEPSEEK_API_KEY": secret(settings.llm_api_key),
+            "OPENROUTER_API_KEY": secret(settings.openrouter_api_key),
+        }
+        try:
+            return DeepRare(
+                _knowledge(evals_dir, data_dir),
+                settings.deeprare_dir,
+                keys,
+                _deeprare_queries(data_dir),
+            )
+        except DeepRareNotSetUp as e:
+            _fail(str(e))
     if name == "fixed-pipeline":
         from raredx.baselines.fixed_pipeline import FixedPipeline
         from raredx.tools.check_match import CheckMatch
@@ -387,7 +486,7 @@ def _system(
         if not from_run:
             _fail("the judge replays a recorded agent run: give --from-run RUN_ID")
         variant, _, thinking = name.removeprefix("judge-").partition("-")
-        traces = _harness().traces(from_run)
+        traces = _harness().answers(from_run)
         evidence = {e.case_id: e for e in map(gather, traces)}
         answers = {
             t.data.spans[0].inputs["question"]["case_id"]: candidates_of(t.data.spans[0].outputs)
@@ -403,10 +502,26 @@ def _system(
             thinking=thinking == "thinking",
         )
     if name in ("llm-direct", "llm-direct-thinking"):
+        from raredx import llm
         from raredx.baselines.llm_direct import LLMDirect
 
+        reasoning = name == "llm-direct-thinking"
+        if llm_model is None:
+            return LLMDirect(_model_client(), settings.llm_model, thinking=reasoning)
+        if not llm_model.startswith(OPENROUTER):
+            _fail(f"--model takes an OpenRouter model id, written {OPENROUTER}provider/model")
+        if budget_usd is None:
+            _fail("a run billed through OpenRouter needs a cap: give --budget-usd")
+        try:
+            client = llm.openrouter_client(settings)
+        except llm.MissingAPIKey as e:
+            _fail(str(e))
         return LLMDirect(
-            _model_client(), settings.llm_model, thinking=name == "llm-direct-thinking"
+            client,
+            llm_model.removeprefix(OPENROUTER),
+            thinking=reasoning,
+            provider="openrouter",
+            budget=llm.Budget(budget_usd),
         )
     _fail(f"unknown system {name!r}: choose {', '.join(SYSTEMS)}")
 
@@ -463,11 +578,29 @@ def run_system(
         bool,
         typer.Option(help="The agents: add the disease-text search, off by default since ch 20."),
     ] = False,
+    model: Annotated[
+        str | None,
+        typer.Option(
+            help="llm-direct: another provider's model through OpenRouter, "
+            "e.g. openrouter:anthropic/claude-sonnet-5.5"
+        ),
+    ] = None,
+    budget_usd: Annotated[
+        float | None,
+        typer.Option(help="OpenRouter runs: stop calling the model once this much is spent."),
+    ] = None,
+    fill_in: Annotated[
+        str | None,
+        typer.Option(
+            help="A run of the same system on the same manifest: ask again only the cases "
+            "it lost to a model-API failure, as a run that completes it."
+        ),
+    ] = None,
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
     """Evaluate a system on a manifest with MLflow; the run and every answer are recorded."""
-    if split == "heldout" and not final:
+    if split.startswith("heldout") and not final:
         _fail("heldout is the final exam: run it once, with --final, when the design is frozen")
     left_out = tuple(sorted(set(without or [])))
     unknown = [t for t in left_out if t not in EXTRA_TOOLS]
@@ -475,13 +608,37 @@ def run_system(
         _fail(f"--without takes {', '.join(EXTRA_TOOLS)}; not {', '.join(unknown)}")
     if left_out and system not in ("agent", "seeded-agent"):
         _fail("--without applies to the agents only")
+    if model and system not in ("llm-direct", "llm-direct-thinking"):
+        _fail("--model applies to llm-direct only")
+    if model and budget_usd is None:
+        _fail("a run billed through OpenRouter needs a cap: give --budget-usd")
     out_dir, cases = _processed(data_dir, evals_dir)
     manifest = _manifest(evals_dir, split)
     by_id = {c.id: c for c in cases}
     selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
+    lost: dict[str, str] = {}
+    if fill_in:
+        earlier = _harness().client.get_run(fill_in).data.params
+        if earlier.get("manifest") != split:
+            _fail(f"run {fill_in} was not made on {split}")
+        lost = _harness().lost_cases(fill_in)
+        if not lost:
+            _fail(f"run {fill_in} lost no case to the model API: there is nothing to fill in")
+        selected = [c for c in selected if c.id in lost]
     chosen = _system(
-        system, cases, evals_dir, data_dir, similarity, left_out, with_genes, from_run, with_texts
+        system,
+        cases,
+        evals_dir,
+        data_dir,
+        similarity,
+        left_out,
+        with_genes,
+        from_run,
+        with_texts,
+        model,
+        budget_usd,
     )
+    billed = getattr(chosen, "provider", None) == "openrouter"
     recorded = getattr(chosen, "evidence", None)
     if isinstance(recorded, dict) and {c.id for c in selected} - set(recorded):
         _fail(f"run {from_run} has no record of some cases in {split}: replay the same manifest")
@@ -498,12 +655,19 @@ def run_system(
     system_params = getattr(chosen, "params", None)
     if callable(system_params):  # e.g. the model, thinking mode and prompt version
         params.update(system_params())
+    if fill_in:
+        if _harness().client.get_run(fill_in).data.params.get("system") != chosen.name:
+            _fail(f"run {fill_in} was made by another system")
+        params |= {"fills_in": fill_in, "cases_asked_again": len(selected)}
     label, dataset_sha256, genes = split, manifest_sha256, None
     if with_genes:  # its own experiment and dataset: a different exam
         from raredx.evals import candidates
 
         knowledge = _knowledge(evals_dir, data_dir)
+        without_gene = [c.id for c in selected if c.gene is None]
+        selected = [c for c in selected if c.gene is not None]  # nothing to sequence otherwise
         genes = {c.id: candidates.candidate_genes(c, knowledge) for c in selected}
+        params["cases_without_a_causal_gene_left_out"] = len(without_gene)
         label = f"{split}+genes"
         dataset_sha256 = hashlib.sha256(f"{manifest_sha256} {candidates.SPEC}".encode()).hexdigest()
         params |= {"label": label, "track": "phenotype+genes", "candidates": candidates.SPEC}
@@ -520,13 +684,17 @@ def run_system(
             mask_source_papers=mask_source_paper,
             hidden_of=_hidden_of(evals_dir, data_dir),
             genes=genes,
+            part=bool(fill_in),
         )
     except IncompleteRun as e:
         _fail(str(e))
     usage = harness.usage(run_id)
     tokens_in, tokens_out = usage["usage/input_tokens"], usage["usage/output_tokens"]
     cached = usage["usage/cached_input_tokens"]
-    if tokens_in or tokens_out:
+    if billed:  # what OpenRouter said each call cost, summed; not an estimate
+        usage["usage/cost_usd_billed"] = round(chosen.budget.spent, 4)  # type: ignore[attr-defined]
+        harness.log_metrics(run_id, usage)
+    elif tokens_in or tokens_out:
         cost = (
             (tokens_in - cached) * settings.llm_price_input
             + cached * settings.llm_price_cached_input
@@ -539,7 +707,13 @@ def run_system(
     if summary.n_answered < summary.n_cases:
         missing = summary.n_cases - summary.n_answered
         typer.echo(f"note: {missing} cases got no answer; their traces in MLflow show why")
-    if tokens_in or tokens_out:
+    if billed:
+        typer.echo(
+            f"usage: {tokens_in:,.0f} input + {tokens_out:,.0f} output tokens, "
+            f"${usage['usage/cost_usd_billed']:.4f} billed by OpenRouter; "
+            f"{usage['usage/seconds_per_case']:.1f} s per case"
+        )
+    elif tokens_in or tokens_out:
         typer.echo(
             f"usage: {tokens_in:,.0f} input ({cached:,.0f} cached) + {tokens_out:,.0f} output "
             f"tokens, about ${usage['usage/cost_usd_estimate']:.2f} at peak price; "
@@ -579,7 +753,9 @@ def score_run(
     manifest = _manifest(evals_dir, params["manifest"])
     from raredx.evals.harness import IncompleteRun, ManifestMismatch
 
-    expected = len(splits.read(manifest))
+    expected = len(splits.read(manifest)) - int(
+        params.get("cases_without_a_causal_gene_left_out", 0)
+    )
     try:
         new_id, summary, _ = harness.rescore(run_id, sources.sha256_of(manifest), expected)
     except (ManifestMismatch, IncompleteRun) as e:
@@ -618,7 +794,7 @@ def compare_runs(
     typer.echo(f"  only {name_a} ({run_a[:8]}) right: {only_a:>4}")
     typer.echo(f"  only {name_b} ({run_b[:8]}) right: {only_b:>4}")
     typer.echo(f"  both right: {both}   neither: {len(hits_a) - both - only_a - only_b}")
-    typer.echo(f"  sign test, two-sided: p = {scoring.sign_test(only_a, only_b):.3f}")
+    typer.echo(f"  sign test, two-sided: {scoring.p_value(scoring.sign_test(only_a, only_b))}")
 
 
 @eval_app.command("runs")
@@ -695,6 +871,121 @@ def serve_mcp(
     mlflow.set_experiment("mcp-server")  # every call a host makes is traced here
     server = build(knowledge, extra)
     server.run(transport="streamable-http" if transport == "streamable-http" else "stdio")
+
+
+# ── service ─────────────────────────────────────────────────────────
+
+
+SERVICE_EXPERIMENT = "service"
+
+
+def _service(data_dir: Path, evals_dir: Path) -> "FastAPI":
+    """The HTTP service around the final system, built as the evaluation built it:
+    the seeded agent with the patient bank, and the same with the gene tool for
+    requests that carry candidate genes. Without a model API key, the fallback alone."""
+    import mlflow
+
+    from raredx import llm
+    from raredx.agent import Agent
+    from raredx.service import examples
+    from raredx.service.app import create_app
+    from raredx.service.diagnoser import Diagnoser
+    from raredx.tools.rank_candidate_genes import RankCandidateGenes
+
+    knowledge = _knowledge(evals_dir, data_dir)
+    _, cases = _processed(data_dir, evals_dir)
+    used = ("design",) if settings.service_patient_bank == "evaluated" else ("design", "heldout")
+    bank = _patient_bank(cases, evals_dir, data_dir, splits_used=used)
+    mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+    if mlflow.get_experiment_by_name(SERVICE_EXPERIMENT) is None:
+        # A local store keeps the traces' files under the configured root, as the
+        # evaluation's experiments do; a tracking server decides for itself.
+        local = not settings.mlflow_tracking_uri.startswith("http")
+        root = (settings.mlflow_artifact_root / SERVICE_EXPERIMENT).resolve().as_uri()
+        mlflow.create_experiment(SERVICE_EXPERIMENT, artifact_location=root if local else None)
+    mlflow.set_experiment(SERVICE_EXPERIMENT)  # every request is traced here
+    agent = with_genes = unavailable = None
+    try:
+        model = llm.chat_model(settings, timeout=settings.service_deadline_seconds, max_retries=1)
+    except llm.MissingAPIKey:
+        unavailable = "no model API key is configured"
+        typer.echo("no model API key: serving the no-model ranking only", err=True)
+    else:
+        name = settings.llm_model
+        agent = Agent(model, name, knowledge, seeded=True, extra_tools=[bank])
+        with_genes = Agent(
+            model, name, knowledge, seeded=True, extra_tools=[bank, RankCandidateGenes(knowledge)]
+        )
+    diagnoser = Diagnoser(
+        knowledge,
+        agent=agent,
+        agent_with_genes=with_genes,
+        unavailable_because=unavailable,
+        deadline_seconds=settings.service_deadline_seconds,
+        prices=(
+            settings.llm_price_input,
+            settings.llm_price_cached_input,
+            settings.llm_price_output,
+        ),
+        code=settings.build_version or code_version(),
+    )
+    key = settings.service_api_key
+    return create_app(
+        diagnoser,
+        examples=examples.load(cases, knowledge),
+        api_key=key.get_secret_value() if key else None,
+        max_concurrent=settings.service_max_concurrent,
+    )
+
+
+@app.command("serve")
+def serve_http(
+    host: Annotated[
+        str, typer.Option(help="127.0.0.1: this machine only. 0.0.0.0: inside a container.")
+    ] = "127.0.0.1",
+    port: int = 8000,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Serve the agent over HTTP: POST /v1/diagnose, its steps as a stream, and /docs."""
+    import logging
+
+    import uvicorn
+
+    service = _service(data_dir, evals_dir)
+    # The service's own log lines (one JSON line per answer), beside uvicorn's access log.
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    log = logging.getLogger("raredx.service")
+    log.addHandler(handler)
+    log.setLevel(logging.INFO)
+    logging.getLogger("mlflow").setLevel(logging.WARNING)
+    uvicorn.run(service, host=host, port=port, log_level="info")
+
+
+@app.command("demo")
+def demo_page(
+    api_url: Annotated[
+        str, typer.Option(help="Where `raredx serve` is listening.")
+    ] = "http://127.0.0.1:8000",
+    host: str = "127.0.0.1",
+    port: int = 8501,
+) -> None:
+    """Open the demo page (Streamlit) on a running `raredx serve`."""
+    import importlib.util
+    import os
+    import sys
+
+    if importlib.util.find_spec("streamlit") is None:
+        _fail("streamlit is not installed — run `uv sync` (it is in the demo group)")
+    page = Path(__file__).parent / "service" / "demo.py"
+    command = [sys.executable, "-m", "streamlit", "run", str(page)]
+    command += ["--server.address", host, "--server.port", str(port)]
+    # No first-run prompt, and no usage statistics sent to Streamlit: nothing leaves.
+    command += ["--server.headless", "true", "--browser.gatherUsageStats", "false"]
+    command += ["--client.toolbarMode", "minimal"]  # no "Deploy" button: this page stays here
+    # Streamlit takes this process's place, so a stop signal reaches it directly.
+    os.execve(sys.executable, command, {**os.environ, "RAREDX_API_URL": api_url})
 
 
 # ── llm ─────────────────────────────────────────────────────────────

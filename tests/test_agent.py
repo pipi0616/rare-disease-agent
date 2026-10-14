@@ -6,52 +6,30 @@ answer are real.
 
 import itertools
 from collections.abc import Callable, Iterator
-from typing import Any
 
 import pytest
-from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langchain_core.outputs import ChatResult
+from langchain_core.messages import AIMessage, HumanMessage
 
-from raredx.agent import FILLED, LAST_TURN, MAX_MODEL_CALLS, Agent, NoFinalAnswer, as_langchain_tool
+from conftest import OFFERED, RECEIVED, ScriptedModel, answer, call
+from raredx.agent import (
+    FILLED,
+    FUSED,
+    LAST_TURN,
+    MAX_MODEL_CALLS,
+    Agent,
+    NoFinalAnswer,
+    as_langchain_tool,
+    fuse,
+)
 from raredx.baselines.rank_then_check import RankThenCheck
 from raredx.data.cases import Case
-from raredx.evals.systems import question_of
+from raredx.evals.systems import Candidate, question_of
 from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
 from raredx.tools.check_match import CheckMatch
 from raredx.tools.find_similar_patients import FindSimilarPatients
 from raredx.tools.rank_candidate_genes import RankCandidateGenes
 from raredx.tools.rank_diseases import RankDiseases
-
-OFFERED: list[list[str]] = []  # the tools offered to the model, call by call
-RECEIVED: list[list[BaseMessage]] = []  # the messages it was sent, call by call
-
-
-class ScriptedModel(GenericFakeChatModel):
-    """A fake chat model that plays the given moves, noting what it was offered and sent."""
-
-    def bind_tools(self, tools: Any, **kwargs: Any) -> "ScriptedModel":
-        OFFERED.append([t.name for t in tools])
-        return self
-
-    def _generate(self, messages: list[BaseMessage], *args: Any, **kwargs: Any) -> ChatResult:
-        RECEIVED.append(list(messages))
-        return super()._generate(messages, *args, **kwargs)
-
-
-_ids = itertools.count()
-
-
-def call(tool: str, **args: Any) -> AIMessage:
-    """One move: a new message each time, with its own tool-call id, as a real model sends."""
-    tool_call = {"name": tool, "args": args, "id": f"{tool}-{next(_ids)}", "type": "tool_call"}
-    return AIMessage(content="", tool_calls=[tool_call])
-
-
-def answer(*diagnoses: tuple[str, str, str]) -> AIMessage:
-    rows = [{"disease_id": d, "disease_name": n, "reason": r} for d, n, r in diagnoses]
-    return call("FinalAnswer", diagnoses=rows)
 
 
 def agent(hpo: HPO, moves: Iterator[AIMessage]) -> Agent:
@@ -251,3 +229,40 @@ def test_without_candidate_genes_the_prompt_has_no_genes_line(hpo: HPO, case: Ca
     RECEIVED.clear()
     agent(hpo, iter([answer(("OMIM:690001", "x", "fits"))])).predict(question_of(case))
     assert "Candidate genes" not in str(RECEIVED[0][1].content)
+
+
+def test_fusing_puts_first_the_disease_both_rankings_rank_high() -> None:
+    def c(disease: str, gene: str | None = None, reason: str | None = None) -> Candidate:
+        return Candidate(disease_name=disease, disease_id=disease, gene=gene, reason=reason)
+
+    agent_ranking = [c("OMIM:1", reason="agent 1"), c("OMIM:2", reason="agent 2"), c("OMIM:3")]
+    gene_ranking = [c("OMIM:2", gene="GENE2"), c("OMIM:9", gene="GENE9")]
+    fused = fuse(agent_ranking, gene_ranking)
+    assert [x.disease_id for x in fused] == ["OMIM:2", "OMIM:1", "OMIM:9", "OMIM:3"]
+    assert (fused[0].reason, fused[0].gene) == ("agent 2", "GENE2")  # the agent's words, its gene
+    assert fused[2].reason == FUSED  # only the gene ranking had it
+
+
+def test_with_candidate_genes_the_answer_is_fused_with_the_gene_ranking(
+    hpo: HPO, case: Case
+) -> None:
+    moves = iter([answer(("OMIM:690005", "Frequency-test syndrome", "the agent's pick"))])
+    system = Agent(
+        ScriptedModel(messages=moves), "deepseek-flash", hpo, extra_tools=[RankCandidateGenes(hpo)]
+    )
+    question = question_of(case).model_copy(update={"candidate_genes": ["GENEA", "GENEE"]})
+    answers = system.predict(question)
+    # The gene ranking has GENEA's disease first and GENEE's second; the agent named only
+    # GENEE's. Ranked by both, GENEE's disease leads; GENEA's enters from the gene ranking.
+    assert [c.disease_id for c in answers[:2]] == ["OMIM:690005", "OMIM:690001"]
+    assert answers[0].reason == "the agent's pick" and answers[0].gene == "GENEE"
+    assert answers[1].reason == FUSED and answers[1].gene == "GENEA"
+    assert "reciprocal rank" in system.params()["fusion"]
+
+
+def test_without_candidate_genes_nothing_is_fused(hpo: HPO, case: Case) -> None:
+    moves = iter([answer(("OMIM:690005", "Frequency-test syndrome", "the agent's pick"))])
+    system = Agent(
+        ScriptedModel(messages=moves), "deepseek-flash", hpo, extra_tools=[RankCandidateGenes(hpo)]
+    )
+    assert [c.disease_id for c in system.predict(question_of(case))] == ["OMIM:690005"]

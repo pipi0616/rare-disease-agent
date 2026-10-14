@@ -23,6 +23,7 @@ next to the first.
 """
 
 import csv
+import functools
 import re
 from collections import defaultdict
 from collections.abc import Iterator
@@ -32,6 +33,7 @@ from typing import Any, Literal, NamedTuple
 from pyhpo import BasicHPOSet, Ontology
 
 ANNOTATIONS = "phenotype.hpoa"
+PHENOTYPE_ROOT = "HP:0000118"  # Phenotypic abnormality: every finding is below it
 GENES = "genes_to_disease.txt"
 
 Relation = Literal["same", "more specific", "less specific"]
@@ -193,7 +195,8 @@ class HPO:
 
     def __init__(self, folder: Path, release: str) -> None:
         self.release = release
-        self._lines, self.names = _annotations(folder / ANNOTATIONS)
+        self._annotations_file = folder / ANNOTATIONS
+        self._lines, self.names = _annotations(self._annotations_file)
         self.genes = _genes(folder / GENES)
         # Each gene's diseases, those with phenotype annotations only: the others have no
         # name or profile here, so nothing can be said or scored about them.
@@ -260,6 +263,21 @@ class HPO:
             if not any(not absent(line.frequency) for line in self.lines(disease, "P", masked))
         }
 
+    def write_annotations(self, target: Path, masked: frozenset[str] = frozenset()) -> None:
+        """The release's phenotype.hpoa, for another program to read under the same mask:
+        without the lines resting only on masked sources, and without any line of a
+        disease known only from them — to that program too, such a disease does not
+        exist. With nothing masked, the file as published."""
+        hidden = self.known_only_from(masked)
+        with self._annotations_file.open(newline="") as source, target.open("w", newline="") as out:
+            for line in source:
+                if masked and not line.startswith("#"):
+                    cells = line.split("\t")
+                    refs = {r.strip() for r in cells[4].split(";") if r.strip()}
+                    if cells[0] in hidden or (refs and not refs - masked):
+                        continue
+                out.write(line)
+
     def cites(self, disease: str, reference: str) -> bool:
         """Whether HPO's annotation of the disease cites this reference."""
         return disease in self._citing.get(reference, set())
@@ -288,6 +306,26 @@ class HPO:
         if term.is_obsolete and term.replaced_by:
             term = Ontology.get_hpo_object(term.replaced_by)
         return str(term.id), str(term.name), float(term.information_content["omim"])
+
+    @functools.cached_property
+    def _findings(self) -> list[tuple[str, str]]:
+        """Every term that describes a finding, as (id, name): the terms below
+        "Phenotypic abnormality", without the obsolete ones. Built on first use."""
+        root = Ontology.get_hpo_object(PHENOTYPE_ROOT)
+        return sorted(
+            (str(t.id), str(t.name)) for t in Ontology if not t.is_obsolete and root.parent_of(t)
+        )
+
+    def search(self, query: str, limit: int = 10) -> list[tuple[str, str]]:
+        """Terms for findings whose name contains the query, whatever its case, as
+        (id, name): names starting with it first, the shorter first among those. Terms
+        that describe no finding (inheritance, onset, modifiers) are not offered."""
+        wanted = query.strip().lower()
+        if not wanted:
+            return []
+        hits = [(i, name) for i, name in self._findings if wanted in name.lower()]
+        hits.sort(key=lambda h: (not h[1].lower().startswith(wanted), len(h[1]), h[0]))
+        return hits[:limit]
 
     def features(self, disease: str, masked: frozenset[str] = frozenset()) -> list[Feature]:
         """The disease's phenotypic features, each gathered from all its lines: those

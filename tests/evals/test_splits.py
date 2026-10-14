@@ -51,6 +51,14 @@ def test_dev_takes_one_case_per_paper_from_design_only(store: list[Case]) -> Non
     assert all(c.split == "design" for c in dev)
 
 
+def test_the_final_run_takes_one_case_from_every_heldout_paper(store: list[Case]) -> None:
+    heldout = [c for c in store if c.split == "heldout"]
+    sample = splits.sample_per_paper(heldout)
+    assert {c.pmid for c in sample} == {c.pmid for c in heldout}
+    assert len(sample) == 100 and all(c.split == "heldout" for c in sample)
+    assert sample == splits.sample_per_paper(list(reversed(heldout)))  # fixed by the seed
+
+
 def test_sampling_is_fixed_by_the_seed(store: list[Case]) -> None:
     assert splits.build(store) == splits.build(list(reversed(store)))
 
@@ -83,3 +91,11 @@ def test_check_catches_a_heldout_case_moved_into_dev(store: list[Case], tmp_path
 
 def test_committed_manifests_keep_every_rule() -> None:
     assert splits.check(COMMITTED) == []
+
+
+def test_the_billed_sample_is_a_fixed_part_of_the_final_run(store: list[Case]) -> None:
+    built = splits.build(store)
+    sample, every = built["heldout-papers-200"], built["heldout-papers"]
+    assert set(sample) <= set(every)
+    assert len(sample) == min(splits.HELDOUT_SAMPLE, len(every))  # 100 papers here: all of them
+    assert sample == splits.build(list(reversed(store)))["heldout-papers-200"]

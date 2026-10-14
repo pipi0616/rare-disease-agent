@@ -12,7 +12,7 @@ import httpx2
 import mlflow
 import pytest
 from mlflow.entities import Feedback, SpanType
-from openai import APIStatusError
+from openai import APIStatusError, RateLimitError
 
 from raredx.data.cases import Case
 from raredx.evals import harness as h
@@ -247,6 +247,34 @@ class OutOfCredit:
         )
 
 
+class Busy:
+    """Rate-limited on its first attempt at each case and right on the second, as a new
+    account at a model provider is: MLflow's evaluate asks the case again."""
+
+    name = "busy"
+
+    def __init__(self) -> None:
+        self.tried: set[str] = set()
+
+    def predict(self, question: Question) -> list[Candidate]:
+        if question.case_id not in self.tried:
+            self.tried.add(question.case_id)
+            response = httpx2.Response(429, request=httpx2.Request("POST", "https://api.test"))
+            raise RateLimitError("Rate limit exceeded: new accounts", response=response, body=None)
+        return [Candidate(disease_name="Perrault syndrome 7", disease_id="OMIM:621101")]
+
+
+def test_a_case_asked_again_after_a_rate_limit_counts_once_by_its_last_attempt(
+    harness: h.Harness, cases: list[Case]
+) -> None:
+    run_id, summary = harness.evaluate(Busy(), "toy", "sha-1", cases, {"system": "busy"})
+    assert len(harness.traces(run_id)) == 6  # every attempt is recorded
+    assert len(harness.answers(run_id)) == 3  # one answer per case: the run is complete
+    assert summary.n_answered == 3
+    assert harness.hits(run_id, 1) == {"1": True, "2": True, "3": False}
+    assert harness.client.get_run(run_id).data.metrics["errors/model_api"] == 0
+
+
 def test_a_model_api_failure_is_counted_apart_from_the_systems_misses(
     harness: h.Harness, cases: list[Case]
 ) -> None:
@@ -256,3 +284,19 @@ def test_a_model_api_failure_is_counted_apart_from_the_systems_misses(
     assert "Insufficient Balance" in run.tags["model_api_errors"]
     flaky, _ = harness.evaluate(Flaky(), "toy", "sha-1", cases, {"system": "flaky"})
     assert harness.client.get_run(flaky).data.metrics["errors/model_api"] == 0  # its own error
+
+
+def test_the_cases_a_run_lost_to_the_model_api_can_be_asked_again_alone(
+    harness: h.Harness, cases: list[Case]
+) -> None:
+    broke, _ = harness.evaluate(OutOfCredit(), "toy", "sha-1", cases, {"system": "x"})
+    lost = harness.lost_cases(broke)
+    assert set(lost) == {"1", "2", "3"} and "Insufficient Balance" in lost["1"]
+    flaky, _ = harness.evaluate(Flaky(), "toy", "sha-1", cases, {"system": "flaky"})
+    assert harness.lost_cases(flaky) == {}  # its own crash is its miss, not a lost case
+    again = [c for c in cases if c.id in {"1", "3"}]
+    filled, summary = harness.evaluate(
+        Oracle.from_cases(cases), "toy", "sha-1", again, {"system": "oracle"}, part=True
+    )
+    assert summary.n_cases == 2 and len(harness.answers(filled)) == 2
+    assert harness.hits(filled, 1) == {"1": True, "3": True}

@@ -101,6 +101,12 @@ def sign_test(wins: int, losses: int) -> float:
     return min(1.0, 2 * tail)
 
 
+def p_value(p: float) -> str:
+    """A p-value as it is reported: three decimals, and "p < 0.001" below that rather
+    than a misleading "p = 0.000"."""
+    return "p < 0.001" if p < 0.001 else f"p = {p:.3f}"
+
+
 class Rate(BaseModel):
     hits: int
     n: int
