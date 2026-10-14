@@ -149,9 +149,11 @@ def _complete(
 ) -> str | None:
     options: dict[str, Any] = {"response_format": {"type": "json_object"}}
     if provider == "openrouter":
-        # OpenRouter's own switch for reasoning, whatever the provider calls it; and the
-        # cost of each call in its answer, for the budget.
-        options["extra_body"] = {"reasoning": {"enabled": thinking}, "usage": {"include": True}}
+        # OpenRouter's own setting for reasoning, whatever the provider calls it. The
+        # current models refuse to switch it off ("Reasoning is mandatory"), so off is
+        # its lowest effort; and the cost of each call in its answer, for the budget.
+        reasoning = {"enabled": True} if thinking else {"effort": "minimal"}
+        options["extra_body"] = {"reasoning": reasoning, "usage": {"include": True}}
     else:
         options["extra_body"] = {"thinking": {"type": "enabled" if thinking else "disabled"}}
     if not thinking:  # temperature has no effect in thinking mode

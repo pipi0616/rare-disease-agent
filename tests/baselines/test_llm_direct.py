@@ -103,7 +103,7 @@ class BilledClient(FakeLLM):
         self.chat = SimpleNamespace(completions=SimpleNamespace(create=create))
 
 
-def test_through_openrouter_reasoning_is_switched_off_its_way_and_the_cost_is_asked_for(
+def test_through_openrouter_reasoning_is_at_its_lowest_and_the_cost_is_asked_for(
     make_case: Callable[..., Case],
 ) -> None:
     client = BilledClient(json.dumps(ANSWER), cost=0.01)
@@ -117,7 +117,7 @@ def test_through_openrouter_reasoning_is_switched_off_its_way_and_the_cost_is_as
     )
     assert len(model.predict(question_of(make_case("1")))) == 10
     request = client.requests[0]
-    assert request["extra_body"] == {"reasoning": {"enabled": False}, "usage": {"include": True}}
+    assert request["extra_body"] == {"reasoning": {"effort": "minimal"}, "usage": {"include": True}}
     assert request["temperature"] == 0.0 and request["model"] == "anthropic/claude-sonnet-5.5"
     assert budget.spent == pytest.approx(0.01)
     assert model.name == "llm-direct (anthropic/claude-sonnet-5.5)"
