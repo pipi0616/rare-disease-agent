@@ -374,8 +374,8 @@ def main() -> None:
     st.set_page_config(page_title="raredx", page_icon="🧬", layout="wide")
     st.title("raredx — a rare-disease diagnosis agent")
     st.caption(
-        "A patient's findings as HPO terms in; up to ten candidate diseases out, each with "
-        "its reason and its evidence. " + DISCLAIMER
+        "A patient's findings in — as HPO terms, or a clinical note read into them; up to ten "
+        "candidate diseases out, each with its reason and its evidence. " + DISCLAIMER
     )
     try:
         system, examples = client().system(), client().examples()
