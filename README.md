@@ -51,6 +51,29 @@ the agent reaches 49.6% top-1 and 72.6% top-10. I had predicted the lead
 would shrink from the dev set's; it did not. Not yet done: comparison with
 Exomiser, LIRICAL, general-purpose LLMs and DeepRare on the same cases.
 
+**Against an established tool.** LIRICAL 2.4.1 (Robinson et al. 2020), a
+published, maintained phenotype-driven tool, run on the same 840 cases under
+the same conditions — the same findings, the same HPO release, and the same
+mask, applied by giving it, for each case, its own copy of the annotation
+file written under the masking rules — with a plan committed beforehand
+(`docs/comparison_plan.md`):
+
+| held-out, 840 cases | top-1 | top-10 |
+|---|---|---|
+| **final agent** | **42.4%** [39.1–45.8] | **62.0%** [58.7–65.2] |
+| LIRICAL | 30.1% [27.1–33.3] | 48.3% [45.0–51.7] |
+| LIRICAL, each case's own paper left in the knowledge | 63.2% [59.9–66.4] | 79.4% [76.5–82.0] |
+
+Paired, the agent is right at first place on 121 cases LIRICAL misses, and
+LIRICAL on 18 the agent misses. Masked, LIRICAL is level with this project's
+strongest no-model baseline (rank, then check: 32.1%), which was therefore no
+strawman. Unmasked, every system measured gains over 30 points at top-1 (LIRICAL
++33, 278 cases gained and none lost): for 75% of these published cases HPO's
+annotation of the disease cites the patient's own paper, and the whole gain
+comes from those — on the other 25% masking changes not one answer. A
+benchmark on public case reports that does not mask is about half leakage.
+Per-case outcomes: `docs/comparison_hits.tsv`.
+
 During development, on the 200-case dev set
 (recall of the confirmed disease, 95% intervals):
 
@@ -148,6 +171,8 @@ uv run raredx eval runs --split dev-200                      # every recorded ru
 uv run raredx eval compare <run id> <run id>                 # two runs, question by question
 uv run raredx eval score <run id>                            # re-score recorded traces, no re-run
 uv run mlflow ui --port 5050                                 # browse runs at http://127.0.0.1:5050
+uv run raredx data fetch lirical hpo-json && uv run raredx data lirical  # LIRICAL (needs Java 17)
+uv run raredx eval run --system lirical --split dev-200      # LIRICAL under the same mask
 ```
 
 Scoring rules are fixed in `src/raredx/evals/scoring.py`: a disease counts when
