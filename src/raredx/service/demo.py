@@ -55,6 +55,13 @@ MEASURED = """\
 | fallback, with candidate genes | 59.5% | 80.0% |
 """
 
+# The note-reading test (docs/phenotyping_plan.md, section 9): document-level F1.
+NOTES_MEASURED = (
+    "Reading notes, measured on 68 annotated clinical notes (ID-68): F1 71.7%, level "
+    "with a dictionary of HPO names (72.3%), which finds fewer findings and cannot tell "
+    "a denied one; the model writing ids itself: 55.3%. Check the terms."
+)
+
 
 @st.cache_resource
 def client() -> Client:
@@ -82,6 +89,7 @@ def sidebar(system: SystemInfo) -> None:
                 f"- Notes read by: `{reader['model']}`, prompt `{reader['prompt_version']}`, "
                 f"terms from HPO {reader['hpo_release']}"
             )
+            st.caption(NOTES_MEASURED)
         st.caption(f"service {system.service_version} · code {system.code}")
         st.subheader("Measured")
         st.markdown(MEASURED)
