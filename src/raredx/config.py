@@ -32,6 +32,13 @@ class Settings(BaseSettings):
     llm_api_key: SecretStr | None = Field(
         default=None, validation_alias=AliasChoices("RAREDX_LLM_API_KEY", "DEEPSEEK_API_KEY")
     )
+    # OpenRouter: one account for other providers' models, which the evaluation calls
+    # once per case to compare with the agent. A secret: .env only.
+    openrouter_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("RAREDX_OPENROUTER_API_KEY", "OPENROUTER_API_KEY"),
+    )
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
     # USD per million tokens, for each run's cost estimate: deepseek-flash at its peak
     # rate (api-docs.deepseek.com, 2026-10); off-peak is half. Input the provider has
     # cached — a prefix it saw recently, such as an agent's earlier turns — costs 1/50.

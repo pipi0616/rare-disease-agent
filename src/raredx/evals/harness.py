@@ -47,7 +47,8 @@ from raredx.knowledge import masking
 
 HEADLINE = ("disease_top1", "disease_top10", "gene_top10")
 
-# Exceptions of the OpenAI SDK that mean the API failed, not the system under test.
+# Exceptions that mean the model API could not be used — it failed, or the run's spending
+# cap stopped the call — not that the system under test got the case wrong.
 MODEL_API_ERRORS = frozenset(
     {
         "APIConnectionError",
@@ -57,6 +58,7 @@ MODEL_API_ERRORS = frozenset(
         "InternalServerError",
         "PermissionDeniedError",
         "RateLimitError",
+        "BudgetExceeded",  # ours: the run's spending cap stopped the call
     }
 )
 

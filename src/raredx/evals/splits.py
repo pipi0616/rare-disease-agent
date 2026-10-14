@@ -2,16 +2,20 @@
 
 A manifest is a TSV of case_id and pmid. The cases themselves stay out of git;
 the manifest is what makes "the dev set" mean the same cases for everyone,
-forever. There are five:
+forever. There are six:
 
-    design          every design-split case         confirming a change at full size
-    dev-200         200 design cases, one/paper     day-to-day iteration
-    ci-20           20 of dev-200                   the regression check in CI
-    heldout         every held-out case             the full held-out set
-    heldout-papers  one case per held-out paper     the final run, once
+    design              every design-split case         confirming a change at full size
+    dev-200             200 design cases, one/paper     day-to-day iteration
+    ci-20               20 of dev-200                   the regression check in CI
+    heldout             every held-out case             the full held-out set
+    heldout-papers      one case per held-out paper     the final run, once
+    heldout-papers-200  200 of heldout-papers           comparisons billed per case
 
 The final run takes one case from every held-out paper, as dev-200 does from the
 design split and for the same reason; it is the held-out set at the dev set's grain.
+heldout-papers-200 is a fixed random fifth of it, for systems paid for by the case
+(other providers' models): every system already run on heldout-papers has its
+answers to these 200 recorded, so a comparison on them costs only the new system.
 
 dev-200 takes at most one case per paper. The largest paper contributes 462
 cases; sampling cases rather than papers would fill the dev set with one
@@ -31,7 +35,8 @@ SEED = 20261008
 DEV_SIZE = 200
 CI_SIZE = 20
 HELDOUT_SEED = SEED + 1
-NAMES = ("design", "dev-200", "ci-20", "heldout", "heldout-papers")
+HELDOUT_SAMPLE = 200
+NAMES = ("design", "dev-200", "ci-20", "heldout", "heldout-papers", "heldout-papers-200")
 HEADER = "case_id\tpmid"
 
 Row = tuple[str, str]
@@ -69,12 +74,15 @@ def build(cases: list[Case]) -> dict[str, list[Row]]:
     def rows(selected: list[Case]) -> list[Row]:
         return sorted((c.id, c.pmid) for c in selected)
 
+    per_paper = sorted(sample_per_paper(heldout), key=lambda c: c.id)
+    sample = random.Random(HELDOUT_SEED + 1).sample(per_paper, min(HELDOUT_SAMPLE, len(per_paper)))
     return {
         "design": rows(design),
         "dev-200": rows(dev),
         "ci-20": rows(ci),
         "heldout": rows(heldout),
-        "heldout-papers": rows(sample_per_paper(heldout)),
+        "heldout-papers": rows(per_paper),
+        "heldout-papers-200": rows(sample),
     }
 
 
@@ -147,6 +155,13 @@ def check(splits_dir: Path) -> list[str]:
         problems.append("heldout-papers has more than one case from the same paper")
     if papers["heldout-papers"] != papers["heldout"]:
         problems.append("heldout-papers does not cover every held-out paper")
+    if not ids["heldout-papers-200"] <= ids["heldout-papers"]:
+        problems.append("heldout-papers-200 contains cases that are not in heldout-papers")
+    expected = min(HELDOUT_SAMPLE, len(m["heldout-papers"]))
+    if len(m["heldout-papers-200"]) != expected:
+        problems.append(
+            f"heldout-papers-200 has {len(m['heldout-papers-200'])} cases, expected {expected}"
+        )
     return problems
 
 

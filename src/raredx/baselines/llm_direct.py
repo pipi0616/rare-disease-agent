@@ -66,20 +66,53 @@ def parse(content: str | None) -> list[Candidate]:
 
 
 class LLMDirect:
-    """One chat-completions call per patient (llm.ask_json: one repair attempt)."""
+    """One chat-completions call per patient (llm.ask_json: one repair attempt).
 
-    def __init__(self, client: OpenAI, model: str, *, thinking: bool) -> None:
+    The model is DeepSeek's by default; through OpenRouter, any other provider's,
+    with the same prompt, so that general-purpose models are compared on equal terms.
+    A run billed through OpenRouter carries a Budget that stops it at its cap."""
+
+    def __init__(
+        self,
+        client: OpenAI,
+        model: str,
+        *,
+        thinking: bool,
+        provider: llm.Provider = "deepseek",
+        budget: llm.Budget | None = None,
+    ) -> None:
         self.client = client
         self.model = model
         self.thinking = thinking
+        self.provider = provider
+        self.budget = budget
         self.name = "llm-direct-thinking" if thinking else "llm-direct"
+        if provider == "openrouter":
+            self.name += f" ({model})"
 
     def params(self) -> dict[str, Any]:
-        return {"model": self.model, "thinking": self.thinking, "prompt_version": PROMPT_VERSION}
+        params: dict[str, Any] = {
+            "model": self.model,
+            "thinking": self.thinking,
+            "prompt_version": PROMPT_VERSION,
+        }
+        if self.provider != "deepseek":
+            params["provider"] = self.provider
+        if self.budget is not None:
+            params["budget_usd"] = self.budget.usd
+        return params
 
     def predict(self, question: Question) -> list[Candidate]:
         messages: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt(question)},
         ]
-        return llm.ask_json(self.client, self.model, messages, parse, thinking=self.thinking)
+        return llm.ask_json(
+            self.client,
+            self.model,
+            messages,
+            parse,
+            thinking=self.thinking,
+            provider=self.provider,
+            budget=self.budget,
+        )

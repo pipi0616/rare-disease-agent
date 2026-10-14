@@ -308,6 +308,8 @@ def _text_search(evals_dir: Path, data_dir: Path) -> "SearchDiseaseTexts":
     return SearchDiseaseTexts(index, knowledge)
 
 
+OPENROUTER = "openrouter:"
+
 # Tools an agent can be given beyond the four core ones; --without leaves one out.
 EXTRA_TOOLS = ("find_similar_patients", "search_disease_texts", "rank_candidate_genes")
 
@@ -331,7 +333,11 @@ def _system(
     with_genes: bool = False,
     from_run: str | None = None,
     with_texts: bool = False,
+    llm_model: str | None = None,
+    budget_usd: float | None = None,
 ) -> System:
+    if llm_model and name not in ("llm-direct", "llm-direct-thinking"):
+        _fail("--model applies to llm-direct only")
     if name == "oracle":
         return Oracle.from_cases(cases)
     if name == "popularity":
@@ -441,10 +447,26 @@ def _system(
             thinking=thinking == "thinking",
         )
     if name in ("llm-direct", "llm-direct-thinking"):
+        from raredx import llm
         from raredx.baselines.llm_direct import LLMDirect
 
+        reasoning = name == "llm-direct-thinking"
+        if llm_model is None:
+            return LLMDirect(_model_client(), settings.llm_model, thinking=reasoning)
+        if not llm_model.startswith(OPENROUTER):
+            _fail(f"--model takes an OpenRouter model id, written {OPENROUTER}provider/model")
+        if budget_usd is None:
+            _fail("a run billed through OpenRouter needs a cap: give --budget-usd")
+        try:
+            client = llm.openrouter_client(settings)
+        except llm.MissingAPIKey as e:
+            _fail(str(e))
         return LLMDirect(
-            _model_client(), settings.llm_model, thinking=name == "llm-direct-thinking"
+            client,
+            llm_model.removeprefix(OPENROUTER),
+            thinking=reasoning,
+            provider="openrouter",
+            budget=llm.Budget(budget_usd),
         )
     _fail(f"unknown system {name!r}: choose {', '.join(SYSTEMS)}")
 
@@ -501,6 +523,17 @@ def run_system(
         bool,
         typer.Option(help="The agents: add the disease-text search, off by default since ch 20."),
     ] = False,
+    model: Annotated[
+        str | None,
+        typer.Option(
+            help="llm-direct: another provider's model through OpenRouter, "
+            "e.g. openrouter:anthropic/claude-sonnet-5.5"
+        ),
+    ] = None,
+    budget_usd: Annotated[
+        float | None,
+        typer.Option(help="OpenRouter runs: stop calling the model once this much is spent."),
+    ] = None,
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
@@ -513,13 +546,32 @@ def run_system(
         _fail(f"--without takes {', '.join(EXTRA_TOOLS)}; not {', '.join(unknown)}")
     if left_out and system not in ("agent", "seeded-agent"):
         _fail("--without applies to the agents only")
+    if model and system not in ("llm-direct", "llm-direct-thinking"):
+        _fail("--model applies to llm-direct only")
+    if model and budget_usd is None:
+        _fail("a run billed through OpenRouter needs a cap: give --budget-usd")
     out_dir, cases = _processed(data_dir, evals_dir)
     manifest = _manifest(evals_dir, split)
     by_id = {c.id: c for c in cases}
     selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
     chosen = _system(
-        system, cases, evals_dir, data_dir, similarity, left_out, with_genes, from_run, with_texts
+        system,
+        cases,
+        evals_dir,
+        data_dir,
+        similarity,
+        left_out,
+        with_genes,
+        from_run,
+        with_texts,
+        model,
+        budget_usd,
     )
+    billed = getattr(chosen, "provider", None) == "openrouter"
+    if billed:
+        from raredx import llm
+
+        spent_before = llm.openrouter_spent(settings)
     recorded = getattr(chosen, "evidence", None)
     if isinstance(recorded, dict) and {c.id for c in selected} - set(recorded):
         _fail(f"run {from_run} has no record of some cases in {split}: replay the same manifest")
@@ -567,7 +619,10 @@ def run_system(
     usage = harness.usage(run_id)
     tokens_in, tokens_out = usage["usage/input_tokens"], usage["usage/output_tokens"]
     cached = usage["usage/cached_input_tokens"]
-    if tokens_in or tokens_out:
+    if billed:  # what the account was charged, not an estimate at DeepSeek's prices
+        usage["usage/cost_usd_billed"] = round(llm.openrouter_spent(settings) - spent_before, 4)
+        harness.log_metrics(run_id, usage)
+    elif tokens_in or tokens_out:
         cost = (
             (tokens_in - cached) * settings.llm_price_input
             + cached * settings.llm_price_cached_input
@@ -580,7 +635,13 @@ def run_system(
     if summary.n_answered < summary.n_cases:
         missing = summary.n_cases - summary.n_answered
         typer.echo(f"note: {missing} cases got no answer; their traces in MLflow show why")
-    if tokens_in or tokens_out:
+    if billed:
+        typer.echo(
+            f"usage: {tokens_in:,.0f} input + {tokens_out:,.0f} output tokens, "
+            f"${usage['usage/cost_usd_billed']:.4f} billed by OpenRouter; "
+            f"{usage['usage/seconds_per_case']:.1f} s per case"
+        )
+    elif tokens_in or tokens_out:
         typer.echo(
             f"usage: {tokens_in:,.0f} input ({cached:,.0f} cached) + {tokens_out:,.0f} output "
             f"tokens, about ${usage['usage/cost_usd_estimate']:.2f} at peak price; "

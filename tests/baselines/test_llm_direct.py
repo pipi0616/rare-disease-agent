@@ -2,11 +2,14 @@
 
 import json
 from collections.abc import Callable
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
 
 from conftest import FakeLLM
+from raredx import llm
 from raredx.baselines.llm_direct import SYSTEM_PROMPT, LLMDirect, parse, user_prompt
 from raredx.config import Settings
 from raredx.data.cases import Case
@@ -82,3 +85,67 @@ def test_the_api_key_is_read_from_the_providers_variable(monkeypatch: pytest.Mon
     key = Settings(_env_file=None).llm_api_key  # type: ignore[call-arg]
     assert key is not None and key.get_secret_value() == "sk-test"
     assert "sk-test" not in repr(key)  # SecretStr keeps it out of logs
+
+
+class BilledClient(FakeLLM):
+    """Like FakeLLM, and each reply carries what OpenRouter says the call cost."""
+
+    def __init__(self, *replies: str, cost: float) -> None:
+        super().__init__(*replies)
+        self.cost = cost
+        plain = self.chat.completions.create
+
+        def create(**request: Any) -> Any:
+            response = plain(**request)
+            response.usage = SimpleNamespace(cost=self.cost, model_extra={})
+            return response
+
+        self.chat = SimpleNamespace(completions=SimpleNamespace(create=create))
+
+
+def test_through_openrouter_reasoning_is_switched_off_its_way_and_the_cost_is_asked_for(
+    make_case: Callable[..., Case],
+) -> None:
+    client = BilledClient(json.dumps(ANSWER), cost=0.01)
+    budget = llm.Budget(1.0)
+    model = LLMDirect(
+        client,  # type: ignore[arg-type]
+        "anthropic/claude-sonnet-5.5",
+        thinking=False,
+        provider="openrouter",
+        budget=budget,
+    )
+    assert len(model.predict(question_of(make_case("1")))) == 10
+    request = client.requests[0]
+    assert request["extra_body"] == {"reasoning": {"enabled": False}, "usage": {"include": True}}
+    assert request["temperature"] == 0.0 and request["model"] == "anthropic/claude-sonnet-5.5"
+    assert budget.spent == pytest.approx(0.01)
+    assert model.name == "llm-direct (anthropic/claude-sonnet-5.5)"
+    assert model.params()["provider"] == "openrouter" and model.params()["budget_usd"] == 1.0
+
+
+def test_the_budget_stops_the_run_before_the_call_that_would_go_over(
+    make_case: Callable[..., Case],
+) -> None:
+    client = BilledClient(json.dumps(ANSWER), json.dumps(ANSWER), cost=0.6)
+    model = LLMDirect(
+        client,  # type: ignore[arg-type]
+        "openai/gpt-6.1-sol",
+        thinking=False,
+        provider="openrouter",
+        budget=llm.Budget(0.5),
+    )
+    model.predict(question_of(make_case("1")))  # under the cap when it starts
+    with pytest.raises(llm.BudgetExceeded, match=r"\$0.6000 spent of a \$0.50 cap"):
+        model.predict(question_of(make_case("2")))
+    assert len(client.requests) == 1  # the second call was never made
+
+
+def test_the_openrouter_key_is_read_from_its_own_variable(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-test")
+    settings = Settings(_env_file=None)  # type: ignore[call-arg]
+    assert settings.openrouter_api_key is not None
+    assert settings.openrouter_api_key.get_secret_value() == "sk-or-test"
+    monkeypatch.setenv("OPENROUTER_API_KEY", " ")
+    with pytest.raises(llm.MissingAPIKey, match="OPENROUTER_API_KEY"):
+        llm.openrouter_client(Settings(_env_file=None))  # type: ignore[call-arg]

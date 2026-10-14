@@ -156,3 +156,24 @@ def test_lirical_says_what_to_run_when_it_is_not_set_up(tmp_path: Path) -> None:
     result = runner.invoke(app, ["data", "lirical", "--data-dir", str(tmp_path)])
     assert result.exit_code == 1
     assert "raredx data fetch lirical hpo-json" in result.output
+
+
+def test_a_model_billed_through_openrouter_needs_a_cap_and_only_suits_llm_direct(
+    tmp_path: Path,
+) -> None:
+    base = [
+        "eval",
+        "run",
+        "--split",
+        "ci-20",
+        "--data-dir",
+        str(tmp_path),
+        "--evals-dir",
+        str(EVALS),
+    ]
+    no_cap = runner.invoke(app, [*base, "--system", "llm-direct", "--model", "openrouter:x/y"])
+    other = runner.invoke(app, [*base, "--system", "oracle", "--model", "openrouter:x/y"])
+    for result in (no_cap, other):  # refused before any data is read or any money spent
+        assert result.exit_code == 1
+    assert "give --budget-usd" in no_cap.output
+    assert "--model applies to llm-direct only" in other.output

@@ -91,3 +91,11 @@ def test_check_catches_a_heldout_case_moved_into_dev(store: list[Case], tmp_path
 
 def test_committed_manifests_keep_every_rule() -> None:
     assert splits.check(COMMITTED) == []
+
+
+def test_the_billed_sample_is_a_fixed_part_of_the_final_run(store: list[Case]) -> None:
+    built = splits.build(store)
+    sample, every = built["heldout-papers-200"], built["heldout-papers"]
+    assert set(sample) <= set(every)
+    assert len(sample) == min(splits.HELDOUT_SAMPLE, len(every))  # 100 papers here: all of them
+    assert sample == splits.build(list(reversed(store)))["heldout-papers-200"]
