@@ -284,3 +284,19 @@ def test_a_model_api_failure_is_counted_apart_from_the_systems_misses(
     assert "Insufficient Balance" in run.tags["model_api_errors"]
     flaky, _ = harness.evaluate(Flaky(), "toy", "sha-1", cases, {"system": "flaky"})
     assert harness.client.get_run(flaky).data.metrics["errors/model_api"] == 0  # its own error
+
+
+def test_the_cases_a_run_lost_to_the_model_api_can_be_asked_again_alone(
+    harness: h.Harness, cases: list[Case]
+) -> None:
+    broke, _ = harness.evaluate(OutOfCredit(), "toy", "sha-1", cases, {"system": "x"})
+    lost = harness.lost_cases(broke)
+    assert set(lost) == {"1", "2", "3"} and "Insufficient Balance" in lost["1"]
+    flaky, _ = harness.evaluate(Flaky(), "toy", "sha-1", cases, {"system": "flaky"})
+    assert harness.lost_cases(flaky) == {}  # its own crash is its miss, not a lost case
+    again = [c for c in cases if c.id in {"1", "3"}]
+    filled, summary = harness.evaluate(
+        Oracle.from_cases(cases), "toy", "sha-1", again, {"system": "oracle"}, part=True
+    )
+    assert summary.n_cases == 2 and len(harness.answers(filled)) == 2
+    assert harness.hits(filled, 1) == {"1": True, "3": True}

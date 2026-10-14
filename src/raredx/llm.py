@@ -97,7 +97,9 @@ def openrouter_client(settings: Settings) -> OpenAI:
     import mlflow
 
     mlflow.openai.autolog()
-    return OpenAI(base_url=settings.openrouter_base_url, api_key=key, timeout=180, max_retries=2)
+    # More retries than for DeepSeek: a run of 200 calls through a relay to a third party
+    # lost 28 to dropped connections with two.
+    return OpenAI(base_url=settings.openrouter_base_url, api_key=key, timeout=180, max_retries=5)
 
 
 def chat_model(

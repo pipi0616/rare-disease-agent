@@ -534,6 +534,13 @@ def run_system(
         float | None,
         typer.Option(help="OpenRouter runs: stop calling the model once this much is spent."),
     ] = None,
+    fill_in: Annotated[
+        str | None,
+        typer.Option(
+            help="A run of the same system on the same manifest: ask again only the cases "
+            "it lost to a model-API failure, as a run that completes it."
+        ),
+    ] = None,
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
@@ -554,6 +561,15 @@ def run_system(
     manifest = _manifest(evals_dir, split)
     by_id = {c.id: c for c in cases}
     selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
+    lost: dict[str, str] = {}
+    if fill_in:
+        earlier = _harness().client.get_run(fill_in).data.params
+        if earlier.get("manifest") != split:
+            _fail(f"run {fill_in} was not made on {split}")
+        lost = _harness().lost_cases(fill_in)
+        if not lost:
+            _fail(f"run {fill_in} lost no case to the model API: there is nothing to fill in")
+        selected = [c for c in selected if c.id in lost]
     chosen = _system(
         system,
         cases,
@@ -584,6 +600,10 @@ def run_system(
     system_params = getattr(chosen, "params", None)
     if callable(system_params):  # e.g. the model, thinking mode and prompt version
         params.update(system_params())
+    if fill_in:
+        if _harness().client.get_run(fill_in).data.params.get("system") != chosen.name:
+            _fail(f"run {fill_in} was made by another system")
+        params |= {"fills_in": fill_in, "cases_asked_again": len(selected)}
     label, dataset_sha256, genes = split, manifest_sha256, None
     if with_genes:  # its own experiment and dataset: a different exam
         from raredx.evals import candidates
@@ -609,6 +629,7 @@ def run_system(
             mask_source_papers=mask_source_paper,
             hidden_of=_hidden_of(evals_dir, data_dir),
             genes=genes,
+            part=bool(fill_in),
         )
     except IncompleteRun as e:
         _fail(str(e))
