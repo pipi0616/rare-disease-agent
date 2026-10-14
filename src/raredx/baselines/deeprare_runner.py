@@ -35,7 +35,7 @@ EMBEDDING = "openai/text-embedding-3-small"  # the model DeepRare's case bank wa
 
 
 def main() -> None:
-    deeprare, case_file, answer_file = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
+    deeprare, case_file, answer_file = (Path(a).resolve() for a in sys.argv[1:4])
     sys.path.insert(0, str(deeprare))
     os.chdir(deeprare)
     os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")

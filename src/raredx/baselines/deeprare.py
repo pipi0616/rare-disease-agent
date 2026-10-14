@@ -71,9 +71,12 @@ class DeepRare:
         """`folder`: the DeepRare checkout, with its environment in .venv and its
         database downloaded; `keys`: DEEPSEEK_API_KEY and OPENROUTER_API_KEY."""
         self.hpo = hpo
-        self.folder = folder
-        self.python = folder / ".venv" / "bin" / "python"
-        if not self.python.exists() or not (folder / "database" / "RDS_embeddings.csv").exists():
+        self.folder = folder.resolve()  # the runner changes directory: no relative path survives
+        self.python = self.folder / ".venv" / "bin" / "python"
+        if (
+            not self.python.exists()
+            or not (self.folder / "database" / "RDS_embeddings.csv").exists()
+        ):
             raise DeepRareNotSetUp(
                 f"{folder} has no DeepRare set up: its checkout, its own environment in .venv "
                 "and its database (huggingface dataset Angelakeke/DeepRare in database/)"

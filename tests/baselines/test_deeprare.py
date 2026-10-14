@@ -85,6 +85,19 @@ def test_its_names_become_omim_ids_and_what_it_sent_its_model_is_traced(
     assert tool.span_type == "TOOL" and "PMID 1001" in json.dumps(tool.outputs)
 
 
+def test_a_relative_folder_is_handed_on_whole(
+    hpo: HPO, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The runner changes into DeepRare's folder; a relative path would no longer lead
+    to it (the first check run lost every case to "No module named 'diagnosis'")."""
+    answer = {"final": FINAL, "read": {}, "usage": {}}
+    folder = checkout(tmp_path, answer)
+    monkeypatch.chdir(tmp_path)
+    system = DeepRare(hpo, Path("DeepRare"), KEYS)
+    assert system.folder.is_absolute() and system.folder == folder.resolve()
+    assert system.predict(question())[0].disease_id == "OMIM:690001"
+
+
 def test_no_answer_fails_the_case_with_what_went_wrong(
     hpo: HPO, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
