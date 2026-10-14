@@ -42,6 +42,8 @@ from raredx.evals.systems import Candidate, Question
 from raredx.knowledge.hpo import HPO
 
 TOP = 5
+EMBEDDING = "openai/text-embedding-3-small"  # the model DeepRare's case bank was embedded with
+QUERY_EMBEDDINGS = "query-embeddings.json"
 MATCH = 90  # least name similarity (0-100) for a name to count as that OMIM disease
 TIMEOUT_SECONDS = 1800
 RUNNER = Path(__file__).with_name("deeprare_runner.py")
@@ -57,6 +59,28 @@ class DeepRareAPIError(Exception):
     counts it with the model-API failures, and it can be asked again)."""
 
 
+def query_text(hpo_labels: list[str]) -> str:
+    """What DeepRare embeds to find similar cases: the patient's findings, by name, in a
+    line — its patient_info, as the runner builds it."""
+    return ", ".join(hpo_labels)
+
+
+def embed_queries(texts: list[str], cache: Path, client: Any) -> int:
+    """Embed the texts not yet in the cache file (OpenAI's model, through OpenRouter),
+    and add them; returns how many were embedded. With every case's query embedded
+    beforehand, a run needs OpenRouter not at all: the same vectors, read from disk."""
+    known: dict[str, list[float]] = json.loads(cache.read_text()) if cache.exists() else {}
+    todo = [t for t in dict.fromkeys(texts) if t not in known]
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    for start in range(0, len(todo), 50):
+        batch = todo[start : start + 50]
+        response = client.embeddings.create(input=batch, model=EMBEDDING)
+        for text, item in zip(batch, response.data, strict=True):
+            known[text] = item.embedding
+        cache.write_text(json.dumps(known))
+    return len(todo)
+
+
 def ranked_names(final: str | None) -> list[str]:
     """The diseases DeepRare's final answer ranks, best first. It writes each as a
     heading: "## **DISEASE NAME** (Rank #1/5)"."""
@@ -68,10 +92,14 @@ def ranked_names(final: str | None) -> list[str]:
 class DeepRare:
     name = "deeprare"
 
-    def __init__(self, hpo: HPO, folder: Path, keys: dict[str, str]) -> None:
+    def __init__(
+        self, hpo: HPO, folder: Path, keys: dict[str, str], embeddings: Path | None = None
+    ) -> None:
         """`folder`: the DeepRare checkout, with its environment in .venv and its
-        database downloaded; `keys`: DEEPSEEK_API_KEY and OPENROUTER_API_KEY."""
+        database downloaded; `keys`: DEEPSEEK_API_KEY and OPENROUTER_API_KEY;
+        `embeddings`: queries embedded beforehand (embed_queries), if any."""
         self.hpo = hpo
+        self.embeddings = embeddings.resolve() if embeddings else None
         self.folder = folder.resolve()  # the runner changes directory: no relative path survives
         self.python = self.folder / ".venv" / "bin" / "python"
         if (
@@ -108,7 +136,12 @@ class DeepRare:
         """DeepRare's answer for these findings, and everything it sent its model."""
         with tempfile.TemporaryDirectory(prefix="deeprare-") as tmp:
             case, answer = Path(tmp) / "case.json", Path(tmp) / "answer.json"
-            case.write_text(json.dumps({"hpo_ids": hpo_ids, "hpo_labels": hpo_labels}))
+            embeddings = str(self.embeddings) if self.embeddings else None
+            case.write_text(
+                json.dumps(
+                    {"hpo_ids": hpo_ids, "hpo_labels": hpo_labels, "embeddings_file": embeddings}
+                )
+            )
             done = subprocess.run(
                 [str(self.python), str(RUNNER), str(self.folder), str(case), str(answer)],
                 capture_output=True,

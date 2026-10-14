@@ -12,7 +12,9 @@ Departures from the published setup, each forced or for cost, and stated where
 results are reported:
 - the model: DeepSeek deepseek-flash, thinking off, for its main model (published:
   deepseek-reasoner) and for its summariser (published: gpt-4o-mini);
-- the embeddings: OpenAI text-embedding-3-small, as published, through OpenRouter;
+- the embeddings: OpenAI text-embedding-3-small, as published, through OpenRouter —
+  each case's query embedded beforehand when it can be (raredx data deeprare-queries),
+  so that a long run does not depend on OpenRouter being reachable;
 - the case bank: the public PubMed one (its other banks are not published);
 - web search: DuckDuckGo, one of its three options and the one needing no key;
 - two repairs: its DuckDuckGo tool is called with its arguments by name (it was
@@ -101,7 +103,13 @@ def main() -> None:
             sent.append({"role": self.role, "prompt": prompt})
             return str(r.choices[0].message.content)
 
+    cached = {}
+    if case.get("embeddings_file") and Path(case["embeddings_file"]).exists():
+        cached = json.loads(Path(case["embeddings_file"]).read_text())
+
     def embed(text, model=None):
+        if text in cached:  # embedded beforehand by the same model: no call needed
+            return cached[text]
         try:
             return openrouter.embeddings.create(input=[text], model=EMBEDDING).data[0].embedding
         except Exception:
@@ -162,7 +170,7 @@ def main() -> None:
     )
 
     started = time.time()
-    patient = (", ".join(case["hpo_labels"]), "", case["hpo_labels"], case["hpo_ids"])
+    patient = (", ".join(case["hpo_labels"]), "", case["hpo_labels"], case["hpo_ids"])  # query_text
     error, result = None, None
     try:
         result = diagnosis.make_diagnosis(

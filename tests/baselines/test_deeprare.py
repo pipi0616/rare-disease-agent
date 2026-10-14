@@ -7,12 +7,20 @@ checked: what it hands DeepRare, how its names become OMIM ids, what is traced.
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import mlflow
 import pytest
 
-from raredx.baselines.deeprare import DeepRare, DeepRareAPIError, DeepRareNotSetUp, ranked_names
+from raredx.baselines.deeprare import (
+    DeepRare,
+    DeepRareAPIError,
+    DeepRareNotSetUp,
+    embed_queries,
+    query_text,
+    ranked_names,
+)
 from raredx.evals.systems import Question
 from raredx.knowledge.hpo import HPO
 
@@ -121,3 +129,31 @@ def test_without_its_environment_or_keys_it_says_what_is_missing(hpo: HPO, tmp_p
     folder = checkout(tmp_path, {})
     with pytest.raises(DeepRareNotSetUp, match="OPENROUTER_API_KEY"):
         DeepRare(hpo, folder, {"DEEPSEEK_API_KEY": "sk"})
+
+
+class Embedder:
+    """Stands in for the OpenRouter client's embeddings: a vector per text, noting each call."""
+
+    def __init__(self) -> None:
+        self.calls: list[list[str]] = []
+        self.embeddings = self
+
+    def create(self, input: list[str], model: str) -> Any:  # noqa: A002 - the SDK's name
+        self.calls.append(input)
+        return SimpleNamespace(data=[SimpleNamespace(embedding=[float(len(t))]) for t in input])
+
+
+def test_queries_are_embedded_once_ahead_and_handed_to_deeprare(
+    hpo: HPO, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache = tmp_path / "queries.json"
+    client = Embedder()
+    assert embed_queries([query_text(["a", "b"]), "c", "c"], cache, client) == 2
+    assert embed_queries([query_text(["a", "b"]), "d"], cache, client) == 1  # only the new one
+    assert client.calls == [["a, b", "c"], ["d"]]
+    assert json.loads(cache.read_text()) == {"a, b": [4.0], "c": [1.0], "d": [1.0]}
+    folder = checkout(tmp_path, {"final": FINAL, "read": {}, "usage": {}})
+    monkeypatch.setattr("raredx.baselines.deeprare.RUNNER", folder / "runner.py")
+    DeepRare(hpo, folder, KEYS, cache).predict(question())
+    seen = json.loads((folder / "seen.json").read_text())
+    assert seen["case"]["embeddings_file"] == str(cache.resolve())

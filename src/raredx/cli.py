@@ -159,6 +159,34 @@ def setup_lirical(
     )
 
 
+@data_app.command("deeprare-queries")
+def deeprare_queries(
+    split: Annotated[list[str], typer.Option(help="Manifests whose cases to prepare.")],
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Embed DeepRare's similar-case query for every case of these manifests, once
+    (through OpenRouter, well under a cent), so its runs need no OpenRouter."""
+    from raredx import llm
+    from raredx.baselines import deeprare
+
+    knowledge = _knowledge(evals_dir, data_dir)
+    _, cases = _processed(data_dir, evals_dir)
+    by_id = {c.id: c for c in cases}
+    texts = [
+        deeprare.query_text([knowledge.term(t)[1] for t in by_id[case_id].hpo_ids])
+        for name in split
+        for case_id, _ in splits.read(_manifest(evals_dir, name))
+    ]
+    try:
+        client = llm.openrouter_client(settings)
+    except llm.MissingAPIKey as e:
+        _fail(str(e))
+    cache = _deeprare_queries(data_dir)
+    done = deeprare.embed_queries(texts, cache, client)
+    typer.echo(f"ok  {cache}: {done} embedded now, {len(set(texts)) - done} already there")
+
+
 @data_app.command()
 def stats(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir) -> None:
     """Summarise the processed cases."""
@@ -311,6 +339,13 @@ def _text_search(evals_dir: Path, data_dir: Path) -> "SearchDiseaseTexts":
 
 OPENROUTER = "openrouter:"
 
+
+def _deeprare_queries(data_dir: Path) -> Path:
+    from raredx.baselines.deeprare import QUERY_EMBEDDINGS
+
+    return data_dir / "processed" / "deeprare" / QUERY_EMBEDDINGS
+
+
 # Tools an agent can be given beyond the four core ones; --without leaves one out.
 EXTRA_TOOLS = ("find_similar_patients", "search_disease_texts", "rank_candidate_genes")
 
@@ -391,7 +426,12 @@ def _system(
             "OPENROUTER_API_KEY": secret(settings.openrouter_api_key),
         }
         try:
-            return DeepRare(_knowledge(evals_dir, data_dir), settings.deeprare_dir, keys)
+            return DeepRare(
+                _knowledge(evals_dir, data_dir),
+                settings.deeprare_dir,
+                keys,
+                _deeprare_queries(data_dir),
+            )
         except DeepRareNotSetUp as e:
             _fail(str(e))
     if name == "fixed-pipeline":
