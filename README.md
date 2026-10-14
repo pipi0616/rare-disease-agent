@@ -236,6 +236,7 @@ The agent behind an HTTP API (FastAPI), with a demo page that is one client of i
 ```bash
 uv run raredx serve     # the API on http://127.0.0.1:8000 — interactive reference at /docs
 uv run raredx demo      # the demo page (Streamlit) on http://127.0.0.1:8501
+RAREDX_SERVICE_READ_NOTES=true uv run raredx serve   # also read clinical notes (off by default)
 docker compose up --build   # or all of it in containers: API, demo page, MLflow server
 ```
 
@@ -251,6 +252,7 @@ curl -X POST http://127.0.0.1:8000/v1/diagnose -H 'content-type: application/jso
 | `POST /v1/diagnose` | up to ten diseases, each with the agent's reason and the evidence it rests on (findings explained and not, frequencies, sources) |
 | `POST /v1/diagnose/stream` | the same as server-sent events: each step the agent takes, as it takes it, then the answer |
 | `GET /v1/system` | what is serving: model, prompt version, tools, knowledge release, code commit |
+| `POST /v1/terms/from-note` | a clinical note read into HPO terms — each with the note's words and whether the patient has it, the note denies it or a relative has it — for a person to check; where the deployment reads notes |
 | `GET /v1/terms?q=`, `GET /v1/examples` | HPO terms by name; published patients to try |
 | `GET /healthz`, `GET /readyz` | liveness and readiness; neither calls the model |
 
@@ -268,10 +270,18 @@ What the service is built to guarantee (`src/raredx/service/`):
   says so (`mode: "fallback"`, with the reason). Its quality is measured too:
   32.1% top-1 against the agent's 42.4% on the held-out set. A failure of the
   service's own code is not hidden the same way: it is a 500 with a request id.
-- **Only coded data goes in.** A request is HPO ids, sex, gene symbols and
-  PubMed ids, each matched against a pattern; any other field is refused. No
-  free text means no name or date of birth can reach a log, a trace or the
-  model provider by mistake. The log line of a request holds counts and ids only.
+- **Only coded data goes into a diagnosis.** A request is HPO ids, sex, gene
+  symbols and PubMed ids, each matched against a pattern; any other field is
+  refused. No free text means no name or date of birth can reach a log, a trace
+  or the model provider by mistake. The log line of a request holds counts and ids only.
+- **A note is read, not kept.** Reading clinical notes is a separate endpoint a
+  deployment switches on. The note goes to the model provider — production needs
+  one covered by an agreement for patient data, or a model run in-house — and
+  nowhere else: an MLflow span processor replaces the inputs and outputs of every
+  span that ends while a note is read, so the trace keeps the steps, their timings,
+  the tokens and the codes found, not the text; a test drives the real OpenAI SDK
+  with autologging and checks that no word of the note is stored. The terms come
+  back for a person to check; what goes on to `/v1/diagnose` is codes.
 - **Every request is one MLflow trace**, shaped like an evaluation's — the
   question in, the candidates out, each model and tool call a span — so a
   request in production can be read, replayed and judged with the tools built
@@ -336,6 +346,7 @@ src/raredx/     all application code — an installed package, no path hacks
   data/           datasets: registry, fetch, verify, parse, processed layer
   evals/          manifests, systems, scoring rules, MLflow evaluation harness
   knowledge/      reference knowledge the tools read (HPO), and source masking
+  phenotyping/    a clinical note read into HPO terms, and its evaluation on annotated text
   tools/          the agent's tools: typed, described, tested alone, traced
   baselines/      systems the agent must beat: similarity, rank-then-check, the fixed
                   pipeline, one LLM call
