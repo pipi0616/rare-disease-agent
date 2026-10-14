@@ -59,6 +59,7 @@ MODEL_API_ERRORS = frozenset(
         "PermissionDeniedError",
         "RateLimitError",
         "BudgetExceeded",  # ours: the run's spending cap stopped the call
+        "DeepRareAPIError",  # DeepRare gave no answer after one of its API calls failed
     }
 )
 

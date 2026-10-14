@@ -12,7 +12,7 @@ from typing import Any
 import mlflow
 import pytest
 
-from raredx.baselines.deeprare import DeepRare, DeepRareNotSetUp, ranked_names
+from raredx.baselines.deeprare import DeepRare, DeepRareAPIError, DeepRareNotSetUp, ranked_names
 from raredx.evals.systems import Question
 from raredx.knowledge.hpo import HPO
 
@@ -88,10 +88,15 @@ def test_its_names_become_omim_ids_and_what_it_sent_its_model_is_traced(
 def test_no_answer_fails_the_case_with_what_went_wrong(
     hpo: HPO, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    folder = checkout(tmp_path, {"final": None, "error": "APIConnectionError('x')"})
+    lost = {"final": None, "error": "APIConnectionError('x')", "usage": {"api_errors": 2}}
+    folder = checkout(tmp_path, lost)
     monkeypatch.setattr("raredx.baselines.deeprare.RUNNER", folder / "runner.py")
-    with pytest.raises(RuntimeError, match="gave no answer: APIConnectionError"):
-        DeepRare(hpo, folder, KEYS).predict(question())
+    with pytest.raises(DeepRareAPIError, match="gave no answer: APIConnectionError"):
+        DeepRare(hpo, folder, KEYS).predict(question())  # a lost case: asked again later
+    own = checkout(tmp_path / "own", {"final": None, "error": "KeyError('x')", "usage": {}})
+    with pytest.raises(RuntimeError, match="gave no answer: KeyError") as failed:
+        DeepRare(hpo, own, KEYS).predict(question())  # its own failure: its miss
+    assert not isinstance(failed.value, DeepRareAPIError)
     crashed = checkout(tmp_path / "other", None)
     with pytest.raises(RuntimeError, match="torch is not installed"):
         DeepRare(hpo, crashed, KEYS).predict(question())

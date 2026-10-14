@@ -51,6 +51,11 @@ class DeepRareNotSetUp(Exception):
     pass
 
 
+class DeepRareAPIError(Exception):
+    """DeepRare gave no answer after a call to a model API failed: a lost case, not its
+    miss (the harness counts it with the model-API failures)."""
+
+
 def ranked_names(final: str | None) -> list[str]:
     """The diseases DeepRare's final answer ranks, best first. It writes each as a
     heading: "## **DISEASE NAME** (Rank #1/5)"."""
@@ -125,6 +130,8 @@ class DeepRare:
         labels = [self.hpo.term(t)[1] for t in question.hpo_ids]
         answer = self.consult(question.hpo_ids, labels)
         if answer.get("final") is None:
+            if (answer.get("usage") or {}).get("api_errors"):
+                raise DeepRareAPIError(f"DeepRare gave no answer: {answer.get('error')}")
             raise RuntimeError(f"DeepRare gave no answer: {answer.get('error')}")
         candidates = []
         for name in ranked_names(answer["final"]):

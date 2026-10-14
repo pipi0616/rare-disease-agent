@@ -53,7 +53,13 @@ def main() -> None:
 
     case = json.loads(case_file.read_text())
     sent: list[dict] = []
-    usage = {"model_calls": 0, "input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0}
+    usage = {
+        "model_calls": 0,
+        "input_tokens": 0,
+        "cached_input_tokens": 0,
+        "output_tokens": 0,
+        "api_errors": 0,
+    }
     deepseek = OpenAI(
         api_key=os.environ["DEEPSEEK_API_KEY"],
         base_url="https://api.deepseek.com",
@@ -85,6 +91,7 @@ def main() -> None:
                 )
             except Exception as e:  # DeepRare expects None on failure, and carries on
                 sent.append({"role": self.role, "error": repr(e)[:300]})
+                usage["api_errors"] += 1
                 return None
             u = r.usage
             usage["model_calls"] += 1
@@ -95,7 +102,11 @@ def main() -> None:
             return str(r.choices[0].message.content)
 
     def embed(text, model=None):
-        return openrouter.embeddings.create(input=[text], model=EMBEDDING).data[0].embedding
+        try:
+            return openrouter.embeddings.create(input=[text], model=EMBEDDING).data[0].embedding
+        except Exception:
+            usage["api_errors"] += 1
+            raise
 
     args = SimpleNamespace(
         search_engine="duckduckgo",
