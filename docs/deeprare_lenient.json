@@ -1,0 +1,1002 @@
+[
+ {
+  "case_id": "PMID_10498624_Case_4_IP",
+  "deeprare": 1,
+  "agent": 5
+ },
+ {
+  "case_id": "PMID_10571775_KSN_II_1",
+  "deeprare": 1,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_10580070_Family_C_individual_II_2",
+  "deeprare": null,
+  "agent": 3
+ },
+ {
+  "case_id": "PMID_11118249_PATIENT_III_2",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_11175294_Patient_D13",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_11805270_patient",
+  "deeprare": null,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_11950863_Individual_II_3",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_12647205_index_case",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_12920062_Family_C_individual_IV_21",
+  "deeprare": null,
+  "agent": 4
+ },
+ {
+  "case_id": "PMID_14994243_Clinical_Report",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_15148656_female_patient",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_15210538_Individual_II_2",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_15214011_5_year_old_girl",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_15385446_Family_C_proband_IV_1",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_15844001_child",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_15945070_7_month_old_girl",
+  "deeprare": 3,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_16283890_II_2",
+  "deeprare": 2,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_16439204_P2",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_16855267_Patient2",
+  "deeprare": 1,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_17187620_child",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_17331980_patient",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_17661820_3",
+  "deeprare": 1,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_18456719_Patient_2",
+  "deeprare": null,
+  "agent": 5
+ },
+ {
+  "case_id": "PMID_19185281_Family_1_individual_15",
+  "deeprare": 1,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_19864201_Case_3",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_19948535_individual",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_20015879_Patient",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_20186813_6_year_old_male",
+  "deeprare": 2,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_20932317_SMS335",
+  "deeprare": 1,
+  "agent": 3
+ },
+ {
+  "case_id": "PMID_2107739_proband",
+  "deeprare": 1,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_21236492_Individual_P8",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_21358634_Family_8",
+  "deeprare": 1,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_21487076_Patient_II_5",
+  "deeprare": 1,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_21548011_Case_report",
+  "deeprare": null,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_21567932_Patient",
+  "deeprare": 1,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_21747628_16_year_old_male",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_21958591_Case_report",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_22241092_Patient_CDL341",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_22305531_IV_4",
+  "deeprare": 5,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_22647861_41_year_old_woman",
+  "deeprare": null,
+  "agent": 5
+ },
+ {
+  "case_id": "PMID_22940089_PT1",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_23086397_Patient_2",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_23505306_Patient_9",
+  "deeprare": 2,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_23664117_family_F8_subject_P9",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_23691375_4_year_old_girl",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_23988501_Family_F1_individual_I_1",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_24066033_LCA81_1",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_24331334_DM_patient",
+  "deeprare": 1,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_24706016_individual_1",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_24739679_patient_K6",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_24770546_Case_report",
+  "deeprare": null,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_24791903_Patient_4",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_25145518_index_patient_IV_1",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_25411445_Patient_4",
+  "deeprare": null,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_25533820_proband",
+  "deeprare": 1,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_25539947_25539947_P1",
+  "deeprare": null,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_25710899_boy",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_25817014_Individual_3",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_25870235_proband",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_26031502_proband",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_26162006_Individual_II_4",
+  "deeprare": 1,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_26364901_33_year_old_man",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_26453364_Patient_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_26567009_male_child",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_26706854_Subject_3",
+  "deeprare": null,
+  "agent": 3
+ },
+ {
+  "case_id": "PMID_26805781_Family_3_Subject_3_II_1",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_26833330_F2_II2",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_26843181_Patient_2",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_27148570_Patient_2",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_27479843_Patient_162",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_27552067_girl",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_27558376_Patient_3",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_27648472_Clinical_data",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_27672653_Individual_7",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_27824329_M19813",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_28069640_Patient_A_J_VII1",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_28103835_brother_IV_5",
+  "deeprare": null,
+  "agent": 3
+ },
+ {
+  "case_id": "PMID_28132690_Family_B_II_1",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_28289593_Case_Report",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_28289718_Higgins_Patient_2",
+  "deeprare": 3,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_28321562_index_patient",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_28434921_a_6_month_old_female",
+  "deeprare": 2,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_28542676_SK3",
+  "deeprare": 2,
+  "agent": 4
+ },
+ {
+  "case_id": "PMID_28569194_Case_presentation",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_28575651_Individual_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_28620721_III_1",
+  "deeprare": null,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_28629372_Patient_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_28781842_patient_1",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_28949039_Case_1",
+  "deeprare": null,
+  "agent": 5
+ },
+ {
+  "case_id": "PMID_29122497_29122497_P4",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_29186133_daughter_III_1",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_29378527_male_sinbling",
+  "deeprare": 2,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_29482518_Patient_2",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_29484404_proband",
+  "deeprare": 1,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_29491316_12_year_old_boy",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_29502866_Older_twin",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_29537367_Patient_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_29569962_e_index_patient_IV_1",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_29575310_patient",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_29575628_case_report",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_29620724_15DG2222",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_29707406_A_II_3",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_29883675_second_family_patient_3",
+  "deeprare": 1,
+  "agent": 3
+ },
+ {
+  "case_id": "PMID_29914387_patient",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_29925855_P7",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_30012084_older_sister",
+  "deeprare": null,
+  "agent": 5
+ },
+ {
+  "case_id": "PMID_30057029_Individual_5",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_30147916_proband_IV_7",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_30315159_Patient_N",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_30538526_patient",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_30580808_Patient_7",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_30612693_Individual_4",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_30622725_patient",
+  "deeprare": null,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_31024343_Proband_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_31213928_patient",
+  "deeprare": 2,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_31450277_second_patient",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_31569402_Family_24_Patient_I",
+  "deeprare": 2,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_31636267_patient",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_31997314_proband",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_32022899_Patient_2",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_32303603_family_P0005_IV_2",
+  "deeprare": 1,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_32363625_Individual_P1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_32559514_1_year_old_girl",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_32666529_Family_4_II_1",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_32869508_11_month_old_boy",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_33067218_Case_Report",
+  "deeprare": null,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_33235621_Case_report",
+  "deeprare": 2,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_33534181_patient",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_33633439_17413_II_1",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_33708862_Family_4_proband",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_33890291_Proband_2",
+  "deeprare": null,
+  "agent": 4
+ },
+ {
+  "case_id": "PMID_33897766_Case_Description",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_33952808_II_3",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_34133408_case",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_34214472_patient_P3",
+  "deeprare": 1,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_34321325_Patient_S12",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_34338282_GLSP_family_1",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_34354969_P18",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_34355836_Patient_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_34552798_8_year_old_female_patient",
+  "deeprare": 2,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_34602956_34602956",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_34641913_Case_presentation",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_34722527_individual_MOL1150_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_34805998_Proband_1_2",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_34888090_index_patient",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_35266227_Patient_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_35298084_Girl",
+  "deeprare": null,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_35308163_Patient_2",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_35652444_proband_II_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_35668506_First_clinical_case",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_35716097_Patient_2",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_35904593_Patient_2",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_35933355_two_year_old_ACM_proband",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_36122175_Patient_in_the_present_study",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_36136088_Family_2_II_2",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_36256512_F2_II_1",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_36522252_Individual_6",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_36603335_Case_report",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_36659944_Patient",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_36695497_Individual_2",
+  "deeprare": null,
+  "agent": 4
+ },
+ {
+  "case_id": "PMID_36779064_patient",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_37030525_proband_IV_6",
+  "deeprare": null,
+  "agent": 2
+ },
+ {
+  "case_id": "PMID_37057295_Case_Report",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_37065631_Proposita_I_1",
+  "deeprare": 1,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_37196654_Individual_44_DDD_286674",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_37418012_Family_1_II_2",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_37459438_Family_2_II_1",
+  "deeprare": null,
+  "agent": 3
+ },
+ {
+  "case_id": "PMID_37476413_proband",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_37488749_Study_subject",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_37541189_Individual_4",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_37584719_Patient_P13",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_37771582_Case_description",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_37833060_Family_F_II_3",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_37880421_Family_4_II_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_38386308_F4_II_2",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_38386481_8_year_old_male",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_38513146_Patient",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_38652464_Patient",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_38702431_Patient_2",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_38791218_Family_2_Patient_8_II_2",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_38824264_Case_1",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_38950288_Proband_4",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_38977784_FM1_II_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_39073169_Patient_F3_III_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_39088281_III_3",
+  "deeprare": 3,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_39270020_Patient_4",
+  "deeprare": null,
+  "agent": 1
+ },
+ {
+  "case_id": "PMID_39416860_proband",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_39442041_Patient_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_39623139_Patient_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_39721588_Individual_20",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_40204357_Family_3_Patient_4",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_40259859_Family_1_II_2",
+  "deeprare": 1,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_40499538_Subject_1",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_40814755_Ind_A2",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_40924475_XP140BR",
+  "deeprare": 4,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_40930097_Family_D_II_2",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_40965981_Individual_3",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_41716553_Patient_3",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_8825048_father",
+  "deeprare": null,
+  "agent": null
+ },
+ {
+  "case_id": "PMID_9106527_Putnam_1997_Patient_P319",
+  "deeprare": 1,
+  "agent": 1
+ }
+]

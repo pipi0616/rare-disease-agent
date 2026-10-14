@@ -78,8 +78,9 @@ model-API failures; the leak audit clean over more than 50,000 tool outputs
 per agent run), and on the 122 cases strict masking makes unanswerable every
 tool-using system scores zero in the top ten, as it should; on the other 718
 the agent reaches 49.6% top-1 and 72.6% top-10. I had predicted the lead
-would shrink from the dev set's; it did not. Not yet done: comparison with
-Exomiser, LIRICAL, general-purpose LLMs and DeepRare on the same cases.
+would shrink from the dev set's; it did not. Since then the same cases went
+to LIRICAL (all 840), and a fixed 200 of them to three frontier models and
+DeepRare (below).
 
 **Against an established tool.** LIRICAL 2.4.1 (Robinson et al. 2020), a
 published, maintained phenotype-driven tool, run on the same 840 cases under
@@ -116,6 +117,7 @@ OpenRouter, on a fixed random 200 of the 840 held-out cases
 | LIRICAL | 28.0% [22.2–34.6] | 47.0% [40.2–53.9] |
 | Gemini 4, asked directly | 27.0% [21.3–33.5] | 42.0% [35.4–48.9] |
 | Claude Sonnet 5.5, asked directly | 23.5% [18.2–29.8] | 38.5% [32.0–45.4] |
+| DeepRare, same model (`deepseek-flash`) | 8.5% [5.4–13.2] | 11.5% [7.8–16.7] (top-5; it gives five) |
 | `deepseek-flash`, asked directly | 15.0% [10.7–20.6] | 25.5% [20.0–32.0] |
 
 Paired at first place the agent wins against each: 37 to 17 (GPT-6.1,
@@ -125,6 +127,27 @@ cost per case. Every billed run carries a per-call spending cap; two runs that
 lost cases to the provider (a new account's rate limit, dropped connections)
 were completed by asking only those cases again (`--fill-in`). Per-case
 outcomes: `docs/comparison_llm_hits.tsv`.
+
+**Against another diagnosis agent.** DeepRare (Zhao et al., *Nature* 2026), run
+from its code on the same 200 cases with the agent's model, `deepseek-flash`,
+under a plan committed beforehand (`docs/comparison_plan_deeprare.md`). It names
+diseases without ids, so two scorings, both applied as planned: by OMIM id, its
+names matched by name (57% of them match one), and by DeepRare's own scoring — an
+LLM judge asked whether the confirmed diagnosis is among the five — applied to
+both systems alike:
+
+| held-out, 200 cases | first, by OMIM id | top 5, by OMIM id | first, judged | top 5, judged |
+|---|---|---|---|---|
+| **final agent** (masked) | **43.0%** | **58.5%** | **42.5%** | **59.0%** |
+| DeepRare (cannot be masked) | 8.5% | 11.5% | 27.5% | 35.0% |
+
+Paired, the agent leads under either scoring: 71 cases to 2 at first place by id,
+48 to 18 judged (both p < 0.001). DeepRare searches the web and its case bank,
+so it could not be masked; everything it read was searched for the patient's own
+paper, found in 3 of 200 cases (none answered right). It took about 27 model calls
+and 3.2 minutes a case (median) against the agent's 4–8 and 13 seconds, at 2.4
+times the cost. The comparison is of designs on one inexpensive model: DeepRare's
+paper used a reasoning model (DeepSeek-R1) and case banks not all public.
 
 **By how rare the disease is** (looked at afterwards, not planned; descriptive).
 The 840 held-out cases split by Orphanet's prevalence class of the confirmed
