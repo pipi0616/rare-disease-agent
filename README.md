@@ -126,6 +126,25 @@ lost cases to the provider (a new account's rate limit, dropped connections)
 were completed by asking only those cases again (`--fill-in`). Per-case
 outcomes: `docs/comparison_llm_hits.tsv`.
 
+**By how rare the disease is** (looked at afterwards, not planned; descriptive).
+The 840 held-out cases split by Orphanet's prevalence class of the confirmed
+disease (`src/raredx/knowledge/prevalence.py`; exact OMIM mappings only), first
+place:
+
+| held-out, by prevalence | cases (diseases) | final agent | fixed pipeline | LIRICAL | `deepseek-flash` alone |
+|---|---|---|---|---|---|
+| 1 in 100,000 or more | 42 (25) | 57.1% | 50.0% | 40.5% | 61.9% |
+| 1–9 in 1,000,000 | 66 (12) | 80.3% | 74.2% | 50.0% | 53.0% |
+| under 1 in 1,000,000 | 272 (115) | 52.6% | 45.6% | 40.1% | 9.6% |
+| not classed by Orphanet | 460 (327) | 29.6% | 25.0% | 20.4% | 7.2% |
+
+The model alone knows the relatively common rare diseases — level with the
+agent there — and almost none of the rarest, where the agent with its tools is
+right about half the time. Its gain over its own model is in the long tail. The
+groups are small and cases cluster by disease, so no test is made of it. Of the
+327 unclassed diseases, 290 have no exact Orphanet counterpart at all, and a
+quarter of their cases cannot be answered once their own paper is masked.
+
 During development, on the 200-case dev set
 (recall of the confirmed disease, 95% intervals):
 
