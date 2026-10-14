@@ -185,6 +185,17 @@ def main() -> None:
         )
     except Exception as e:
         error = repr(e)[:500]
+        # A service it depends on could not be reached (PubCaseFinder, PhenoBrain, a model
+        # API, a web page): the case is lost, not answered wrong. requests' errors are OSErrors.
+        reached = (type(e).__module__ or "").split(".")[0]
+        if isinstance(e, OSError) or reached in (
+            "requests",
+            "urllib3",
+            "openai",
+            "httpx",
+            "selenium",
+        ):
+            usage["api_errors"] += 1
     final = (result or {}).get("final_diagnois")
     answer = {
         "final": final,

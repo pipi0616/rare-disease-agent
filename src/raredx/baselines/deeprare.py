@@ -52,8 +52,9 @@ class DeepRareNotSetUp(Exception):
 
 
 class DeepRareAPIError(Exception):
-    """DeepRare gave no answer after a call to a model API failed: a lost case, not its
-    miss (the harness counts it with the model-API failures)."""
+    """DeepRare gave no answer because a service it calls failed — a model API, or
+    PubCaseFinder, PhenoBrain, a web page: a lost case, not its miss (the harness
+    counts it with the model-API failures, and it can be asked again)."""
 
 
 def ranked_names(final: str | None) -> list[str]:
