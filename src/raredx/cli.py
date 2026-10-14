@@ -431,6 +431,7 @@ def _system(
                 settings.deeprare_dir,
                 keys,
                 _deeprare_queries(data_dir),
+                _deeprare_queries(data_dir).parent / "answers",
             )
         except DeepRareNotSetUp as e:
             _fail(str(e))
