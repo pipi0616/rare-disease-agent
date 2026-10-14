@@ -194,3 +194,26 @@ def test_the_annotations_are_written_for_another_program_under_the_same_mask(
     assert [r for r in written("PMID:1005") if r[0] == "OMIM:690005"] == [
         ("OMIM:690005", "HP:0000407", "PMID:1006")
     ]
+
+
+def test_synonyms_keep_their_scope_and_type(hpo: HPO) -> None:
+    assert hpo.synonyms("HP:0000365") == [
+        ("Hearing loss", "EXACT", "layperson"),
+        ("Deafness", "RELATED", ""),
+    ]
+    assert hpo.synonyms("HP:0000510") == [("RCD", "EXACT", "abbreviation")]
+    assert hpo.synonyms("HP:0000786") == []
+
+
+def test_an_id_from_another_release_is_brought_up_to_this_one(hpo: HPO) -> None:
+    assert hpo.current("HP:0000365") == "HP:0000365"
+    assert hpo.current("HP:0001730") == "HP:0000365"  # an alternative id of a merged term
+    assert hpo.current("HP:0099999") == "HP:0000407"  # obsolete, replaced
+    assert hpo.current("HP:0000000") is None  # not in this release
+
+
+def test_only_terms_below_phenotypic_abnormality_are_findings(hpo: HPO) -> None:
+    assert hpo.is_finding("HP:0001250")
+    assert not hpo.is_finding("HP:0000007")  # an inheritance
+    assert not hpo.is_finding("HP:0099999")  # obsolete
+    assert ("HP:0001250", "Seizure") in hpo.findings

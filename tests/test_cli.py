@@ -177,3 +177,21 @@ def test_a_model_billed_through_openrouter_needs_a_cap_and_only_suits_llm_direct
         assert result.exit_code == 1
     assert "give --budget-usd" in no_cap.output
     assert "--model applies to llm-direct only" in other.output
+
+
+def test_a_test_corpus_of_notes_is_read_only_for_the_final_run(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "eval",
+            "notes",
+            "--corpus",
+            "id-68",
+            "--data-dir",
+            str(tmp_path),
+            "--evals-dir",
+            str(EVALS),
+        ],
+    )
+    assert result.exit_code == 1
+    assert "--final" in result.output

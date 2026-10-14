@@ -18,8 +18,9 @@ def test_every_registered_source_is_pinned_and_verifiable() -> None:
         for name, sha256 in source.files.items():
             assert re.fullmatch(r"[0-9a-f]{64}", sha256), f"{source.name}/{name}"
         assert source.url.startswith("https://") and source.url.endswith("/"), source.name
-        if not source.latest_only:
-            assert source.version in source.url, f"{source.name}: url does not name the version"
+        if not source.latest_only:  # the address names the version, or each file does
+            named = source.version in source.url or all(source.version in n for n in source.files)
+            assert named, f"{source.name}: neither url nor files name the version"
         assert source.license, source.name
 
 

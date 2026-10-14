@@ -79,3 +79,30 @@ latest_only = true
 
 [medlineplus.files]
 "ghr-summaries.xml" = "fdc8bd614310c12718379cef6569962e5d0e791cecabcc355b53a72816ac263a"
+
+# Text annotated with HPO terms by hand, to measure how well a note is read into terms
+# (src/raredx/phenotyping). Evaluation only: read from the archive as downloaded, never
+# unpacked, never in git, never shown to a tool.
+#
+# PhenoBERT's repository at a fixed commit: ID-68, 68 clinical notes (the test set), and
+# 10 GeneReviews summaries (for development).
+[phenobert]
+version = "195d5df"
+url = "https://github.com/EclipseCN/PhenoBERT/archive/"
+homepage = "https://github.com/EclipseCN/PhenoBERT"
+license = "MIT (the repository); the ID-68 notes were published by Anazi et al., Mol Psychiatry 2017"
+role = "evaluation: ID-68 clinical notes (test) and GeneReviews summaries (development), with HPO annotations"
+
+[phenobert.files]
+"195d5df2ad9c6265e1de523f139694c7646eee29.zip" = "7d911190e40874320aabaae2fa3ae568fca27f4f1dbe06de4461f1fa5a9db435"
+
+# GSC-2024: the 228 GSC+ abstracts annotated again against HPO 2024 (Groza et al., 2024).
+[gsc-2024]
+version = "77b5761"
+url = "https://raw.githubusercontent.com/tudorgroza/code-for-papers/77b5761e46f752c6565519e25245155c12f58657/gsc-2024/"
+homepage = "https://github.com/tudorgroza/code-for-papers/tree/main/gsc-2024"
+license = "none stated; published with Groza et al. 2024 — used here for evaluation, not redistributed"
+role = "evaluation: 22 abstracts for development, 206 for the test, with HPO annotations"
+
+[gsc-2024.files]
+"gsc_2024.tar.gz" = "5548f7fcab357fa825000cb19cd29f5bf0dc34f795166fa211e79e1b42d76484"

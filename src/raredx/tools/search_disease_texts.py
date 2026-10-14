@@ -41,7 +41,7 @@ class SearchDiseaseTexts:
     name = "search_disease_texts"
     title = "Search disease descriptions"
 
-    def __init__(self, index: TextIndex, hpo: HPO) -> None:
+    def __init__(self, index: TextIndex[Passage], hpo: HPO) -> None:
         self.index = index
         self.hpo = hpo
 

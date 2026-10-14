@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
     from raredx.evals.harness import Harness
     from raredx.knowledge.hpo import HPO
+    from raredx.phenotyping.reader import Reader
     from raredx.tools.find_similar_patients import FindSimilarPatients
     from raredx.tools.rank_diseases import RankDiseases
     from raredx.tools.search_disease_texts import SearchDiseaseTexts
@@ -131,6 +132,27 @@ def index(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.
     folder = _text_index_dir(registry, data_dir, knowledge.release)
     TextIndex.save(folder, passages, dense, sparse, info)
     typer.echo(f"ok  {folder}: {len(passages)} passages")
+
+
+@data_app.command("hpo-index")
+def hpo_index(
+    data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir
+) -> None:
+    """Embed HPO's term names and synonyms, for coding a note's findings; minutes, once."""
+    from raredx.knowledge.text_index import FastEmbedder, TextIndex
+    from raredx.phenotyping.reader import labels
+
+    knowledge = _knowledge(evals_dir, data_dir)
+    names = labels(knowledge)
+    typer.echo(f"embedding {len(names)} names and synonyms of {len(knowledge.findings)} terms ...")
+    dense, sparse = FastEmbedder(data_dir / "models").passages([n.text for n in names])
+    info = {
+        "sources": f"HPO {knowledge.release}: names and EXACT/RELATED synonyms of finding terms",
+        "hpo_release": knowledge.release,
+    }
+    folder = _term_index_dir(data_dir, knowledge.release)
+    TextIndex.save(folder, names, dense, sparse, info)
+    typer.echo(f"ok  {folder}: {len(names)} names and synonyms")
 
 
 @data_app.command("lirical")
@@ -326,6 +348,7 @@ def _text_index_dir(
 def _text_search(evals_dir: Path, data_dir: Path) -> "SearchDiseaseTexts":
     """Tool T6 over the embedded disease texts; a clear message if they were never built."""
     from raredx.knowledge.text_index import INFO, FastEmbedder, TextIndex
+    from raredx.knowledge.texts import Passage
     from raredx.tools.search_disease_texts import SearchDiseaseTexts
 
     knowledge = _knowledge(evals_dir, data_dir)
@@ -333,7 +356,7 @@ def _text_search(evals_dir: Path, data_dir: Path) -> "SearchDiseaseTexts":
     folder = _text_index_dir(registry, data_dir, knowledge.release)
     if not (folder / INFO).exists():
         _fail(f"{folder} has no text index — run `raredx data index` first")
-    index = TextIndex.load(folder, FastEmbedder(data_dir / "models"))
+    index = TextIndex.load(folder, FastEmbedder(data_dir / "models"), Passage)
     return SearchDiseaseTexts(index, knowledge)
 
 
@@ -872,6 +895,142 @@ def serve_mcp(
     mlflow.set_experiment("mcp-server")  # every call a host makes is traced here
     server = build(knowledge, extra)
     server.run(transport="streamable-http" if transport == "streamable-http" else "stdio")
+
+
+# ── notes ───────────────────────────────────────────────────────────
+
+
+READERS = ("note-reader", "model-direct", "dictionary")
+TEST_CORPORA = ("id-68", "gsc-2024-test")
+
+
+def _term_index_dir(data_dir: Path, hpo_release: str) -> Path:
+    return data_dir / "processed" / "hpo-terms" / f"hpo-{hpo_release}"
+
+
+def _reader(
+    name: str, evals_dir: Path, data_dir: Path, budget_usd: float | None = None
+) -> "Reader":
+    """One of the readers that turn a note into HPO terms; a clear message if it
+    cannot be built."""
+    from raredx import llm
+    from raredx.knowledge.text_index import INFO, FastEmbedder, TextIndex
+    from raredx.phenotyping.reader import DictionaryReader, DirectReader, Label, NoteReader
+
+    if name not in READERS:
+        _fail(f"unknown reader {name!r}; choose one of: {', '.join(READERS)}")
+    knowledge = _knowledge(evals_dir, data_dir)
+    if name == "dictionary":
+        return DictionaryReader(knowledge)
+    prices = (settings.llm_price_input, settings.llm_price_cached_input, settings.llm_price_output)
+    budget = llm.Budget(budget_usd, prices) if budget_usd is not None else None
+    if name == "model-direct":
+        return DirectReader(_model_client(), settings.llm_model, knowledge, budget=budget)
+    folder = _term_index_dir(data_dir, knowledge.release)
+    if not (folder / INFO).exists():
+        _fail(f"{folder} has no term index — run `raredx data hpo-index` first")
+    index = TextIndex.load(folder, FastEmbedder(data_dir / "models"), Label)
+    return NoteReader(_model_client(), settings.llm_model, knowledge, index, budget=budget)
+
+
+@app.command("read-note")
+def read_note(
+    path: Annotated[
+        Path | None, typer.Argument(help="A text file. Default: standard input.")
+    ] = None,
+    reader: Annotated[str, typer.Option(help=" | ".join(READERS))] = "note-reader",
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Read a clinical note into HPO terms. The note goes to the model provider: never
+    a real patient's without an agreement with the provider that covers it."""
+    import sys
+
+    from raredx import llm
+
+    text = path.read_text(encoding="utf-8") if path else sys.stdin.read()
+    chosen = _reader(reader, evals_dir, data_dir)
+    tally = llm.Tally()
+    findings = chosen.read(text, tally)
+    for f in findings:
+        code = f"{f.hpo_id}  {f.label}" if f.hpo_id else f"(not coded: {f.uncoded})"
+        typer.echo(f'{f.status:<8} {code:<60} "{f.quote}"')
+    if tally.model_calls:
+        typer.echo(
+            f"\n{tally.model_calls} model calls, {tally.input_tokens} tokens in "
+            f"({tally.cached_input_tokens} cached), {tally.output_tokens} out, "
+            f"about ${tally.cost(settings):.4f}"
+        )
+
+
+@eval_app.command("notes")
+def eval_notes(
+    corpus: Annotated[
+        str, typer.Option(help="id-68 | gsc-2024-test (test); genereviews | gsc-2024-dev")
+    ],
+    reader: Annotated[str, typer.Option(help=" | ".join(READERS))] = "note-reader",
+    final: Annotated[bool, typer.Option(help="Required for a test corpus.")] = False,
+    limit: Annotated[int | None, typer.Option(help="Only the first N documents.")] = None,
+    budget_usd: Annotated[
+        float | None, typer.Option(help="Stop calling the model once this much is spent.")
+    ] = None,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Score a reader against text annotated with HPO terms by hand."""
+    from raredx.phenotyping import corpora, evaluation
+
+    if corpus not in corpora.CORPORA:
+        _fail(f"unknown corpus {corpus!r}; choose one of: {', '.join(corpora.CORPORA)}")
+    if corpus in TEST_CORPORA and not final:
+        _fail(f"{corpus} is a test set: pass --final, once the reader is settled on the others")
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    archive, tarball = (
+        sources.raw_dir(registry[name], data_dir) / next(iter(registry[name].files))
+        for name in ("phenobert", "gsc-2024")
+    )
+    if not archive.exists() or not tarball.exists():
+        _fail("the corpora are not downloaded — run `raredx data fetch phenobert gsc-2024`")
+    documents = corpora.load(corpus, archive, tarball)[:limit]
+    chosen = _reader(reader, evals_dir, data_dir, budget_usd)
+    run_id, metrics = evaluation.evaluate(
+        chosen,
+        documents,
+        corpus if limit is None else f"{corpus}-first{limit}",
+        _knowledge(evals_dir, data_dir),
+        tracking_uri=settings.mlflow_tracking_uri,
+        artifact_root=settings.mlflow_artifact_root,
+        answers=data_dir / "processed" / "notes" / "answers",
+        params={"code_version": code_version(), "budget_usd": budget_usd},
+    )
+    harness = _harness()
+    usage = harness.usage(run_id)
+    tokens_in, cached = usage["usage/input_tokens"], usage["usage/cached_input_tokens"]
+    cost = (
+        (tokens_in - cached) * settings.llm_price_input
+        + cached * settings.llm_price_cached_input
+        + usage["usage/output_tokens"] * settings.llm_price_output
+    ) / 1e6
+    usage["usage/cost_usd_estimate"] = round(cost, 4)
+    harness.log_metrics(run_id, usage)
+    n, answered = int(metrics["n_documents"]), int(metrics["n_answered"])
+    typer.echo(f"{chosen.name} · {corpus} · {answered} of {n} documents read")
+    for scope in ("micro", "macro", "present"):
+        p, r, f1 = (metrics[f"{scope}/{m}"] for m in ("precision", "recall", "f1"))
+        typer.echo(f"  {scope:<8} precision {p:6.1%}  recall {r:6.1%}  F1 {f1:6.1%}")
+    if metrics["negated/n"]:
+        typer.echo(
+            f"  denied in the note: {int(metrics['negated/n'])} terms; read as absent "
+            f"{int(metrics['negated/as_absent'])}, as present {int(metrics['negated/as_present'])}"
+        )
+    typer.echo(
+        f"  {int(metrics['gold/set_aside'])} annotated terms set aside (not findings in this "
+        f"release); {int(metrics['usage/read_back'])} readings read back from earlier runs; "
+        f"about ${cost:.4f}"
+    )
+    typer.echo(f"recorded in MLflow: run {run_id}")
+    if answered < n:
+        _fail(f"{n - answered} documents were not read (model API): run the same command again")
 
 
 # ── service ─────────────────────────────────────────────────────────

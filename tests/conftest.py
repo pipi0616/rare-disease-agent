@@ -128,7 +128,7 @@ def word_embedder() -> WordEmbedder:
 
 
 @pytest.fixture(scope="session")
-def text_index() -> TextIndex:
+def text_index() -> TextIndex[texts.Passage]:
     """The miniature disease texts (tests/fixtures/texts), indexed with WordEmbedder."""
     passages = texts.read(FIXTURES / "texts", FIXTURES / "texts")
     embedder = WordEmbedder()

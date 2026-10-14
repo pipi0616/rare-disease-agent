@@ -40,11 +40,15 @@ class Budget:
     answer; that sum is also the run's bill (the account's own total settles minutes
     later). Calls in flight when the cap is reached still finish, so a run can go over
     by a few calls.
+
+    DeepSeek does not say what a call cost; given `prices` (USD per million input,
+    cached input and output tokens), a call's cost is estimated from its tokens.
     """
 
-    def __init__(self, usd: float) -> None:
+    def __init__(self, usd: float, prices: tuple[float, float, float] | None = None) -> None:
         self.usd = usd
         self.spent = 0.0
+        self.prices = prices
         self._lock = threading.Lock()
 
     def check(self) -> None:
@@ -55,6 +59,56 @@ class Budget:
     def add(self, usd: float) -> None:
         with self._lock:
             self.spent += usd
+
+    def charge(self, response: Any) -> None:
+        """Add what the call cost: as the provider reported it, else estimated."""
+        cost = cost_of(response)
+        if not cost and self.prices is not None:
+            tally = Tally()
+            tally.add(response)
+            uncached = tally.input_tokens - tally.cached_input_tokens
+            price_in, price_cached, price_out = self.prices
+            cost = (
+                uncached * price_in
+                + tally.cached_input_tokens * price_cached
+                + tally.output_tokens * price_out
+            ) / 1e6
+        self.add(cost)
+
+
+class Tally:
+    """Model calls and tokens, summed over the calls it is given to — what one request
+    used, for its answer to report."""
+
+    def __init__(self) -> None:
+        self.model_calls = 0
+        self.input_tokens = 0
+        self.cached_input_tokens = 0
+        self.output_tokens = 0
+        self._lock = threading.Lock()
+
+    def add(self, response: Any) -> None:
+        usage = getattr(response, "usage", None)
+        if usage is None:
+            return
+        details = getattr(usage, "prompt_tokens_details", None)
+        cached = getattr(usage, "prompt_cache_hit_tokens", None)  # DeepSeek's name
+        if cached is None:
+            cached = getattr(details, "cached_tokens", 0) if details is not None else 0
+        with self._lock:
+            self.model_calls += 1
+            self.input_tokens += usage.prompt_tokens or 0
+            self.cached_input_tokens += cached or 0
+            self.output_tokens += usage.completion_tokens or 0
+
+    def cost(self, settings: Settings) -> float:
+        """At the configured model's peak price, in US dollars."""
+        uncached = self.input_tokens - self.cached_input_tokens
+        return (
+            uncached * settings.llm_price_input
+            + self.cached_input_tokens * settings.llm_price_cached_input
+            + self.output_tokens * settings.llm_price_output
+        ) / 1e6
 
 
 def cost_of(response: Any) -> float:
@@ -136,6 +190,7 @@ def _complete(
     thinking: bool,
     provider: Provider = "deepseek",
     budget: Budget | None = None,
+    tally: Tally | None = None,
 ) -> str | None:
     options: dict[str, Any] = {"response_format": {"type": "json_object"}}
     if provider == "openrouter":
@@ -152,7 +207,9 @@ def _complete(
         budget.check()
     response = api.chat.completions.create(model=model, messages=messages, **options)
     if budget is not None:
-        budget.add(cost_of(response))
+        budget.charge(response)
+    if tally is not None:
+        tally.add(response)
     content: str | None = response.choices[0].message.content
     return content
 
@@ -166,13 +223,14 @@ def ask_json[T](
     thinking: bool = False,
     provider: Provider = "deepseek",
     budget: Budget | None = None,
+    tally: Tally | None = None,
 ) -> T:
     """One chat-completions call in JSON mode, parsed — with one repair attempt.
 
     A reply that parse rejects is shown its error once and asked again. A second
     failure is raised: recorded in the trace, and scored as a miss.
     """
-    content = _complete(api, model, messages, thinking, provider, budget)
+    content = _complete(api, model, messages, thinking, provider, budget, tally)
     try:
         return parse(content)
     except (ValueError, ValidationError) as first_error:
@@ -185,4 +243,4 @@ def ask_json[T](
                 "Reply again with only the json object.",
             },
         ]
-        return parse(_complete(api, model, repair, thinking, provider, budget))
+        return parse(_complete(api, model, repair, thinking, provider, budget, tally))

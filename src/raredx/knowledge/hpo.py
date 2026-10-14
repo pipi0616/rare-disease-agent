@@ -33,8 +33,13 @@ from typing import Any, Literal, NamedTuple
 from pyhpo import BasicHPOSet, Ontology
 
 ANNOTATIONS = "phenotype.hpoa"
+ONTOLOGY = "hp.obo"
 PHENOTYPE_ROOT = "HP:0000118"  # Phenotypic abnormality: every finding is below it
 GENES = "genes_to_disease.txt"
+# A synonym line of hp.obo: the text; its scope — EXACT says the same thing, RELATED
+# something close, BROAD and NARROW something wider or narrower; and its type, if any
+# (abbreviation, layperson, plural_form, ...).
+_SYNONYM = re.compile(r'synonym: "((?:[^"\\]|\\.)*)" (EXACT|RELATED|BROAD|NARROW)(?: (\w+))?')
 
 Relation = Literal["same", "more specific", "less specific"]
 
@@ -195,6 +200,7 @@ class HPO:
 
     def __init__(self, folder: Path, release: str) -> None:
         self.release = release
+        self._ontology_file = folder / ONTOLOGY
         self._annotations_file = folder / ANNOTATIONS
         self._lines, self.names = _annotations(self._annotations_file)
         self.genes = _genes(folder / GENES)
@@ -315,6 +321,55 @@ class HPO:
         return sorted(
             (str(t.id), str(t.name)) for t in Ontology if not t.is_obsolete and root.parent_of(t)
         )
+
+    @property
+    def findings(self) -> list[tuple[str, str]]:
+        """Every term that describes a finding, as (id, name), by id."""
+        return self._findings
+
+    @functools.cached_property
+    def _finding_ids(self) -> frozenset[str]:
+        return frozenset(i for i, _ in self._findings)
+
+    def is_finding(self, hpo_id: str) -> bool:
+        """Whether the term describes a finding: it is below "Phenotypic abnormality"."""
+        return hpo_id in self._finding_ids
+
+    @functools.cached_property
+    def _obo(self) -> tuple[dict[str, list[tuple[str, str, str]]], dict[str, str]]:
+        """What hpo3 does not keep, read from hp.obo: each term's synonyms with their
+        scope, and the alternative ids that stand for a term (merged terms' old ids)."""
+        synonyms: dict[str, list[tuple[str, str, str]]] = defaultdict(list)
+        alternative: dict[str, str] = {}
+        term = None
+        with self._ontology_file.open(encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("["):
+                    term = None  # a new stanza: a term only once its id line is read
+                elif line.startswith("id: "):
+                    term = line[4:].strip()
+                elif term is None:
+                    continue
+                elif line.startswith("alt_id: "):
+                    alternative[line[8:].strip()] = term
+                elif m := _SYNONYM.match(line):
+                    synonyms[term].append((m[1].replace('\\"', '"'), m[2], m[3] or ""))
+        return dict(synonyms), alternative
+
+    def synonyms(self, hpo_id: str) -> list[tuple[str, str, str]]:
+        """The term's synonyms as (text, scope, type): scope one of EXACT, RELATED, BROAD,
+        NARROW; type "abbreviation", "layperson", ... or empty."""
+        return self._obo[0].get(hpo_id, [])
+
+    def current(self, hpo_id: str) -> str | None:
+        """The id a term has in this release: itself; the term an alternative id stands
+        for; an obsolete term's replacement. None for an id this release does not know —
+        as a term annotated against an older release may be."""
+        hpo_id = self._obo[1].get(hpo_id, hpo_id)
+        try:
+            return self.term(hpo_id)[0]
+        except RuntimeError:  # hpo3: unknown term
+            return None
 
     def search(self, query: str, limit: int = 10) -> list[tuple[str, str]]:
         """Terms for findings whose name contains the query, whatever its case, as
