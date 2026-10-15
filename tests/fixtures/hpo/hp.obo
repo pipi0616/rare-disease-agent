@@ -19,6 +19,7 @@ is_a: HP:0000001 ! All
 [Term]
 id: HP:0000007
 name: Autosomal recessive inheritance
+synonym: "Autosomal recessive" EXACT []
 is_a: HP:0000005 ! Mode of inheritance
 
 [Term]
@@ -29,11 +30,16 @@ is_a: HP:0000118 ! Phenotypic abnormality
 [Term]
 id: HP:0000365
 name: Hearing impairment
+alt_id: HP:0001730
+synonym: "Hearing loss" EXACT layperson []
+synonym: "Deafness" RELATED []
 is_a: HP:0000598 ! Abnormality of the ear
 
 [Term]
 id: HP:0000407
 name: Sensorineural hearing impairment
+synonym: "Sensorineural deafness" EXACT []
+synonym: "Nerve deafness" BROAD []
 is_a: HP:0000365 ! Hearing impairment
 
 [Term]
@@ -49,6 +55,7 @@ is_a: HP:0000118 ! Phenotypic abnormality
 [Term]
 id: HP:0000510
 name: Rod-cone dystrophy
+synonym: "RCD" EXACT abbreviation []
 is_a: HP:0000478 ! Abnormality of the eye
 
 [Term]
@@ -64,6 +71,8 @@ is_a: HP:0000080 ! Abnormality of reproductive system physiology
 [Term]
 id: HP:0001250
 name: Seizure
+synonym: "Seizures" EXACT plural_form []
+synonym: "Epileptic seizure" EXACT []
 is_a: HP:0000118 ! Phenotypic abnormality
 
 [Term]

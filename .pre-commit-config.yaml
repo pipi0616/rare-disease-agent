@@ -16,6 +16,9 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=500]
+        # The demo's recording (scripts/record_demo.py) is the one deliberate exception:
+        # a GIF of about 3 MB plays in the README, and an MP4 of about 2 MB. Data never.
+        exclude: ^docs/img/demo-note\.(gif|mp4)$
       - id: detect-private-key
 
   - repo: https://github.com/astral-sh/ruff-pre-commit

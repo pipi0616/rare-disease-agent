@@ -14,6 +14,7 @@ from mcp.types import TextContent
 from raredx.data.cases import Case
 from raredx.knowledge.hpo import HPO
 from raredx.knowledge.text_index import TextIndex
+from raredx.knowledge.texts import Passage
 from raredx.mcp_server import build
 from raredx.tools.check_match import CheckMatch
 from raredx.tools.find_similar_patients import FindSimilarPatients
@@ -114,7 +115,7 @@ async def test_given_a_patient_bank_the_server_adds_find_similar_patients(
 
 @pytest.mark.anyio
 async def test_given_a_text_index_the_server_adds_search_disease_texts(
-    hpo: HPO, text_index: TextIndex
+    hpo: HPO, text_index: TextIndex[Passage]
 ) -> None:
     async with Client(
         build(hpo, [SearchDiseaseTexts(text_index, hpo)]), raise_exceptions=True

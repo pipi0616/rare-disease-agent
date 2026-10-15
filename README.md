@@ -2,13 +2,32 @@
 
 [![CI](https://github.com/pipi0616/rare-disease-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/pipi0616/rare-disease-agent/actions/workflows/ci.yml)
 
-An agent that takes a patient's clinical findings (free text or HPO terms,
-optionally with candidate variants), decides what to look up, and returns
-ranked candidate diseases and genes with cited evidence. Evaluated on public,
-leakage-controlled case collections against classical, fixed-pipeline and
-single-call baselines.
+An agent that takes a patient's findings — a clinical note, or HPO terms, and
+optionally the genes left after sequencing — decides what to look up, and returns
+up to ten candidate diseases, each with its reason and the evidence it rests on,
+with sources.
 
-**Status:** the agent, evaluated on a held-out set and served over HTTP, with seven tools and the baselines it is measured against. Tools:
+![A clinical note pasted, read into HPO terms, checked, and diagnosed: the published diagnosis comes first](docs/img/demo-note.gif)
+
+*A note written for the demo from a published patient's findings (galactosemia):
+read into terms in about 5 s, then the agent's answer in about 14 s — the
+published diagnosis first — for about half a US cent in all.
+[Video (MP4)](docs/img/demo-note.mp4).*
+
+| 200 held-out cases, each case's own paper masked | confirmed disease ranked first | paired against the agent (cases each gets right alone) |
+|---|---|---|
+| **this agent** (`deepseek-flash` with tools) | **43.0%** | |
+| GPT-6.1, asked directly | 33.0% | 37 : 17 (p = 0.009) |
+| LIRICAL, an established tool | 28.0% | 34 : 4 (p < 0.001) |
+| Gemini 4, asked directly | 27.0% | 46 : 14 (p < 0.001) |
+| DeepRare, on the same model — judged by its own LLM scoring, as the agent (42.5%) | 27.5% | 48 : 18 (p < 0.001) |
+| Claude Sonnet 5.5, asked directly | 23.5% | 52 : 13 (p < 0.001) |
+
+Each comparison follows a plan committed before its run, on a fixed version of
+the system; below are the details, the conditions that were not equal, and the
+one pre-registered claim that failed (reading notes).
+
+**Status:** the agent, evaluated on a held-out set and against LIRICAL, three frontier models and DeepRare; served over HTTP, reading clinical notes as well as HPO terms; with seven tools and the baselines it is measured against. Tools:
 `rank_diseases` (every OMIM disease ranked against the patient's phenotype),
 `lookup_disease` (one disease's features with their frequencies, inheritance,
 onset, genes and sources, sized for a model to read), `check_match` (the
@@ -23,6 +42,36 @@ diseases match the phenotype). The agent gets the four core tools and
 `find_similar_patients` (and `rank_candidate_genes` with sequencing data);
 the text search, which the ablation found worth nothing, is served over MCP
 and given to the agent only with `--with-texts`.
+
+**How the parts fit.** A note is read into HPO terms (`/v1/terms/from-note`), a
+person checks them, and the codes go to the diagnosis service (`/v1/diagnose`),
+which ranks diseases without a model first — its answer if the model fails — and
+then lets the agent investigate with its tools. Every request is one MLflow trace,
+and the evaluation harness runs the very agent the service serves, with each case's
+own paper masked from its knowledge.
+
+```mermaid
+flowchart TB
+    note["Clinical note, free text"] --> reader
+    subgraph reader["Note reader"]
+        direction LR
+        r1["LLM lists each finding<br/>with the note's words<br/>and its status"] --> r2["HPO term search<br/>Qdrant hybrid<br/>BGE + BM25"]
+        r2 --> r3["LLM picks a term<br/>among the candidates only"]
+        r4["Dictionary pass<br/>HPO names in the note"] --> r3
+    end
+    reader --> check["A clinician checks the terms"]
+    check --> api
+    coded["Or HPO terms directly<br/>+ candidate genes"] --> api
+    subgraph api["Diagnosis service (FastAPI)"]
+        direction LR
+        f["No-model ranking first<br/>the fallback"] --> agent["Agent<br/>LangChain create_agent<br/>deepseek-flash, ≤ 8 calls"]
+        agent <--> tools["Tools, also over MCP<br/>rank_diseases · check_match<br/>lookup_disease · find_disease<br/>find_similar_patients<br/>rank_candidate_genes"]
+        tools --- kb[("Pinned knowledge<br/>HPO 2026-09-01<br/>6,014 published patients")]
+    end
+    api --> out["Up to ten diseases, each with<br/>its reason, evidence and sources"]
+    api -.->|traces| mlflow[("MLflow<br/>traces · evaluation runs")]
+    harness["Evaluation harness · mlflow.genai.evaluate<br/>runs this same agent, each case's paper masked<br/>leak audit on every tool output"] --> mlflow
+```
 
 **Held-out result (v1.0).** One case from each of 840 papers that share no
 paper with anything used in development; one run per system, on a tagged
@@ -48,8 +97,9 @@ model-API failures; the leak audit clean over more than 50,000 tool outputs
 per agent run), and on the 122 cases strict masking makes unanswerable every
 tool-using system scores zero in the top ten, as it should; on the other 718
 the agent reaches 49.6% top-1 and 72.6% top-10. I had predicted the lead
-would shrink from the dev set's; it did not. Not yet done: comparison with
-Exomiser, LIRICAL, general-purpose LLMs and DeepRare on the same cases.
+would shrink from the dev set's; it did not. Since then the same cases went
+to LIRICAL (all 840), and a fixed 200 of them to three frontier models and
+DeepRare (below).
 
 **Against an established tool.** LIRICAL 2.4.1 (Robinson et al. 2020), a
 published, maintained phenotype-driven tool, run on the same 840 cases under
@@ -86,6 +136,7 @@ OpenRouter, on a fixed random 200 of the 840 held-out cases
 | LIRICAL | 28.0% [22.2–34.6] | 47.0% [40.2–53.9] |
 | Gemini 4, asked directly | 27.0% [21.3–33.5] | 42.0% [35.4–48.9] |
 | Claude Sonnet 5.5, asked directly | 23.5% [18.2–29.8] | 38.5% [32.0–45.4] |
+| DeepRare, same model (`deepseek-flash`) | 8.5% [5.4–13.2] | 11.5% [7.8–16.7] (top-5; it gives five) |
 | `deepseek-flash`, asked directly | 15.0% [10.7–20.6] | 25.5% [20.0–32.0] |
 
 Paired at first place the agent wins against each: 37 to 17 (GPT-6.1,
@@ -95,6 +146,73 @@ cost per case. Every billed run carries a per-call spending cap; two runs that
 lost cases to the provider (a new account's rate limit, dropped connections)
 were completed by asking only those cases again (`--fill-in`). Per-case
 outcomes: `docs/comparison_llm_hits.tsv`.
+
+**Against another diagnosis agent.** DeepRare (Zhao et al., *Nature* 2026), run
+from its code on the same 200 cases with the agent's model, `deepseek-flash`,
+under a plan committed beforehand (`docs/comparison_plan_deeprare.md`). It names
+diseases without ids, so two scorings, both applied as planned: by OMIM id, its
+names matched by name (57% of them match one), and by DeepRare's own scoring — an
+LLM judge asked whether the confirmed diagnosis is among the five — applied to
+both systems alike:
+
+| held-out, 200 cases | first, by OMIM id | top 5, by OMIM id | first, judged | top 5, judged |
+|---|---|---|---|---|
+| **final agent** (masked) | **43.0%** | **58.5%** | **42.5%** | **59.0%** |
+| DeepRare (cannot be masked) | 8.5% | 11.5% | 27.5% | 35.0% |
+
+Paired, the agent leads under either scoring: 71 cases to 2 at first place by id,
+48 to 18 judged (both p < 0.001). DeepRare searches the web and its case bank,
+so it could not be masked; everything it read was searched for the patient's own
+paper, found in 3 of 200 cases (none answered right). It took about 27 model calls
+and 3.2 minutes a case (median) against the agent's 4–8 and 13 seconds, at 2.4
+times the cost. The comparison is of designs on one inexpensive model: DeepRare's
+paper used a reasoning model (DeepSeek-R1) and case banks not all public.
+
+**By how rare the disease is** (looked at afterwards, not planned; descriptive).
+The 840 held-out cases split by Orphanet's prevalence class of the confirmed
+disease (`src/raredx/knowledge/prevalence.py`; exact OMIM mappings only), first
+place:
+
+| held-out, by prevalence | cases (diseases) | final agent | fixed pipeline | LIRICAL | `deepseek-flash` alone |
+|---|---|---|---|---|---|
+| 1 in 100,000 or more | 42 (25) | 57.1% | 50.0% | 40.5% | 61.9% |
+| 1–9 in 1,000,000 | 66 (12) | 80.3% | 74.2% | 50.0% | 53.0% |
+| under 1 in 1,000,000 | 272 (115) | 52.6% | 45.6% | 40.1% | 9.6% |
+| not classed by Orphanet | 460 (327) | 29.6% | 25.0% | 20.4% | 7.2% |
+
+The model alone knows the relatively common rare diseases — level with the
+agent there — and almost none of the rarest, where the agent with its tools is
+right about half the time. Its gain over its own model is in the long tail. The
+groups are small and cases cluster by disease, so no test is made of it. Of the
+327 unclassed diseases, 290 have no exact Orphanet counterpart at all, and a
+quarter of their cases cannot be answered once their own paper is masked.
+
+**Reading a clinical note.** A note is read into HPO terms before it is
+diagnosed (`src/raredx/phenotyping/`): the model lists each finding with the
+note's own words and whether the patient has it, the note denies it or a relative
+has it; it never writes an id — exact names are coded directly, the rest chosen
+among candidates a hybrid search over HPO's names and synonyms offers — and a
+dictionary pass it checks in context. Tested once, under a plan committed
+beforehand (`docs/phenotyping_plan.md`), against hand-annotated public text,
+document-level micro F1:
+
+| | ID-68 (68 clinical notes) | GSC-2024 (206 abstracts) |
+|---|---|---|
+| **this reader** | 71.7% (P 64.7, R 80.3) | **71.5%** |
+| a dictionary of HPO names | **72.3%** (P 89.9, R 60.5) | 58.6% |
+| the model writing HPO ids itself | 55.3% | 47.3% |
+| AutoPCR, published (HPO 2024) | 80.3% | 83.5% |
+
+The pre-registered primary claim — better than both baselines on the clinical
+notes — **failed**: paired per note, the reader beats the model writing ids
+(58 notes to 5, p < 0.001) but not the dictionary (29 to 38, p = 0.33). On the
+abstracts it beats both (122 to 31, 160 to 11). The two trade recall for
+precision: looked at afterwards, half of the 347 terms counted against the reader
+on ID-68 are findings the annotators did not annotate ("floppy", "IQ was
+estimated to be 20-30"), and the dictionary cannot tell a denied finding from a
+present one. Which costs a diagnosis more was not measured: no public notes come
+with confirmed diagnoses. The service offers the reader's terms for a person to
+check, each with the note's words.
 
 During development, on the 200-case dev set
 (recall of the confirmed disease, 95% intervals):
@@ -236,6 +354,7 @@ The agent behind an HTTP API (FastAPI), with a demo page that is one client of i
 ```bash
 uv run raredx serve     # the API on http://127.0.0.1:8000 — interactive reference at /docs
 uv run raredx demo      # the demo page (Streamlit) on http://127.0.0.1:8501
+RAREDX_SERVICE_READ_NOTES=true uv run raredx serve   # also read clinical notes (off by default)
 docker compose up --build   # or all of it in containers: API, demo page, MLflow server
 ```
 
@@ -251,6 +370,7 @@ curl -X POST http://127.0.0.1:8000/v1/diagnose -H 'content-type: application/jso
 | `POST /v1/diagnose` | up to ten diseases, each with the agent's reason and the evidence it rests on (findings explained and not, frequencies, sources) |
 | `POST /v1/diagnose/stream` | the same as server-sent events: each step the agent takes, as it takes it, then the answer |
 | `GET /v1/system` | what is serving: model, prompt version, tools, knowledge release, code commit |
+| `POST /v1/terms/from-note` | a clinical note read into HPO terms — each with the note's words and whether the patient has it, the note denies it or a relative has it — for a person to check; where the deployment reads notes |
 | `GET /v1/terms?q=`, `GET /v1/examples` | HPO terms by name; published patients to try |
 | `GET /healthz`, `GET /readyz` | liveness and readiness; neither calls the model |
 
@@ -268,10 +388,18 @@ What the service is built to guarantee (`src/raredx/service/`):
   says so (`mode: "fallback"`, with the reason). Its quality is measured too:
   32.1% top-1 against the agent's 42.4% on the held-out set. A failure of the
   service's own code is not hidden the same way: it is a 500 with a request id.
-- **Only coded data goes in.** A request is HPO ids, sex, gene symbols and
-  PubMed ids, each matched against a pattern; any other field is refused. No
-  free text means no name or date of birth can reach a log, a trace or the
-  model provider by mistake. The log line of a request holds counts and ids only.
+- **Only coded data goes into a diagnosis.** A request is HPO ids, sex, gene
+  symbols and PubMed ids, each matched against a pattern; any other field is
+  refused. No free text means no name or date of birth can reach a log, a trace
+  or the model provider by mistake. The log line of a request holds counts and ids only.
+- **A note is read, not kept.** Reading clinical notes is a separate endpoint a
+  deployment switches on. The note goes to the model provider — production needs
+  one covered by an agreement for patient data, or a model run in-house — and
+  nowhere else: an MLflow span processor replaces the inputs and outputs of every
+  span that ends while a note is read, so the trace keeps the steps, their timings,
+  the tokens and the codes found, not the text; a test drives the real OpenAI SDK
+  with autologging and checks that no word of the note is stored. The terms come
+  back for a person to check; what goes on to `/v1/diagnose` is codes.
 - **Every request is one MLflow trace**, shaped like an evaluation's — the
   question in, the candidates out, each model and tool call a span — so a
   request in production can be read, replayed and judged with the tools built
@@ -336,6 +464,7 @@ src/raredx/     all application code — an installed package, no path hacks
   data/           datasets: registry, fetch, verify, parse, processed layer
   evals/          manifests, systems, scoring rules, MLflow evaluation harness
   knowledge/      reference knowledge the tools read (HPO), and source masking
+  phenotyping/    a clinical note read into HPO terms, and its evaluation on annotated text
   tools/          the agent's tools: typed, described, tested alone, traced
   baselines/      systems the agent must beat: similarity, rank-then-check, the fixed
                   pipeline, one LLM call

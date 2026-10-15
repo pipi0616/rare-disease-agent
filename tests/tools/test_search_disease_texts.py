@@ -7,11 +7,12 @@ from pydantic import ValidationError
 from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
 from raredx.knowledge.text_index import TextIndex
+from raredx.knowledge.texts import Passage
 from raredx.tools.search_disease_texts import SearchDiseaseTexts
 
 
 @pytest.fixture
-def search(text_index: TextIndex, hpo: HPO) -> SearchDiseaseTexts:
+def search(text_index: TextIndex[Passage], hpo: HPO) -> SearchDiseaseTexts:
     return SearchDiseaseTexts(text_index, hpo)
 
 

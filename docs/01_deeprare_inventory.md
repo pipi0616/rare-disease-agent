@@ -26,7 +26,7 @@
 | Selenium + Chrome | 打开网页读正文 | Chrome 有；驱动由 Selenium 自动下载 |
 | PubCaseFinder、PhenoBrain | 症状 → 候选疾病 | 公开网络接口，不需要密钥 |
 | BioLORD-2023-C、MedCPT-Cross-Encoder | 疾病名标准化、相似病例精排 | HuggingFace 下载，CPU 可跑 |
-| 数据库 `Angelakeke/DeepRare` | 疾病映射、预算好的向量、PubMed 病例库（约 6.7 万例） | 公开，共 0.66 GB |
+| 数据库 `Angelakeke/DeepRare` | 疾病映射、预算好的向量、PubMed 病例库（约 6.7 万例；2026-10-14 更正：`RDS_embeddings.csv` 实际是 10,000 例） | 公开，共 0.66 GB |
 
 ## 需要改的地方（复现差异要在论文里写明）
 

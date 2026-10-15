@@ -45,6 +45,9 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.16.10",
 ]
+record = [
+    "playwright>=1.64.0",
+]
 
 # `uv sync` and `uv run` install both groups: the demo page (Streamlit) is part of a
 # working checkout. The container image leaves `dev` out.

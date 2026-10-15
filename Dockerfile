@@ -26,11 +26,13 @@ RUN uv sync --locked --no-editable --no-default-groups --group demo
 
 # ── data: the pinned knowledge, downloaded and checked against the registry ──
 # evals/datasets.toml names each file's version and sha256; a download that does
-# not match fails the build. Then the published patients are parsed into cases.
+# not match fails the build. Then the published patients are parsed into cases,
+# and HPO's names and synonyms embedded for reading notes (the embedding models,
+# FastEmbed's, are downloaded once into data/models and run on the CPU).
 FROM build AS data
 ENV PATH="/app/.venv/bin:$PATH"
 COPY evals ./evals
-RUN raredx data fetch hpo phenopacket-store && raredx data build
+RUN raredx data fetch hpo phenopacket-store && raredx data build && raredx data hpo-index
 
 # ── runtime: what runs ──
 FROM python:3.12-slim-bookworm AS runtime

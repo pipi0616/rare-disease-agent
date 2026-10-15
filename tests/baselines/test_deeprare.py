@@ -157,3 +157,30 @@ def test_queries_are_embedded_once_ahead_and_handed_to_deeprare(
     DeepRare(hpo, folder, KEYS, cache).predict(question())
     seen = json.loads((folder / "seen.json").read_text())
     assert seen["case"]["embeddings_file"] == str(cache.resolve())
+
+
+def test_each_answer_is_saved_as_it_arrives_and_read_back_instead_of_asking_again(
+    hpo: HPO, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    folder = checkout(tmp_path, {"final": FINAL, "read": {"prompts": ["x"]}, "usage": {}})
+    monkeypatch.setattr("raredx.baselines.deeprare.RUNNER", folder / "runner.py")
+    answers = tmp_path / "answers"
+    first = DeepRare(hpo, folder, KEYS, answers=answers).predict(question())
+    [saved] = list(answers.glob("*.json"))
+    (folder / "seen.json").unlink()
+    again = DeepRare(hpo, folder, KEYS, answers=answers).predict(question())  # e.g. after a crash
+    assert again == first
+    assert not (folder / "seen.json").exists()  # DeepRare was not run a second time
+    assert json.loads(saved.read_text())["final"] == FINAL
+
+
+def test_a_lost_case_is_not_saved_so_it_is_asked_again(
+    hpo: HPO, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    lost = {"final": None, "error": "x", "usage": {"api_errors": 1}}
+    folder = checkout(tmp_path, lost)
+    monkeypatch.setattr("raredx.baselines.deeprare.RUNNER", folder / "runner.py")
+    answers = tmp_path / "answers"
+    with pytest.raises(DeepRareAPIError):
+        DeepRare(hpo, folder, KEYS, answers=answers).predict(question())
+    assert not answers.exists() or not list(answers.glob("*.json"))

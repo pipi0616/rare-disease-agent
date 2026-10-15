@@ -18,6 +18,8 @@ from raredx.service.schemas import (
     DiagnoseRequest,
     DiagnoseResponse,
     Example,
+    NoteRequest,
+    NoteResponse,
     Step,
     SystemInfo,
     Term,
@@ -72,6 +74,14 @@ class Client:
 
     def terms(self, q: str, limit: int = 10) -> list[Term]:
         return _terms.validate_json(self._get("/v1/terms", q=q, limit=limit).content)
+
+    def read_note(self, text: str) -> NoteResponse:
+        """The note's findings as HPO terms (where the service takes notes)."""
+        body = NoteRequest(text=text).model_dump()
+        response = self.http.post("/v1/terms/from-note", json=body, headers=self.headers)
+        if response.status_code != 200:
+            raise ServiceError(response.status_code, _detail(response))
+        return NoteResponse.model_validate_json(response.content)
 
     def examples(self) -> list[Example]:
         return _examples.validate_json(self._get("/v1/examples").content)

@@ -26,6 +26,7 @@ Two things set it apart from every other system here:
   DeepRare and to the agent alike.
 """
 
+import hashlib
 import json
 import os
 import re
@@ -44,6 +45,8 @@ from raredx.knowledge.hpo import HPO
 TOP = 5
 EMBEDDING = "openai/text-embedding-3-small"  # the model DeepRare's case bank was embedded with
 QUERY_EMBEDDINGS = "query-embeddings.json"
+SAVED_ANSWERS = "answers"
+SETUP = "deepseek-flash, thinking off; duckduckgo; PubMed case bank"  # what an answer depends on
 MATCH = 90  # least name similarity (0-100) for a name to count as that OMIM disease
 TIMEOUT_SECONDS = 1800
 RUNNER = Path(__file__).with_name("deeprare_runner.py")
@@ -93,13 +96,21 @@ class DeepRare:
     name = "deeprare"
 
     def __init__(
-        self, hpo: HPO, folder: Path, keys: dict[str, str], embeddings: Path | None = None
+        self,
+        hpo: HPO,
+        folder: Path,
+        keys: dict[str, str],
+        embeddings: Path | None = None,
+        answers: Path | None = None,
     ) -> None:
         """`folder`: the DeepRare checkout, with its environment in .venv and its
         database downloaded; `keys`: DEEPSEEK_API_KEY and OPENROUTER_API_KEY;
-        `embeddings`: queries embedded beforehand (embed_queries), if any."""
+        `embeddings`: queries embedded beforehand (embed_queries), if any; `answers`: a
+        folder where each answer is saved the moment it arrives, and read back instead of
+        asking DeepRare again — a run cut short costs nothing twice."""
         self.hpo = hpo
         self.embeddings = embeddings.resolve() if embeddings else None
+        self.answers = answers.resolve() if answers else None
         self.folder = folder.resolve()  # the runner changes directory: no relative path survives
         self.python = self.folder / ".venv" / "bin" / "python"
         if (
@@ -131,9 +142,21 @@ class DeepRare:
             "hpo_release": self.hpo.release,
         }
 
+    def saved_answer(self, hpo_ids: list[str], hpo_labels: list[str]) -> Path | None:
+        """Where the answer to these findings is saved, under this setup."""
+        if self.answers is None:
+            return None
+        key = json.dumps({"hpo_ids": hpo_ids, "hpo_labels": hpo_labels, "setup": SETUP})
+        return self.answers / f"{hashlib.sha256(key.encode()).hexdigest()[:24]}.json"
+
     @mlflow.trace(name="deeprare", span_type=SpanType.TOOL)
     def consult(self, hpo_ids: list[str], hpo_labels: list[str]) -> dict[str, Any]:
-        """DeepRare's answer for these findings, and everything it sent its model."""
+        """DeepRare's answer for these findings, and everything it sent its model — read
+        back from where it was saved, when it was already given once."""
+        saved = self.saved_answer(hpo_ids, hpo_labels)
+        if saved is not None and saved.exists():
+            kept: dict[str, Any] = json.loads(saved.read_text())
+            return {**kept, "read_back_from": saved.name}
         with tempfile.TemporaryDirectory(prefix="deeprare-") as tmp:
             case, answer = Path(tmp) / "case.json", Path(tmp) / "answer.json"
             embeddings = str(self.embeddings) if self.embeddings else None
@@ -152,6 +175,11 @@ class DeepRare:
             if not answer.exists():
                 raise RuntimeError(f"DeepRare failed: {(done.stderr or done.stdout)[-500:]}")
             result: dict[str, Any] = json.loads(answer.read_text())
+        if saved is not None and result.get("final") is not None:  # an answer, not a loss
+            saved.parent.mkdir(parents=True, exist_ok=True)
+            part = saved.with_suffix(".part")
+            part.write_text(json.dumps(result, ensure_ascii=False))
+            part.replace(saved)  # whole or not at all
         return result
 
     def omim(self, name: str) -> tuple[str, str] | None:
