@@ -18,7 +18,9 @@ How a diagnosis is read, fixed before any system ran on these sets:
 - every OMIM code the patient lists counts as the diagnosis, and so does any OMIM
   entry Orphanet maps exactly (E) to an Orphanet code listed;
 - disease_id is the first of those HPO knows as a disease, the rest go in
-  also_accepted;
+  also_accepted; the label names every code listed, as the source gives them (as
+  DeepRare's own reading of RareBench does): one patient can list a lupus and a
+  carcinoma, and a single name would say only one;
 - a patient none of whose codes leads to an OMIM entry keeps its first code (say
   ORPHA:81). A system answering in OMIM cannot name it, so it is a miss, as such a
   patient would be in a clinic;
@@ -68,14 +70,11 @@ def diagnosis(codes: list[str], hpo: HPO, orphanet: Orphanet) -> tuple[str, list
                 omim.append(entry)
     known = [c for c in omim if c in hpo.names]
     ordered = known + [c for c in omim if c not in known]
+    names = [hpo.names.get(c) or orphanet.names.get(c) for c in codes]
+    label = "; ".join(dict.fromkeys(n for n in names if n)) or codes[0]
     if not ordered:
-        first = codes[0]
-        return first, [], orphanet.names.get(first, first)
-    disease = ordered[0]
-    label = hpo.names.get(disease) or next(
-        (orphanet.names[c] for c in codes if c in orphanet.names), disease
-    )
-    return disease, ordered[1:], label
+        return codes[0], [], label
+    return ordered[0], ordered[1:], label
 
 
 def load(archive: Path, hpo: HPO, orphanet: Orphanet) -> tuple[list[Case], Counter[str]]:

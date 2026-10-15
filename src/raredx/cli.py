@@ -942,6 +942,8 @@ def hits_table(
                 recorded = harness.client.get_run(run_id).data
             except MlflowException:
                 _fail(f"{name}: no such run {run_id!r}")
+            if harness.client.get_run(run_id).info.status != "FINISHED":
+                _fail(f"{name}: run {run_id} did not finish: it is void")
             if recorded.tags.get("leak_audit") == "failed":
                 _fail(f"{name}: run {run_id} failed its leak audit")
             answered = harness.hits(run_id, scoring.KS[0])
@@ -958,6 +960,56 @@ def hits_table(
     hits.write(rows, out)
     answerable = sum(r["answerable"] == "1" for r in rows)
     typer.echo(f"ok  {out}  ({len(rows)} cases, {answerable} answerable; {', '.join(columns)})")
+
+
+@eval_app.command("lenient")
+def lenient_judge(
+    split: Annotated[str, typer.Option(help="The manifest whose cases are judged.")],
+    run: Annotated[
+        list[str],
+        typer.Option(help="NAME=RUN_ID (or RUN_ID+FILL_ID): a system's run to judge; repeatable."),
+    ],
+    out: Annotated[Path, typer.Option(help="Where the ranks are kept (JSON); read back first.")],
+    budget_usd: Annotated[
+        float, typer.Option(help="Stop calling the judge once this much is spent.")
+    ] = 0.5,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Judge recorded answers DeepRare's way: deepseek-flash reads each system's five
+    names and the confirmed diagnosis, and gives the rank it is named at, or none."""
+    from raredx import llm
+    from raredx.evals import lenient
+    from raredx.evals.harness import candidates_of
+
+    _, pool = _processed(data_dir, evals_dir, splits.EXTERNAL.get(split, DATASET))
+    by_id = {c.id: c for c in pool}
+    cases = [by_id[case_id] for case_id, _ in splits.read(_manifest(evals_dir, split))]
+    harness = _harness()
+    names: dict[str, dict[str, list[str]]] = {c.id: {} for c in cases}
+    for item in run:
+        system, _, chain = item.partition("=")
+        for run_id in chain.split("+"):  # a fill-in run's answers replace the lost ones
+            for trace in harness.answers(run_id):
+                case_id = trace.data.spans[0].inputs["question"]["case_id"]
+                if case_id in names:
+                    found = candidates_of(trace.data.spans[0].outputs)
+                    names[case_id][system] = [c.disease_name for c in found]
+        missing = [c.id for c in cases if system not in names[c.id]]
+        if missing:
+            _fail(f"{system}: no recorded answer to {len(missing)} of the cases")
+    prices = (settings.llm_price_input, settings.llm_price_cached_input, settings.llm_price_output)
+    budget = llm.Budget(budget_usd, prices)
+    judge = lenient.Judge(_model_client(), settings.llm_model, budget)
+    rows = lenient.judge_all(judge, names, {c.id: c.disease_label for c in cases}, out)
+    for item in run:
+        system = item.partition("=")[0]
+        ranks = [row[system] for row in rows]
+        top = {k: sum(isinstance(r, int) and r <= k for r in ranks) for k in (1, 5)}
+        typer.echo(
+            f"{system:<12} top-1 {top[1] / len(rows):6.1%}   top-5 {top[5] / len(rows):6.1%}"
+        )
+    typer.echo(f"ok  {out}  ({len(rows)} cases; about ${budget.spent:.4f} at peak price)")
 
 
 @eval_app.command("runs")

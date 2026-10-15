@@ -42,7 +42,12 @@ def test_every_listed_omim_entry_counts_and_a_known_one_leads(
     # OMIM:600000 is not a disease in this release: the known entry leads, it stays accepted
     disease, also, label = rb.diagnosis(["OMIM:600000", "OMIM:690001", "CCRD:1"], hpo, orphanet)
     assert (disease, also) == ("OMIM:690001", ["OMIM:600000"])
-    assert label == "Hearing-ovarian syndrome"  # HPO's name for it
+    assert label == "Hearing-ovarian syndrome"  # HPO's name; no name for the others
+
+
+def test_the_label_names_every_code_the_patient_lists(hpo: HPO, orphanet: rb.Orphanet) -> None:
+    label = rb.diagnosis(["OMIM:690001", "OMIM:690002", "ORPHA:81"], hpo, orphanet)[2]
+    assert label == "Hearing-ovarian syndrome; Hearing-retina syndrome; Antisynthetase syndrome"
 
 
 def test_an_orphanet_code_brings_its_exact_omim_entry_only(hpo: HPO, orphanet: rb.Orphanet) -> None:
