@@ -38,7 +38,7 @@ def load(cases: list[Case], hpo: HPO) -> list[Example]:
     examples = []
     for case_id, title, note in listed():
         case = by_id.get(case_id)
-        if case is None:
+        if case is None or case.pmid is None:  # examples are published cases
             continue
         written = files("raredx.service").joinpath(NOTES, f"{case.id}.txt")
         examples.append(

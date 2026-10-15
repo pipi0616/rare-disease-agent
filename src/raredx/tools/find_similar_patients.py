@@ -40,7 +40,7 @@ class SimilarPatient(BaseModel):
         description="Your patient's findings this patient also had: the same term, or one "
         "a more specific kind of the other"
     )
-    source: str = Field(description="The paper that reported the patient")
+    source: str | None = Field(description="The paper that reported the patient")
 
 
 class SimilarPatients(BaseModel):

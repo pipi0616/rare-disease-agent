@@ -3,7 +3,8 @@
 The rules are fixed before any model is run:
 
 - A disease is found when a candidate's OMIM number equals the case's. Names
-  are not compared: one disease has many spellings.
+  are not compared: one disease has many spellings. Where a source lists several
+  OMIM entries for one patient, any of them is found (Case.also_accepted).
 - A gene is found when a candidate names the causal gene, ignoring case. Cases
   without a causal gene are left out of the gene numbers.
 - The rank is the candidate's position in the answer, best first.
@@ -40,11 +41,15 @@ class CaseScore(BaseModel):
 
 
 def ranks(
-    candidates: list[Candidate], disease_id: str, gene: str | None
+    candidates: list[Candidate],
+    disease_id: str,
+    gene: str | None,
+    also_accepted: list[str] | None = None,
 ) -> tuple[int | None, int | None]:
     """Where the confirmed disease and gene first appear in an answer (1 = top); None = absent."""
+    accepted = {disease_id, *(also_accepted or [])}
     disease_rank = next(
-        (i for i, c in enumerate(candidates, 1) if normalize_omim(c.disease_id) == disease_id),
+        (i for i, c in enumerate(candidates, 1) if normalize_omim(c.disease_id) in accepted),
         None,
     )
     gene_rank = None
@@ -66,7 +71,7 @@ def found(rank: int | None, k: int) -> bool:
 
 
 def score_case(case: Case, candidates: list[Candidate]) -> CaseScore:
-    disease_rank, gene_rank = ranks(candidates, case.disease_id, case.gene)
+    disease_rank, gene_rank = ranks(candidates, case.disease_id, case.gene, case.also_accepted)
     return CaseScore(
         case_id=case.id,
         answered=bool(candidates),

@@ -94,6 +94,8 @@ def record_of(case: Case, candidate_genes: list[str] | None = None) -> dict[str,
     }
     if case.gene:  # MLflow expectations cannot be empty; gene-less cases simply have none
         expectations["gene"] = case.gene
+    if case.also_accepted:
+        expectations["also_accepted"] = " ".join(case.also_accepted)
     return {"inputs": {"question": question.model_dump()}, "expectations": expectations}
 
 
@@ -112,7 +114,10 @@ def diagnosis(outputs: Any, expectations: dict[str, Any]) -> list[Feedback]:
     """Code check: is the confirmed disease (and gene) among the top k candidates?"""
     candidates = candidates_of(outputs)
     disease_rank, gene_rank = scoring.ranks(
-        candidates, expectations["disease_id"], expectations.get("gene")
+        candidates,
+        expectations["disease_id"],
+        expectations.get("gene"),
+        expectations.get("also_accepted", "").split(),
     )
     feedback = [Feedback(name="answered", value=bool(candidates))]
     feedback += [Feedback(name=f"disease_top{k}", value=scoring.found(disease_rank, k)) for k in KS]
@@ -218,6 +223,7 @@ class Harness:
 
         A masked run is then audited (leak_audit). `hidden_of` gives, for a paper, the
         diseases known only from it; without it only the paper itself is looked for.
+        A case with no paper (a clinic's patient) has nothing to mask or look for.
         """
         if part:
             self._use(manifest)
@@ -231,7 +237,8 @@ class Harness:
         @mlflow.trace(name=system.name, span_type=SpanType.CHAIN)
         def predict(question: dict[str, Any]) -> dict[str, Any]:
             q = Question.model_validate(question)
-            with masking.masked([papers[q.case_id]] if mask_source_papers else []):
+            paper = papers[q.case_id]
+            with masking.masked([paper] if mask_source_papers and paper else []):
                 answer = system.predict(q)
             return {"candidates": [c.model_dump() for c in answer]}
 
@@ -313,23 +320,24 @@ class Harness:
     def leak_audit(
         self,
         run_id: str,
-        papers: dict[str, str],
+        papers: dict[str, str | None],
         hidden_of: Callable[[str], set[str]] | None = None,
     ) -> dict[str, float]:
         """Read back every tool output the run recorded and count those that show the
-        case's own paper, or a disease known only from it. Both counts must be 0."""
+        case's own paper, or a disease known only from it. Both counts must be 0. A
+        case with no paper has neither: its outputs are read and counted, nothing else."""
         outputs = own = hidden = 0
         for trace in self.traces(run_id):
             pmid = papers[trace.data.spans[0].inputs["question"]["case_id"]]
-            paper = re.compile(re.escape(pmid) + r"(?!\d)")
-            diseases = sorted(hidden_of(pmid)) if hidden_of else []
+            paper = re.compile(re.escape(pmid) + r"(?!\d)") if pmid else None
+            diseases = sorted(hidden_of(pmid)) if hidden_of and pmid else []
             disease = re.compile("|".join(re.escape(d) + r"(?!\d)" for d in diseases))
             for span in trace.data.spans:
                 if span.span_type != SpanType.TOOL:
                     continue
                 text = json.dumps(span.outputs, default=str)
                 outputs += 1
-                own += bool(paper.search(text))
+                own += bool(paper and paper.search(text))
                 hidden += bool(diseases and disease.search(text))
         return {
             "leak/tool_outputs_read": outputs,

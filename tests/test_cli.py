@@ -56,10 +56,11 @@ def test_a_model_run_without_a_key_says_where_to_put_it(
 
 def test_fetch_names_the_registered_sources_when_asked_for_another(tmp_path: Path) -> None:
     result = runner.invoke(
-        app, ["data", "fetch", "rarebench", "--data-dir", str(tmp_path), "--evals-dir", str(EVALS)]
+        app, ["data", "fetch", "rarearena", "--data-dir", str(tmp_path), "--evals-dir", str(EVALS)]
     )
     assert result.exit_code == 1
-    assert "phenopacket-store, hpo" in result.output
+    assert "not in the registry: rarearena" in result.output
+    assert "phenopacket-store, phenopacket-store-snapshot, rarebench, hpo" in result.output
 
 
 def test_the_phenotype_baseline_says_to_fetch_hpo_first(tmp_path: Path) -> None:
