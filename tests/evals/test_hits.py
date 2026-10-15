@@ -36,3 +36,16 @@ def test_the_table_puts_runs_side_by_side_and_reads_back(
     assert hits.read(tmp_path / "t.tsv") == rows
     with pytest.raises(ValueError, match="no answer to 1"):
         hits.table([*cases, make_case("3")], {"agent": run}, hpo)
+
+
+def test_a_run_and_its_fill_ins_make_one_column() -> None:
+    def verdicts(**hit: bool) -> hits.Verdicts:
+        return {k: dict(hit) for k in (1, 3, 5, 10)}
+
+    first = (verdicts(a=True, b=False, c=False), {"b", "c"})  # b and c lost to the API
+    again = (verdicts(b=True, c=False), {"c"})  # b answered, c lost again
+    last: tuple[hits.Verdicts, set[str]] = (verdicts(c=True), set())
+    merged, lost = hits.combine([first, again])
+    assert merged[1] == {"a": True, "b": True, "c": False} and lost == {"c"}
+    merged, lost = hits.combine([first, again, last])
+    assert merged[1] == {"a": True, "b": True, "c": True} and lost == set()

@@ -25,6 +25,19 @@ def answerable(case: Case, hpo: HPO) -> bool:
     return any(d not in hidden for d in accepted)
 
 
+def combine(parts: list[tuple[Verdicts, set[str]]]) -> tuple[Verdicts, set[str]]:
+    """A run and the runs that asked again what it lost (--fill-in), in order, as one:
+    each (verdicts, cases lost to the model API). A later answer replaces an earlier
+    one; what is still lost at the end is returned, to be refused."""
+    verdicts: Verdicts = {k: {} for k in KS}
+    lost: set[str] = set()
+    for got, lost_here in parts:
+        lost = (lost - set(got[KS[0]])) | lost_here
+        for k in KS:
+            verdicts[k] |= got[k]
+    return verdicts, lost
+
+
 def table(cases: list[Case], runs: dict[str, Verdicts], hpo: HPO) -> list[dict[str, str]]:
     """The rows; every run must have answered every case."""
     for name, verdicts in runs.items():

@@ -935,21 +935,19 @@ def hits_table(
     columns = {}
     for item in run:
         name, _, chain = item.partition("=")
-        verdicts: dict[int, dict[str, bool]] = {k: {} for k in scoring.KS}
-        lost: set[str] = set()
+        parts = []
         for run_id in chain.split("+"):
             try:
-                recorded = harness.client.get_run(run_id).data
+                recorded = harness.client.get_run(run_id)
             except MlflowException:
                 _fail(f"{name}: no such run {run_id!r}")
-            if harness.client.get_run(run_id).info.status != "FINISHED":
+            if recorded.info.status != "FINISHED":
                 _fail(f"{name}: run {run_id} did not finish: it is void")
-            if recorded.tags.get("leak_audit") == "failed":
+            if recorded.data.tags.get("leak_audit") == "failed":
                 _fail(f"{name}: run {run_id} failed its leak audit")
-            answered = harness.hits(run_id, scoring.KS[0])
-            lost = (lost - set(answered)) | set(harness.lost_cases(run_id))
-            for k in scoring.KS:
-                verdicts[k] |= harness.hits(run_id, k)
+            got = {k: harness.hits(run_id, k) for k in scoring.KS}
+            parts.append((got, set(harness.lost_cases(run_id))))
+        verdicts, lost = hits.combine(parts)
         if lost & {c.id for c in cases}:
             _fail(f"{name}: {len(lost)} cases were lost to the model API and never asked again")
         columns[name] = verdicts
