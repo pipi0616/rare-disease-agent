@@ -99,13 +99,14 @@ latest_only = true
 "en_product1.xml" = "df8d562a0c6011af36a74eb4000ce81ca7d723e8031010819fb71727c0962bbb"
 
 # How rare each disease is: Orphanet's prevalence classes, from the same release as its
-# definitions above. Analysis only — the results split by it; no tool reads it.
+# definitions above. The results split by it, and the hypothesis agent is shown each
+# candidate's; no tool reads it.
 [orphanet-prevalence]
 version = "2026-06-23"
 url = "https://www.orphadata.com/data/xml/"
 homepage = "https://www.orphadata.com"
 license = "CC BY 4.0; cite Orphanet (www.orpha.net)"
-role = "analysis: each disease's prevalence class, to split the held-out results by it"
+role = "analysis and the hypothesis agent's evidence: each disease's prevalence class"
 latest_only = true
 
 [orphanet-prevalence.files]

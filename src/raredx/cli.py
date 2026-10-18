@@ -361,6 +361,7 @@ SYSTEMS = (
     "fixed-pipeline",
     "agent",
     "seeded-agent",
+    "hypothesis-agent",
     "llm-direct",
     "llm-direct-thinking",
     "judge-table",
@@ -440,6 +441,22 @@ def _text_search(evals_dir: Path, data_dir: Path) -> "SearchDiseaseTexts":
 OPENROUTER = "openrouter:"
 
 
+def _prevalence(evals_dir: Path, data_dir: Path) -> dict[str, str]:
+    """Each OMIM disease's Orphanet prevalence class, for the hypothesis agent."""
+    from raredx.knowledge import prevalence
+
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    folders = {name: sources.raw_dir(registry[name], data_dir) for name in ORPHANET_SOURCES}
+    files = (
+        folders["orphanet-prevalence"] / prevalence.PREVALENCE,
+        folders["orphanet"] / "en_product1.xml",
+    )
+    missing = [str(f) for f in files if not f.exists()]
+    if missing:
+        _fail(f"no Orphanet prevalence: {', '.join(missing)} — run `raredx data fetch` first")
+    return prevalence.omim_classes(*files)
+
+
 def _deeprare_queries(data_dir: Path) -> Path:
     from raredx.baselines.deeprare import QUERY_EMBEDDINGS
 
@@ -448,6 +465,8 @@ def _deeprare_queries(data_dir: Path) -> Path:
 
 # Tools an agent can be given beyond the four core ones; --without leaves one out.
 EXTRA_TOOLS = ("find_similar_patients", "search_disease_texts", "rank_candidate_genes")
+AGENTS = ("agent", "seeded-agent", "hypothesis-agent")
+ORPHANET_SOURCES = ("orphanet-prevalence", "orphanet")
 
 
 def _model_client() -> "OpenAI":
@@ -549,7 +568,7 @@ def _system(
             CheckMatch(ranker.hpo),
             LookupDisease(ranker.hpo),
         )
-    if name in ("agent", "seeded-agent"):
+    if name in AGENTS:
         from raredx import llm
         from raredx.agent import Agent
 
@@ -562,14 +581,19 @@ def _system(
         if "find_similar_patients" not in without:
             extra.append(_patient_bank(cases, evals_dir, data_dir))
         # Off by default since chapter 20: on dev-200 the text search added nothing (4 cases
-        # to 2 at top-1, p = 0.69) and cost 18% more tokens. --with-texts adds it back.
-        if with_texts and "search_disease_texts" not in without:
+        # to 2 at top-1, p = 0.69) and cost 18% more tokens. --with-texts adds it back. On
+        # by default for the hypothesis agent: the diseases HPO annotates thinly, which the
+        # model may name itself, are what the texts describe.
+        texts = with_texts or name == "hypothesis-agent"
+        if texts and "search_disease_texts" not in without:
             extra.append(_text_search(evals_dir, data_dir))
         if with_genes and "rank_candidate_genes" not in without:
             from raredx.tools.rank_candidate_genes import RankCandidateGenes
 
             extra.append(RankCandidateGenes(knowledge))
-        label = name + (" (with search_disease_texts)" if with_texts else "")
+        label = name
+        if with_texts and name != "hypothesis-agent":
+            label += " (with search_disease_texts)"
         if without:
             label += f" (without {', '.join(without)})"
         return Agent(
@@ -577,6 +601,8 @@ def _system(
             settings.llm_model,
             knowledge,
             seeded=name == "seeded-agent",
+            hypotheses=name == "hypothesis-agent",
+            prevalence=_prevalence(evals_dir, data_dir) if name == "hypothesis-agent" else None,
             extra_tools=extra,
             name=label,
         )
@@ -704,13 +730,13 @@ def run_system(
     """Evaluate a system on a manifest with MLflow; the run and every answer are recorded."""
     if split.startswith("heldout") and not final:
         _fail("heldout is the final exam: run it once, with --final, when the design is frozen")
-    if split in splits.EXTERNAL and not final:
+    if split in splits.EXTERNAL and split not in splits.PRACTICE and not final:
         _fail(f"{split} tests the frozen system again: run it once, with --final")
     left_out = tuple(sorted(set(without or [])))
     unknown = [t for t in left_out if t not in EXTRA_TOOLS]
     if unknown:
         _fail(f"--without takes {', '.join(EXTRA_TOOLS)}; not {', '.join(unknown)}")
-    if left_out and system not in ("agent", "seeded-agent"):
+    if left_out and system not in AGENTS:
         _fail("--without applies to the agents only")
     if model and system not in ("llm-direct", "llm-direct-thinking"):
         _fail("--model applies to llm-direct only")

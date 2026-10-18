@@ -11,12 +11,16 @@ forever. Six come from the pinned release:
     heldout-papers      one case per held-out paper     the final run, once
     heldout-papers-200  200 of heldout-papers           comparisons billed per case
 
-and four test v1.0 again on cases from outside it, after it was frozen:
+and five come from outside it:
 
     temporal-2026-10       one case per paper first public on or after CUTOFF   temporal test
-    rarebench-hms          every HMS patient of RareBench                        external test
-    rarebench-ramedis      every RAMEDIS patient of RareBench                    external test
-    rarebench-ramedis-200  200 of rarebench-ramedis                              billed per case
+    rarebench-hms          every HMS patient of RareBench                        practice
+    rarebench-ramedis      every RAMEDIS patient of RareBench                    practice
+    rarebench-ramedis-200  200 of rarebench-ramedis                              practice
+    rarebench-mme          every MME patient of RareBench                        external test
+
+HMS and RAMEDIS tested v1.0 once, after it was frozen; it lost to the bare model
+there, and they have been practice sets since (PRACTICE).
 
 The final run takes one case from every held-out paper, as dev-200 does from the
 design split and for the same reason; it is the held-out set at the dev set's grain.
@@ -213,7 +217,9 @@ def check_against(cases: list[Case], splits_dir: Path) -> list[str]:
 # fixed seed). Design papers never: they were developed on, and fill the patient bank.
 #
 # External: patients from other sources than Phenopacket Store, curated by other
-# people. RareBench's HMS and RAMEDIS; MME and LIRICAL are left out (rarebench.py).
+# people. RareBench's HMS and RAMEDIS; LIRICAL is left out (rarebench.py). MME, left
+# out at first too, is the external test of the hypothesis agent: no system had run on
+# it when HMS and RAMEDIS became practice sets.
 
 TEMPORAL = "temporal-2026-10"
 # deepseek-flash, the model inside every system here, is reported to have been
@@ -223,14 +229,22 @@ CUTOFF = date(2025, 6, 1)
 TEMPORAL_SEED = SEED + 3
 RAMEDIS_SEED = SEED + 4
 RAMEDIS_SAMPLE = 200
-RAREBENCH_SETS = {"rarebench-hms": "HMS", "rarebench-ramedis": "RAMEDIS"}
+RAREBENCH_SETS = {
+    "rarebench-hms": "HMS",
+    "rarebench-ramedis": "RAMEDIS",
+    "rarebench-mme": "MME",
+}
 # manifest -> the registered dataset its cases are read from
 EXTERNAL: dict[str, str] = {
     TEMPORAL: "phenopacket-store-snapshot",
     "rarebench-hms": "rarebench",
     "rarebench-ramedis": "rarebench",
     "rarebench-ramedis-200": "rarebench",
+    "rarebench-mme": "rarebench",
 }
+# External sets developed on since v1.0 lost there (its errors were read to find why):
+# run any number of times, and no longer a test of anything.
+PRACTICE = frozenset({"rarebench-hms", "rarebench-ramedis", "rarebench-ramedis-200"})
 
 
 def temporal(

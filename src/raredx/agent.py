@@ -24,6 +24,15 @@ turns go to what the tools cannot do — a disease they missed, found by name an
 checked. A list shorter than ten is filled from the tools' order; those entries
 say so in their reason.
 
+The hypothesis agent (`hypotheses=True`) asks the model first, before any tool
+ran: the single-call baseline's question, answered from what it knows. Each
+disease it names is found in the HPO annotations — by the number it wrote, or
+by name when HPO has no such number — and checked as the tools' candidates are.
+Its first message holds both lists, the model's own first. Built after v1.0
+lost to the bare model on RareBench: seeded with the tools' list alone, it kept
+their first candidate where the model knew better. A short list is filled from
+both lists, merged by reciprocal rank.
+
 With candidate genes from sequencing, the agent's ranking is fused with the
 candidate-gene ranking by reciprocal rank (`fuse`): on dev-200 the two were
 right on different cases, and together beat either alone (chapter 20).
@@ -35,7 +44,7 @@ it reaches the fixed pipeline's. The prompts are versioned like the baselines'.
 import functools
 import inspect
 from collections import defaultdict
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from langchain.agents import create_agent
@@ -48,19 +57,21 @@ from langchain.agents.middleware import (
 )
 from langchain.agents.structured_output import ToolStrategy
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import BaseTool, StructuredTool
 from pydantic import BaseModel, Field, ValidationError
 
-from raredx.baselines.fixed_pipeline import SHOWN, candidates_block
+from raredx.baselines import llm_direct
+from raredx.baselines.fixed_pipeline import SHOWN, candidates_block, evidence
 from raredx.baselines.gene_rank import GeneRank
 from raredx.baselines.llm_direct import user_prompt
 from raredx.baselines.phenotype_rank import candidate
 from raredx.baselines.rank_then_check import RankThenCheck
 from raredx.evals.scoring import normalize_omim
 from raredx.evals.systems import Candidate, Question
+from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
-from raredx.tools.check_match import CheckMatch
+from raredx.tools.check_match import CheckMatch, MatchReport
 from raredx.tools.find_disease import FindDisease
 from raredx.tools.ids import UnknownDisease
 from raredx.tools.lookup_disease import LookupDisease
@@ -68,7 +79,15 @@ from raredx.tools.rank_diseases import RankDiseases
 
 PROMPT_VERSION = "agent-v3"
 SEEDED_PROMPT_VERSION = "seeded-v1"
+HYPOTHESES_PROMPT_VERSION = "hypotheses-v1"
+HYPOTHESES_PREVALENCE_PROMPT_VERSION = "hypotheses-v2"  # v1, and how common each disease is
 MAX_MODEL_CALLS = 8
+# How closely a guessed name must match HPO's (find_disease's WRatio, 0–100) to stand for a
+# number HPO does not know. Not 80: on recorded direct answers (dev-200, HMS, RAMEDIS), names
+# sharing only "syndrome" scored over 80, and replacing the numbers the model wrote by the
+# closest names lost more cases than it found, at any threshold. So a number HPO knows is
+# kept, and a name is looked up only for one it does not (2–11% of them).
+NAME_MATCH = 90
 
 _ROLE = """\
 You are a clinical geneticist. Your task is to diagnose a patient with a suspected \
@@ -135,12 +154,55 @@ sooner if the evidence is clear. Give your final answer: up to 10 OMIM diseases,
 likely first, each with a one-sentence reason."""
 
 
-def system_prompt(tools: list[str], *, seeded: bool = False) -> str:
+_HOW_COMMON = """ Each disease shows how common Orphanet says it is. Where diseases \
+fit comparably, the more common is the likelier: a well-known disease that fits is more \
+likely than a far rarer one that explains a few more annotated findings, and a disease \
+known from a handful of families needs findings that set it apart. An unknown \
+prevalence is not evidence of rarity."""
+
+
+def _investigate_hypotheses(tools: list[str], prevalence: bool) -> str:
+    read = (
+        "; read how it is described with search_disease_texts"
+        if "search_disease_texts" in tools
+        else ""
+    )
+    common = _HOW_COMMON if prevalence else ""
+    return f"""
+
+Before any tool ran, you answered from your own knowledge alone. The first message \
+shows that differential ([H1], [H2], ...), each disease found in the HPO annotations \
+and checked against the patient, then the phenotype tools' leading candidates \
+([T1], [T2], ...), checked the same way. Weigh the two lists as equals: what you know \
+of a disease is evidence, as the tools' match is. The HPO annotations are incomplete: \
+well-known diseases, above all immune, inflammatory and metabolic ones, can have few \
+annotated features, so a disease you suspect for good reason is not ruled out because \
+it explains few findings here{read}. Nor is a candidate right because the tools rank \
+it first: one that explains only a small part of the patient's findings, none of them \
+specific, needs another reason.{common} Spend your turns where the lists disagree, \
+or on a disease neither has. {_WEIGHING}
+
+Your budget is {MAX_MODEL_CALLS} turns, and the last one is for your answer; answer \
+sooner if the evidence is clear. Give your final answer: up to 10 OMIM diseases, most \
+likely first, each with a one-sentence reason."""
+
+
+def system_prompt(
+    tools: list[str], *, seeded: bool = False, hypotheses: bool = False, prevalence: bool = False
+) -> str:
     """The system prompt for an agent with these tools."""
+    if hypotheses:
+        return _role_and_tools(tools) + _investigate_hypotheses(tools, prevalence)
     return f"{_role_and_tools(tools)}{_INVESTIGATE_SEEDED if seeded else _INVESTIGATE}"
 
 
 FILLED = "Not ranked by the agent: filled in from the phenotype tools' order."
+FILLED_BOTH = "Not ranked by the agent: filled in from its first answer and the tools' order."
+H_TITLE = (
+    "Your own differential, before any tool ran; each disease found in the HPO "
+    "annotations and checked against the patient:"
+)
+T_TITLE = "Candidates, in the order the phenotype tools rank them, checked the same way:"
 FUSED = "Not ranked by the agent: a candidate gene's disease, from the gene ranking."
 RRF_K = 60  # the usual constant of reciprocal-rank fusion; not tuned
 
@@ -173,6 +235,18 @@ def fuse(agent: list[Candidate], genes: list[Candidate]) -> list[Candidate]:
         else:
             fused.append(ranked)
     return fused
+
+
+def merge(first: list[str], tools: list[str]) -> list[str]:
+    """Two rankings of disease ids as one, by reciprocal rank: a disease both rank high
+    comes first. Ties go in turn, the first ranking's first (H1, T1, H2, T2, ...)."""
+    score: dict[str, float] = defaultdict(float)
+    turn: dict[str, int] = {}
+    for side, ranking in enumerate((first, tools)):
+        for rank, disease_id in enumerate(dict.fromkeys(ranking)):
+            score[disease_id] += 1 / (RRF_K + rank)
+            turn[disease_id] = min(turn.get(disease_id, 2 * rank + side), 2 * rank + side)
+    return sorted(score, key=lambda d: (-score[d], turn[d]))
 
 
 class Diagnosis(BaseModel):
@@ -234,19 +308,27 @@ class Agent:
         hpo: HPO,
         *,
         seeded: bool = False,
+        hypotheses: bool = False,
+        prevalence: Mapping[str, str] | None = None,
         extra_tools: Sequence[Any] = (),
         name: str | None = None,
     ) -> None:
         """The four core tools, plus any extra ones (each named in GUIDES). `name` is the
-        system's name in the evaluation; by default "agent" or "seeded-agent"."""
+        system's name in the evaluation; by default "agent", "seeded-agent" or
+        "hypothesis-agent". A hypothesis agent is seeded too, with both lists; given
+        `prevalence` (OMIM id -> Orphanet's class), each disease in them shows it."""
+        self.model = model
         self.model_name = model_name
         self.hpo = hpo
-        self.seeded = seeded
-        self.name = name or ("seeded-agent" if seeded else "agent")
+        self.seeded = seeded or hypotheses
+        self.hypotheses = hypotheses
+        self.prevalence = prevalence
+        default = "hypothesis-agent" if hypotheses else "seeded-agent" if seeded else "agent"
+        self.name = name or default
         rank, check, lookup = RankDiseases(hpo), CheckMatch(hpo), LookupDisease(hpo)
         self.seed = RankThenCheck(rank, check)
-        self.lookup = lookup
-        tools: list[Any] = [rank, check, lookup, FindDisease(hpo), *extra_tools]
+        self.check, self.lookup, self.find = check, lookup, FindDisease(hpo)
+        tools: list[Any] = [rank, check, lookup, self.find, *extra_tools]
         self.extra_tools = list(extra_tools)
         self.gene_rank = next(
             (GeneRank(t) for t in extra_tools if t.name == "rank_candidate_genes"), None
@@ -263,7 +345,12 @@ class Agent:
         self.graph = create_agent(
             model,
             tools=[as_langchain_tool(t) for t in tools],
-            system_prompt=system_prompt(self.tool_names, seeded=seeded),
+            system_prompt=system_prompt(
+                self.tool_names,
+                seeded=seeded,
+                hypotheses=hypotheses,
+                prevalence=prevalence is not None,
+            ),
             response_format=ToolStrategy(FinalAnswer),
             middleware=middleware,
         )
@@ -272,12 +359,29 @@ class Agent:
         params: dict[str, Any] = {
             "model": self.model_name,
             "thinking": False,
-            "prompt_version": SEEDED_PROMPT_VERSION if self.seeded else PROMPT_VERSION,
+            "prompt_version": (
+                HYPOTHESES_PREVALENCE_PROMPT_VERSION
+                if self.prevalence is not None
+                else HYPOTHESES_PROMPT_VERSION
+            )
+            if self.hypotheses
+            else SEEDED_PROMPT_VERSION
+            if self.seeded
+            else PROMPT_VERSION,
             "max_model_calls": MAX_MODEL_CALLS,
             "tools": ", ".join(self.tool_names),
             "hpo_release": self.hpo.release,
         }
-        if self.seeded:
+        if self.hypotheses:
+            params |= {
+                "first_answer": f"{llm_direct.PROMPT_VERSION}, each disease found by its "
+                f"number, else by name (WRatio >= {NAME_MATCH}), and checked",
+                "seed": f"rank-then-check top {SHOWN}",
+                "fill": f"first answer and the tools' order, reciprocal rank (k={RRF_K})",
+            }
+            if self.prevalence is not None:
+                params["prevalence"] = "Orphanet's class, by exact OMIM mapping"
+        elif self.seeded:
             params |= {"seed": f"rank-then-check top {SHOWN}", "fill": "the tools' order"}
         for tool in self.extra_tools:
             if hasattr(tool, "bank_name"):
@@ -286,12 +390,106 @@ class Agent:
             params["fusion"] = f"reciprocal rank (k={RRF_K}) with the candidate-gene ranking"
         return params
 
+    def _first_answer(self, question: Question) -> list[Candidate]:
+        """The model's answer before any tool ran: the single-call baseline's prompt and
+        question. One repair attempt, as llm.ask_json; an answer still unreadable is none."""
+        model = self.model.bind(response_format={"type": "json_object"})
+        messages: list[BaseMessage] = [
+            SystemMessage(llm_direct.SYSTEM_PROMPT),
+            HumanMessage(user_prompt(question)),
+        ]
+        for _ in range(2):
+            reply = model.invoke(messages)
+            try:
+                return llm_direct.parse(str(reply.content))
+            except (ValueError, ValidationError) as error:
+                messages += [
+                    reply,
+                    HumanMessage(
+                        f"That reply was not in the required format ({error}). "
+                        "Reply again with only the json object."
+                    ),
+                ]
+        return []
+
+    def _resolve(self, guess: Candidate) -> str | None:
+        """The HPO disease a guess means: the id the model wrote, when HPO knows it; else
+        the disease of the closest name, when close (NAME_MATCH); else none. A disease the
+        mask hides is unknown, as everywhere."""
+        written = normalize_omim(guess.disease_id)
+        if written in self.hpo.names and written not in self.hpo.known_only_from(masking.current()):
+            return written
+        name = guess.disease_name.strip()
+        found = self.find(name, limit=1).matches if len(name) >= 3 else []
+        if found and found[0].similarity >= NAME_MATCH:
+            return found[0].disease_id
+        return None
+
+    def _both_lists(self, question: Question, ordered: list[Any]) -> tuple[str, list[str]]:
+        """The hypothesis agent's evidence: its first answer, each disease found by name
+        and checked, then the tools' leading candidates; a disease already shown is only
+        pointed to. Also the diseases the first answer named, in its order."""
+        guesses = self._first_answer(question)
+        lines, first = [H_TITLE], []
+        shown: dict[str, str] = {}  # disease id -> the tag it was shown under
+        for i, guess in enumerate(guesses, 1):
+            tag, disease_id = f"H{i}", self._resolve(guess)
+            written = f"{guess.disease_name} ({guess.disease_id or 'no id'})"
+            if disease_id is None:
+                lines.append(f"[{tag}] {written}: no disease of this name in the HPO annotations")
+                continue
+            first.append(disease_id)
+            if disease_id in shown:
+                lines.append(f"[{tag}] = [{shown[disease_id]}]")
+                continue
+            shown[disease_id] = tag
+            head, *rest = self._evidence(question, disease_id)
+            if normalize_omim(guess.disease_id) != disease_id:  # found by name instead
+                head += f" (you wrote {written})"
+            lines += [f"[{tag}] {head}", *rest]
+        if not guesses:
+            lines.append("(none: your first answer could not be read)")
+        lines += ["", T_TITLE]
+        for i, (match, report) in enumerate(ordered[:SHOWN], 1):
+            tag = f"T{i}"
+            if match.disease_id in shown:
+                lines.append(f"[{tag}] = [{shown[match.disease_id]}] {report.disease_name}")
+                continue
+            shown[match.disease_id] = tag
+            head, *rest = self._evidence(question, match.disease_id, report)
+            lines += [f"[{tag}] {head}", *rest]
+        return "\n".join(lines), first
+
+    def _evidence(
+        self, question: Question, disease_id: str, report: MatchReport | None = None
+    ) -> list[str]:
+        """A disease's evidence, as the fixed pipeline shows it, with how common it is."""
+        report = report or self.check(question.hpo_ids, disease_id)
+        head, *rest = evidence(report, self.lookup(disease_id, max_features=1))
+        if self.prevalence is not None:
+            head += f" · prevalence {self.prevalence.get(disease_id, 'unknown')} (Orphanet)"
+        return [head, *rest]
+
+    def _candidate(self, disease_id: str, reason: str) -> Candidate:
+        genes = self.hpo.genes.get(disease_id, ())
+        return Candidate(
+            disease_name=self.hpo.names[disease_id],
+            disease_id=disease_id,
+            gene=genes[0] if len(genes) == 1 else None,
+            reason=reason,
+        )
+
     def predict(self, question: Question) -> list[Candidate]:
         prompt = user_prompt(question)
+        first: list[str] = []
         if self.seeded:
             ordered = self.seed.ordered(question)
-            shown = [(r, self.lookup(m.disease_id, max_features=1)) for m, r in ordered[:SHOWN]]
-            prompt += "\n\n" + candidates_block(shown)
+            if self.hypotheses:
+                block, first = self._both_lists(question, ordered)
+            else:
+                shown = [(r, self.lookup(m.disease_id, max_features=1)) for m, r in ordered[:SHOWN]]
+                block = candidates_block(shown)
+            prompt += "\n\n" + block
         result = self.graph.invoke(
             {"messages": [HumanMessage(prompt)]},
             # A backstop only: each turn is several graph steps (middleware hooks, the
@@ -315,7 +513,14 @@ class Agent:
                     reason=d.reason,
                 )
             )
-        if self.seeded:
+        if self.hypotheses:
+            listed = {c.disease_id for c in candidates}
+            for disease_id in merge(first, [m.disease_id for m, _ in ordered]):
+                if len(candidates) >= 10:
+                    break
+                if disease_id not in listed:
+                    candidates.append(self._candidate(disease_id, FILLED_BOTH))
+        elif self.seeded:
             listed = {c.disease_id for c in candidates}
             for match, _ in ordered:
                 if len(candidates) >= 10:

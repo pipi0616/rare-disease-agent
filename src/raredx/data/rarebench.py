@@ -9,9 +9,11 @@ No sex, no gene, no source paper. Four sets are public:
     MME      40 cases from published reports: Matchmaker Exchange's test set
     LIRICAL  370 cases from published reports: LIRICAL's own test set
 
-All four are read; only HMS and RAMEDIS are tested on (evals/splits.py). MME and
-LIRICAL come from case reports that HPO's annotations may cite, and they name no
-paper to mask; LIRICAL's overlap the store's own patients (docs/external_plan.md).
+All four are read; LIRICAL is never tested on (evals/splits.py): its patients
+overlap the store's own (docs/external_plan.md). MME and LIRICAL come from case
+reports that HPO's annotations may cite, and they name no paper to mask; MME was
+left out for that at first, and became the external test once HMS and RAMEDIS had
+been developed on, its caveat with it.
 
 How a diagnosis is read, fixed before any system ran on these sets:
 
