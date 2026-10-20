@@ -23,11 +23,19 @@ published diagnosis first — for about half a US cent in all.
 | DeepRare, on the same model — judged by its own LLM scoring, as the agent (42.5%) | 27.5% | 48 : 18 (p < 0.001) |
 | Claude Sonnet 5.5, asked directly | 23.5% | 52 : 13 (p < 0.001) |
 
+**These cases all come from one source.** On patients curated elsewhere the
+frozen agent lost to its own model asked directly — 4 : 15 on a clinic's 88
+patients, 47 : 97 on a metabolic registry's 624 — and the revised version is
+not yet better than it on a fresh external set ([below](#outside-the-curated-source)).
+The next version changes how development data is split and the architecture:
+[`docs/roadmap.md`](docs/roadmap.md).
+
 Each comparison follows a plan committed before its run, on a fixed version of
 the system; below are the details, the conditions that were not equal, and the
-one pre-registered claim that failed (reading notes).
+pre-registered claims that failed (reading notes; the temporal and external
+tests).
 
-**Status:** the agent, evaluated on a held-out set and against LIRICAL, three frontier models and DeepRare; served over HTTP, reading clinical notes as well as HPO terms; with seven tools and the baselines it is measured against. Tools:
+**Status:** the agent, evaluated on a held-out set and against LIRICAL, three frontier models and DeepRare, then on a temporal and two external tests, where it lost to its own model; served over HTTP, reading clinical notes as well as HPO terms; with seven tools and the baselines it is measured against. Tools:
 `rank_diseases` (every OMIM disease ranked against the patient's phenotype),
 `lookup_disease` (one disease's features with their frequencies, inheritance,
 onset, genes and sources, sized for a model to read), `check_match` (the
@@ -186,6 +194,48 @@ right about half the time. Its gain over its own model is in the long tail. The
 groups are small and cases cluster by disease, so no test is made of it. Of the
 327 unclassed diseases, 290 have no exact Orphanet counterpart at all, and a
 quarter of their cases cannot be answered once their own paper is masked.
+
+<a id="outside-the-curated-source"></a>
+**Outside the curated source: a temporal and two external tests.** Every case
+above comes from Phenopacket Store — published single-gene reports, the same
+kind the knowledge base is curated from. Two further tests ran the frozen v1.0
+once each, under plans committed beforehand
+([`docs/temporal_plan.md`](docs/temporal_plan.md),
+[`docs/external_plan.md`](docs/external_plan.md); notebook chapters 28–29):
+
+| first place | cases | final agent (v1.0) | same model asked directly | paired |
+|---|---|---|---|---|
+| temporal: papers first public after the model's cutoff | 47 | 23.4% | 8.5% | 9 : 2 (p = 0.065) |
+| external: HMS, one clinic's patients (RareBench) | 88 | 19.3% | **31.8%** | 4 : 15 (p = 0.019) |
+| external: RAMEDIS, a metabolic registry (RareBench) | 624 | 24.7% | **32.7%** | 47 : 97 (p < 0.001) |
+
+Both pre-registered claims failed: on the temporal cases the agent over the
+model asked directly (p = 0.065 against 0.05), and on the external ones the
+agent over the fixed pipeline (54 : 45, p = 0.42). Three frontier models asked
+directly scored below `deepseek-flash` on HMS (14.8–22.7%), the reverse of the
+held-out order, which suggests it has seen the public RareBench; that does not
+excuse the agent, which runs on the same model and failed to use what it knows.
+
+Why, from reading the errors afterwards: it was a ranking failure more than a
+retrieval one. Where the model asked directly was right and the agent wrong,
+the agent's own top ten held the answer in 12 of 15 HMS cases and 85 of 97
+RAMEDIS cases. Every tool scored how well a disease explains the findings and
+none how common it is, and the knowledge base kept only OMIM's annotations —
+which describe the relatively common rare diseases thinly (Behçet disease 15
+findings against Orphanet's 85) — and none of Orphanet's 4,355 diseases.
+
+HMS and RAMEDIS, once read, became practice sets, and the agent was revised
+(`hypothesis-agent`, 788e56e): the model's own hypotheses first, checked beside
+the tools' list, each candidate with its Orphanet prevalence class. Tested once
+each, it beat the model asked directly on the temporal cases, 10 : 2
+(p = 0.039) — the second version scored on that set, and one case better than
+v1.0; on a fresh external set, RareBench's 40 MME cases (17 ultra-rare
+diseases, whose reports HPO may cite), it scored 72.5% against v1.0's 80.0%
+(1 : 4, p = 0.38); on the 200 held-out cases 45.0% against 43.0% (12 : 8). It
+is not shown better than v1.0 on clean external data. The next version develops
+on several sources at once and is tested on a new one, and replaces the model's
+unaided final judgment with a scoring step calibrated across sources
+([`docs/roadmap.md`](docs/roadmap.md)).
 
 **Reading a clinical note.** A note is read into HPO terms before it is
 diagnosed (`src/raredx/phenotyping/`): the model lists each finding with the
