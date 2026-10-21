@@ -292,13 +292,21 @@ class HPO:
         reference are rebuilt."""
         if not masked:
             return self._profiles
-        affected: set[str] = set()
-        for ref in masked:
-            affected |= self._citing.get(ref, set())
         profiles = list(self._profiles)
-        for disease in affected:
+        for disease in self.citing(masked):
             profiles[self._index[disease]] = self._profile(disease, masked)
         return profiles
+
+    def citing(self, references: frozenset[str]) -> set[str]:
+        """The diseases whose annotation cites any of these references."""
+        found: set[str] = set()
+        for ref in references:
+            found |= self._citing.get(ref, set())
+        return found
+
+    def index(self, disease: str) -> int:
+        """The disease's position in disease_ids (and in profiles())."""
+        return self._index[disease]
 
     def references(self, disease: str) -> set[str]:
         """The sources HPO's annotation of the disease was curated from."""

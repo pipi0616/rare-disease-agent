@@ -26,11 +26,13 @@ from pydantic import BaseModel, Field, validate_call
 
 from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
+from raredx.knowledge.oneway import OneWayResnik
 from raredx.tools.ids import HpoId
 
-# hpo3's term similarity measures, and its ways of combining them into a set similarity.
+# hpo3's term similarity measures, and its ways of combining them into a set similarity;
+# "oneway" is computed here: Resnik from the patient to the disease only (knowledge.oneway).
 METHODS = ("resnik", "lin", "jc", "jc2", "rel", "ic", "graphic", "dist")
-COMBINES = ("funSimAvg", "funSimMax", "BMA")
+COMBINES = ("funSimAvg", "funSimMax", "BMA", "oneway")
 METHOD, COMBINE = "resnik", "funSimAvg"  # the default; see above for why
 
 
@@ -59,9 +61,12 @@ class RankDiseases:
                 f"unknown similarity {method}/{combine}: the method is one of "
                 f"{', '.join(METHODS)}; the combination one of {', '.join(COMBINES)}"
             )
+        if combine == "oneway" and method != "resnik":
+            raise ValueError("oneway is computed for resnik only")
         self.hpo = hpo
         self.method = method
         self.combine = combine
+        self._oneway = OneWayResnik(hpo) if combine == "oneway" else None
 
     @mlflow.trace(name="rank_diseases", span_type=SpanType.TOOL)
     @validate_call
@@ -82,10 +87,13 @@ class RankDiseases:
         patient, unrecognized = self.hpo.patient(hpo_ids)
         matches: list[Match] = []
         if len(patient):
-            profiles = self.hpo.profiles(masking.current())
-            scores = patient.similarity_scores(
-                profiles, kind="omim", method=self.method, combine=self.combine
-            )
+            if self._oneway is not None:
+                scores = self._oneway.scores(patient, masking.current())
+            else:
+                profiles = self.hpo.profiles(masking.current())
+                scores = patient.similarity_scores(
+                    profiles, kind="omim", method=self.method, combine=self.combine
+                )
             ids = self.hpo.disease_ids
             hidden = self.hpo.known_only_from(masking.current())
             order = sorted(
