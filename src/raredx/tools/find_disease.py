@@ -17,8 +17,16 @@ from mlflow.entities import SpanType
 from pydantic import BaseModel, Field, validate_call
 from rapidfuzz import fuzz, process, utils
 
+from raredx.evals.scoring import normalize_omim
 from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
+
+# How closely a guessed name must match HPO's (WRatio, 0–100) to stand for a number HPO
+# does not know. Not 80: on recorded direct answers (dev-200, HMS, RAMEDIS), names sharing
+# only "syndrome" scored over 80, and replacing the numbers the model wrote by the closest
+# names lost more cases than it found, at any threshold. So a number HPO knows is kept,
+# and a name is looked up only for one it does not (2–11% of them).
+NAME_MATCH = 90
 
 
 class NamedDisease(BaseModel):
@@ -65,3 +73,18 @@ class FindDisease:
                 for _, s, d in hits[:limit]
             ]
         )
+
+
+def resolve(written_id: str | None, name: str, find: FindDisease) -> str | None:
+    """The HPO disease a model's guess means: the id it wrote, when HPO knows it; else
+    the disease of the closest name, when close (NAME_MATCH); else none. A disease the
+    mask hides is unknown, as everywhere."""
+    hpo = find.hpo
+    written = normalize_omim(written_id)
+    if written in hpo.names and written not in hpo.known_only_from(masking.current()):
+        return written
+    name = name.strip()
+    found = find(name, limit=1).matches if len(name) >= 3 else []
+    if found and found[0].similarity >= NAME_MATCH:
+        return found[0].disease_id
+    return None

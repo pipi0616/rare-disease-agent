@@ -69,10 +69,9 @@ from raredx.baselines.phenotype_rank import candidate
 from raredx.baselines.rank_then_check import RankThenCheck
 from raredx.evals.scoring import normalize_omim
 from raredx.evals.systems import Candidate, Question
-from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
 from raredx.tools.check_match import CheckMatch, MatchReport
-from raredx.tools.find_disease import FindDisease
+from raredx.tools.find_disease import NAME_MATCH, FindDisease, resolve
 from raredx.tools.ids import UnknownDisease
 from raredx.tools.lookup_disease import LookupDisease
 from raredx.tools.rank_diseases import RankDiseases
@@ -82,12 +81,6 @@ SEEDED_PROMPT_VERSION = "seeded-v1"
 HYPOTHESES_PROMPT_VERSION = "hypotheses-v1"
 HYPOTHESES_PREVALENCE_PROMPT_VERSION = "hypotheses-v2"  # v1, and how common each disease is
 MAX_MODEL_CALLS = 8
-# How closely a guessed name must match HPO's (find_disease's WRatio, 0–100) to stand for a
-# number HPO does not know. Not 80: on recorded direct answers (dev-200, HMS, RAMEDIS), names
-# sharing only "syndrome" scored over 80, and replacing the numbers the model wrote by the
-# closest names lost more cases than it found, at any threshold. So a number HPO knows is
-# kept, and a name is looked up only for one it does not (2–11% of them).
-NAME_MATCH = 90
 
 _ROLE = """\
 You are a clinical geneticist. Your task is to diagnose a patient with a suspected \
@@ -413,17 +406,8 @@ class Agent:
         return []
 
     def _resolve(self, guess: Candidate) -> str | None:
-        """The HPO disease a guess means: the id the model wrote, when HPO knows it; else
-        the disease of the closest name, when close (NAME_MATCH); else none. A disease the
-        mask hides is unknown, as everywhere."""
-        written = normalize_omim(guess.disease_id)
-        if written in self.hpo.names and written not in self.hpo.known_only_from(masking.current()):
-            return written
-        name = guess.disease_name.strip()
-        found = self.find(name, limit=1).matches if len(name) >= 3 else []
-        if found and found[0].similarity >= NAME_MATCH:
-            return found[0].disease_id
-        return None
+        """The HPO disease a guess means (find_disease.resolve)."""
+        return resolve(guess.disease_id, guess.disease_name, self.find)
 
     def _both_lists(self, question: Question, ordered: list[Any]) -> tuple[str, list[str]]:
         """The hypothesis agent's evidence: its first answer, each disease found by name
