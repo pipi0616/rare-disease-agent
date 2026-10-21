@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from openai import OpenAI
 
     from raredx.evals.harness import Harness
+    from raredx.knowledge.case_bank import CaseBank
     from raredx.knowledge.diseases import Identity
     from raredx.knowledge.hpo import HPO
     from raredx.llm import Budget
@@ -227,7 +228,7 @@ def deeprare_queries(
     knowledge = _knowledge(evals_dir, data_dir)
     by_id = {
         c.id: c
-        for dataset in {splits.EXTERNAL.get(name, DATASET) for name in split}
+        for dataset in {splits.dataset_of(name, DATASET) for name in split}
         for c in _processed(data_dir, evals_dir, dataset)[1]
     }
     texts = [
@@ -260,6 +261,179 @@ def pubmed_dates(
     added = pubmed.update(path, papers)
     known = pubmed.read(path)
     typer.echo(f"ok  {path}  ({added} looked up now; {len(known)} of {len(papers)} papers dated)")
+
+
+RAREARENA = "rarearena-rds"
+PMC_PMIDS = "pmc_pmids.tsv"
+
+
+@data_app.command("pmc-ids")
+def pmc_ids(
+    data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir
+) -> None:
+    """Map each RareArena report's PMC id to its PMID (NCBI's ID converter), into
+    evals/pmc_pmids.tsv, so the report's own paper can be masked."""
+    from raredx.data import rarearena
+
+    folder = sources.raw_dir(sources.load_sources(evals_dir / "datasets.toml")[RAREARENA], data_dir)
+    if not (folder / rarearena.FILE).exists():
+        _fail(f"{folder} has no {rarearena.FILE} — run `raredx data fetch {RAREARENA}` first")
+    papers = {r.pmcid for r in rarearena.reports(folder / rarearena.FILE)}
+    path = evals_dir / PMC_PMIDS
+    added = rarearena.update_pmids(path, papers)
+    known = rarearena.read_pmids(path)
+    typer.echo(f"ok  {path}  ({added} looked up now; {len(known)} of {len(papers)} papers mapped)")
+
+
+@data_app.command("read-rarearena")
+def read_rarearena(
+    n: Annotated[int, typer.Option(help="How many reports the sample holds.")] = 500,
+    limit: Annotated[
+        int | None, typer.Option(help="Read at most this many reports now; the rest later.")
+    ] = None,
+    budget_usd: Annotated[float, typer.Option(help="Stop calling the model past this.")] = 3.0,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Sample RareArena reports by fixed rules (data.rarearena.sample), read each into HPO
+    terms with the note reader, and write them as development cases; once all are read,
+    the manifest rarearena-dev. Resumes: a report already read is not read again."""
+    import json
+
+    from raredx import llm
+    from raredx.data import rarearena
+    from raredx.knowledge import prevalence
+    from raredx.phenotyping.reader import terms
+
+    source = sources.load_sources(evals_dir / "datasets.toml")[RAREARENA]
+    raw = sources.raw_dir(source, data_dir) / rarearena.FILE
+    if not raw.exists():
+        _fail(f"{raw} missing — run `raredx data fetch {RAREARENA}` first")
+    pmids = rarearena.read_pmids(evals_dir / PMC_PMIDS)
+    if not pmids:
+        _fail("no PMC-to-PMID table — run `raredx data pmc-ids` first")
+    merged = _knowledge(evals_dir, data_dir, orphanet=True)
+    _, release = _processed(data_dir, evals_dir)
+    _, snapshot = _processed(data_dir, evals_dir, SNAPSHOT)
+    store_papers = {c.pmid for c in release + snapshot if c.pmid}
+    candidates = [
+        r
+        for r in rarearena.reports(raw)
+        if r.pmcid in pmids
+        and pmids[r.pmcid] not in store_papers
+        and merged.canonical(r.disease_id) is not None
+    ]
+    files = _orphanet_prevalence_files(evals_dir, data_dir)
+    band = prevalence.disease_bands(*files, _identity(evals_dir, data_dir).same)
+    chosen = rarearena.sample(candidates, pmids, dict(band), n)
+
+    out_dir = sources.processed_dir(source, data_dir)
+    readings_file = out_dir / "readings.jsonl"
+    done: dict[str, list[dict[str, Any]]] = {}
+    if readings_file.exists():
+        for line in readings_file.read_text(encoding="utf-8").splitlines():
+            record = json.loads(line)
+            done[record["id"]] = record["findings"]
+    reader = _note_reader(evals_dir, data_dir, llm.Budget(budget_usd, _prices()))
+    tally = llm.Tally()
+    to_read = [r for r in chosen if r.id not in done][:limit]
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with readings_file.open("a", encoding="utf-8") as f:
+        for i, report in enumerate(to_read, 1):
+            findings = reader.read(report.text, tally)
+            done[report.id] = [x.model_dump() for x in findings]
+            f.write(json.dumps({"id": report.id, "findings": done[report.id]}) + "\n")
+            f.flush()
+            if i % 25 == 0:
+                typer.echo(f"  read {i} of {len(to_read)}  (about ${tally.cost(settings):.3f})")
+
+    from raredx.phenotyping.reader import Finding
+
+    cases, unreadable = [], []
+    for report in chosen:
+        if report.id not in done:
+            continue
+        present = terms([Finding.model_validate(x) for x in done[report.id]])
+        if not present:
+            unreadable.append(report.id)
+            continue
+        cases.append(
+            Case(
+                id=report.id,
+                cohort="rarearena",
+                hpo_ids=present,
+                hpo_labels=[merged.term(t)[1] for t in present],
+                disease_id=report.disease_id,
+                disease_label=report.disease_label,
+                gene=None,
+                variants=[],
+                pmid=pmids[report.pmcid],
+                sex=report.sex,
+                split="external",
+            )
+        )
+    build = {
+        "source": RAREARENA,
+        "version": source.version,
+        "raw_sha256": source.files[rarearena.FILE],
+        "reader": reader.config(),
+        "sample": {"n": n, "seed": rarearena.SEED, "per_disease": rarearena.PER_DISEASE},
+        "read": len(done),
+        "unreadable": unreadable,
+    }
+    case_store.write(cases, out_dir, build)
+    cost = f"about ${tally.cost(settings):.4f} for {len(to_read)} reports read now"
+    typer.echo(f"ok  {out_dir}  ({len(cases)} cases; {len(unreadable)} with no finding; {cost})")
+    if all(r.id in done for r in chosen):
+        manifest = evals_dir / "splits" / f"{splits.RAREARENA}.tsv"
+        rows = sorted((c.id, c.pmid or "") for c in cases)
+        text = splits.render(rows)
+        if manifest.exists() and manifest.read_text(encoding="utf-8") != text:
+            _fail(f"{manifest} exists and differs: a manifest is frozen")
+        manifest.write_text(text, encoding="utf-8")
+        typer.echo(f"ok  {manifest}  ({len(rows)} cases)")
+
+
+def _prices() -> tuple[float, float, float]:
+    return (settings.llm_price_input, settings.llm_price_cached_input, settings.llm_price_output)
+
+
+CASE_INDEX = "case_index"
+
+
+def _case_index_dir(evals_dir: Path, data_dir: Path) -> Path:
+    source = sources.load_sources(evals_dir / "datasets.toml")[RAREARENA]
+    return sources.processed_dir(source, data_dir) / CASE_INDEX
+
+
+@data_app.command("case-index")
+def case_index(
+    data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir
+) -> None:
+    """Index RareArena's case reports for the similar-reports route: dense and BM25
+    vectors computed on this machine (about twenty minutes, once). No model is called."""
+    from raredx.data import rarearena
+    from raredx.knowledge import case_bank
+    from raredx.knowledge.text_index import FastEmbedder
+
+    source = sources.load_sources(evals_dir / "datasets.toml")[RAREARENA]
+    raw = sources.raw_dir(source, data_dir) / rarearena.FILE
+    pmids = rarearena.read_pmids(evals_dir / PMC_PMIDS)
+    if not raw.exists() or not pmids:
+        _fail(f"needs {raw} and evals/{PMC_PMIDS}: run `raredx data fetch {RAREARENA}`, `pmc-ids`")
+    folder = _case_index_dir(evals_dir, data_dir)
+    n = case_bank.build(raw, pmids, FastEmbedder(data_dir / "models"), folder)
+    typer.echo(f"ok  {folder}  ({n} reports indexed)")
+
+
+def _case_bank(evals_dir: Path, data_dir: Path) -> "CaseBank":
+    from raredx.knowledge.case_bank import CaseBank, Report
+    from raredx.knowledge.text_index import INFO, FastEmbedder, TextIndex
+
+    folder = _case_index_dir(evals_dir, data_dir)
+    if not (folder / INFO).exists():
+        _fail(f"{folder} has no case index — run `raredx data case-index` first")
+    return CaseBank(TextIndex.load(folder, FastEmbedder(data_dir / "models"), Report))
 
 
 @data_app.command()
@@ -333,6 +507,7 @@ def check(
     folder = splits_dir or evals_dir / "splits"
     dates = pubmed.read(_dates_file(evals_dir))
     problems = splits.check(folder) + splits.check_external(folder, dates or None)
+    problems += splits.check_development(folder)
     registry = sources.load_sources(evals_dir / "datasets.toml")
     out_dir = sources.processed_dir(registry[DATASET], data_dir)
     if not problems and (out_dir / case_store.CASES_FILE).exists():
@@ -346,7 +521,9 @@ def check(
         typer.echo(f"problem  {problem}")
     if problems:
         raise typer.Exit(1)
-    typer.echo(f"ok  {folder}: {', '.join([*splits.NAMES, *external])} pass every rule")
+    development = [n for n in splits.DEVELOPMENT if (folder / f"{n}.tsv").exists()]
+    names = [*splits.NAMES, *external, *development]
+    typer.echo(f"ok  {folder}: {', '.join(names)} pass every rule")
 
 
 SYSTEMS = (
@@ -788,7 +965,7 @@ def run_system(
     # The systems are built on the pinned release (its design half fills the patient
     # bank) whatever the manifest; an external manifest's cases come from its own dataset.
     _, cases = _processed(data_dir, evals_dir)
-    out_dir, asked = _processed(data_dir, evals_dir, splits.EXTERNAL.get(split, DATASET))
+    out_dir, asked = _processed(data_dir, evals_dir, splits.dataset_of(split, DATASET))
     manifest = _manifest(evals_dir, split)
     by_id = {c.id: c for c in asked}
     selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
@@ -1003,7 +1180,7 @@ def hits_table(
 
     from raredx.evals import hits
 
-    _, pool = _processed(data_dir, evals_dir, splits.EXTERNAL.get(split, DATASET))
+    _, pool = _processed(data_dir, evals_dir, splits.dataset_of(split, DATASET))
     by_id = {c.id: c for c in pool}
     cases = [by_id[case_id] for case_id, _ in splits.read(_manifest(evals_dir, split))]
     harness = _harness()
@@ -1126,7 +1303,7 @@ def calibrate(
     to_score = []
     for source in listed:
         split = source["split"]
-        _, asked = _processed(data_dir, evals_dir, splits.EXTERNAL.get(split, DATASET))
+        _, asked = _processed(data_dir, evals_dir, splits.dataset_of(split, DATASET))
         by_id = {c.id: c for c in asked}
         cases = [by_id[case_id] for case_id, _ in splits.read(_manifest(evals_dir, split))]
         if show:
@@ -1248,7 +1425,7 @@ def lenient_judge(
     from raredx.evals import lenient
     from raredx.evals.harness import candidates_of
 
-    _, pool = _processed(data_dir, evals_dir, splits.EXTERNAL.get(split, DATASET))
+    _, pool = _processed(data_dir, evals_dir, splits.dataset_of(split, DATASET))
     by_id = {c.id: c for c in pool}
     cases = [by_id[case_id] for case_id, _ in splits.read(_manifest(evals_dir, split))]
     harness = _harness()
@@ -1278,6 +1455,146 @@ def lenient_judge(
     typer.echo(f"ok  {out}  ({len(rows)} cases; about ${budget.spent:.4f} at peak price)")
 
 
+# The development sources (docs/roadmap.md, section 5.1): never a test set.
+DEVELOPMENT = ("dev-200", "rarebench-hms", "rarebench-ramedis", "rarebench-mme", splits.RAREARENA)
+
+
+def _development_cases(evals_dir: Path, data_dir: Path) -> dict[str, list[Case]]:
+    out = {}
+    for name in DEVELOPMENT:
+        _, pool = _processed(data_dir, evals_dir, splits.dataset_of(name, DATASET))
+        by_id = {c.id: c for c in pool}
+        out[name] = [by_id[case_id] for case_id, _ in splits.read(_manifest(evals_dir, name))]
+    return out
+
+
+@eval_app.command("rankers")
+def rankers(
+    data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir
+) -> None:
+    """The no-model rank-then-check, for every similarity (F funSimAvg, O one-way, FO their
+    fusion), order of the top 30 (N as ranked, C findings explained, I their information
+    content) and knowledge (OMIM, merged with Orphanet), on every development source;
+    each against the default by the rule fixed beforehand. No model is called."""
+    import mlflow
+
+    from raredx.evals import offline
+
+    cases = _development_cases(evals_dir, data_dir)
+    knowledge = {
+        "OMIM": _knowledge(evals_dir, data_dir, orphanet=False),
+        "merged": _knowledge(evals_dir, data_dir, orphanet=True),
+    }
+    mlflow.tracing.disable()  # tens of thousands of tool calls, none of them an evaluation's
+    try:
+        rows = offline.rankers(knowledge, cases, _identity(evals_dir, data_dir).same)
+    finally:
+        mlflow.tracing.enable()
+    configs = sorted({(r["knowledge"], r["ranker"], r["order"]) for r in rows})
+    short = [s.replace("rarebench-", "") for s in cases]
+    typer.echo("First place / top ten, rank-then-check without a model:")
+    typer.echo(f"{'':<16}" + "".join(f"{s:>16}" for s in short))
+    for config in configs:
+        cells = []
+        for source in cases:
+            ranks = [
+                r["rank"]
+                for r in rows
+                if (r["knowledge"], r["ranker"], r["order"]) == config and r["source"] == source
+            ]
+            top1 = sum(x == 1 for x in ranks) / len(ranks)
+            top10 = sum(x is not None for x in ranks) / len(ranks)
+            cells.append(f"{top1:.1%}/{top10:.1%}")
+        mark = "  (default)" if config == offline.BASELINE else ""
+        typer.echo(f"{' '.join(config):<16}" + "".join(f"{c:>16}" for c in cells) + mark)
+    typer.echo(
+        "\nAgainst the default (only this right : only the default right, first place / top "
+        "ten; * p < 0.05). PASS: no source significantly worse, two significantly better."
+    )
+    for config in configs:
+        if config == offline.BASELINE:
+            continue
+        v = offline.verdict(rows, config)
+        cells = [
+            "/".join(
+                f"{w}:{lost}{'*' if p < 0.05 else ''}" for w, lost, p in v["sources"][s].values()
+            )
+            for s in cases
+        ]
+        typer.echo(
+            f"{' '.join(config):<16}"
+            + "".join(f"{c:>16}" for c in cells)
+            + ("   PASS" if v["pass"] else "")
+        )
+
+
+@eval_app.command("routes")
+def routes(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir) -> None:
+    """How often the confirmed disease is among the candidates the agent would see, for
+    each mix of nominating routes: M the model's own answer (read from the recorded runs
+    in evals/calibration.toml), F funSimAvg, O one-way, C similar case reports, P similar
+    Phenopacket patients; ten each. No model is called."""
+    import tomllib
+
+    import mlflow
+
+    from raredx.baselines.similar_patients import SimilarPatientsRank
+    from raredx.evals import offline
+    from raredx.evals.harness import candidates_of
+
+    cases = _development_cases(evals_dir, data_dir)
+    kb = _knowledge(evals_dir, data_dir)
+    listed = tomllib.loads((evals_dir / CALIBRATION).read_text(encoding="utf-8"))["source"]
+    harness = _harness()
+    model: dict[str, list[str]] = {}
+    for source in listed:
+        for trace in harness.answers(source["model"]):
+            case_id = trace.data.spans[0].inputs["question"]["case_id"]
+            ids = [
+                scoring.normalize_disease(c.disease_id)
+                for c in candidates_of(trace.data.spans[0].outputs)
+            ]
+            model[case_id] = [kb.canonical(d) or d for d in ids if d]
+    _, release = _processed(data_dir, evals_dir)
+    patients = SimilarPatientsRank(_patient_bank(release, evals_dir, data_dir))
+    mlflow.tracing.disable()
+    try:
+        rows = offline.routes(
+            kb,
+            cases,
+            _identity(evals_dir, data_dir).same,
+            model,
+            _case_bank(evals_dir, data_dir),
+            patients,
+        )
+    finally:
+        mlflow.tracing.enable()
+    mixes = (
+        "F",
+        "O",
+        "C",
+        "P",
+        "M",
+        "F+O",
+        "F+C",
+        "M+F",
+        "M+F+O",
+        "M+F+C",
+        "M+F+P",
+        "M+F+O+C",
+        "M+F+O+C+P",
+    )
+    short = [s.replace("rarebench-", "") for s in cases]
+    typer.echo(f"Confirmed disease among the candidates ({kb!r}; - = route not recorded):")
+    typer.echo(f"{'routes':<12}" + "".join(f"{s:>15}" for s in short))
+    for mix in mixes:
+        cells = []
+        for source in cases:
+            value = offline.coverage([r for r in rows if r["source"] == source], mix)
+            cells.append("-" if value is None else f"{value:.1%}")
+        typer.echo(f"{mix:<12}" + "".join(f"{c:>15}" for c in cells))
+
+
 @eval_app.command("coverage")
 def coverage(
     split: Annotated[list[str], typer.Option(help="A manifest whose cases to count; repeatable.")],
@@ -1300,7 +1617,7 @@ def coverage(
     omim_only = _knowledge(evals_dir, data_dir, orphanet=False)  # the same release
     typer.echo(f"{'cases answerable':<24}{'cases':>7}{'OMIM only':>11}{'+ Orphanet':>12}")
     for name in split:
-        _, pool = _processed(data_dir, evals_dir, splits.EXTERNAL.get(name, DATASET))
+        _, pool = _processed(data_dir, evals_dir, splits.dataset_of(name, DATASET))
         by_id = {c.id: c for c in pool}
         cases = [by_id[case_id] for case_id, _ in splits.read(_manifest(evals_dir, name))]
         before = {c.id for c in cases if hits.answerable(c, omim_only)}
