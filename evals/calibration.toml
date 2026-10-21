@@ -1,0 +1,32 @@
+# Chapter 30: the recorded runs `raredx eval calibrate` reads, per development source.
+#
+#   model  the single-call baseline (llm-direct): the model's own answer, one route of the pool
+#   v1.0   seeded-agent, the system frozen as v1.0
+#   v1.1   hypothesis-agent, the system frozen as v1.1 (on HMS and RAMEDIS, its practice runs)
+#
+# Development sources only (docs/roadmap.md, section 5.1): never a held-out or test manifest.
+# Each run is the latest complete one of its system on the manifest (`raredx eval runs`).
+
+[[source]]
+split = "dev-200"
+model = "307c6f835d2b4a079a386a2c93bfe26f"
+"v1.0" = "3987099c3e7b44c6b22ca02f962caf42"
+"v1.1" = "96ddb993aca24512a7b330773bf5dbd9"
+
+[[source]]
+split = "rarebench-hms"
+model = "92390f0b571e4ce88409cadaa6ca8eeb"
+"v1.0" = "91b1ba822589471580f3beb62b79ffa8"
+"v1.1" = "92d1839c030a49b5bfa66f6971be0dfe"
+
+[[source]]
+split = "rarebench-ramedis"
+model = "a2d81030d57d41cb9b8c59d8ddf6a69b"
+"v1.0" = "6200b256b32f4fbeacff6368c494c0b8"
+"v1.1" = "f4c68c730aec427594c941a41741f998"
+
+[[source]]
+split = "rarebench-mme"
+model = "a368276b83a341fea8a68e22eb3ad519"
+"v1.0" = "e2149687c28e4689a656f495dac17293"
+"v1.1" = "aa0a19c1eb1244da8dbdf8798913668c"

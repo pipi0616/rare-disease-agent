@@ -17,10 +17,12 @@ and five come from outside it:
     rarebench-hms          every HMS patient of RareBench                        practice
     rarebench-ramedis      every RAMEDIS patient of RareBench                    practice
     rarebench-ramedis-200  200 of rarebench-ramedis                              practice
-    rarebench-mme          every MME patient of RareBench                        external test
+    rarebench-mme          every MME patient of RareBench                        practice
 
 HMS and RAMEDIS tested v1.0 once, after it was frozen; it lost to the bare model
-there, and they have been practice sets since (PRACTICE).
+there, and they have been practice sets since (PRACTICE). MME tested v1.0 and v1.1
+once each, and joined them when v2.0's development began on several sources at once
+(docs/roadmap.md, section 5.1).
 
 The final run takes one case from every held-out paper, as dev-200 does from the
 design split and for the same reason; it is the held-out set at the dev set's grain.
@@ -244,7 +246,9 @@ EXTERNAL: dict[str, str] = {
 }
 # External sets developed on since v1.0 lost there (its errors were read to find why):
 # run any number of times, and no longer a test of anything.
-PRACTICE = frozenset({"rarebench-hms", "rarebench-ramedis", "rarebench-ramedis-200"})
+PRACTICE = frozenset(
+    {"rarebench-hms", "rarebench-ramedis", "rarebench-ramedis-200", "rarebench-mme"}
+)
 
 
 def temporal(

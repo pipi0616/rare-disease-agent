@@ -4375,6 +4375,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "qdrant-client" },
     { name = "rapidfuzz" },
+    { name = "scikit-learn" },
     { name = "typer" },
     { name = "uvicorn" },
 ]
@@ -4411,6 +4412,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "qdrant-client", specifier = ">=1.19.1" },
     { name = "rapidfuzz", specifier = ">=3" },
+    { name = "scikit-learn", specifier = ">=1.9.1" },
     { name = "typer", specifier = ">=0.27.3" },
     { name = "uvicorn", specifier = ">=0.54.0" },
 ]
