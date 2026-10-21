@@ -100,16 +100,35 @@ def parse(packet: dict[str, Any], cohort: str) -> Case | str:
     )
 
 
-def load(archive: Path) -> tuple[list[Case], Counter[str]]:
-    """Every usable case in the archive, plus a count of why the others were skipped."""
+def _cohort(name: str) -> str | None:
+    """The cohort of a phenopacket in the archive; None for a file that is not one.
+
+    A release zip holds <version>/<cohort>/<file>.json. The repository at a commit
+    holds <repo>/notebooks/<cohort>/phenopackets/<file>.json, beside other files
+    (the curators' tables, some of them JSON too).
+    """
+    if not name.endswith(".json"):
+        return None
+    parts = name.split("/")
+    if parts[1:2] == ["notebooks"]:
+        return parts[2] if len(parts) == 5 and parts[3] == "phenopackets" else None
+    return parts[1] if len(parts) >= 3 else ""
+
+
+def load(archive: Path, release_papers: set[str] | None = None) -> tuple[list[Case], Counter[str]]:
+    """Every usable case in the archive, plus a count of why the others were skipped.
+
+    `release_papers`: reading a later snapshot, the papers of the pinned release. A
+    case from any other paper is "external" — new since the release, so never part
+    of its design or held-out half.
+    """
     cases: list[Case] = []
     skipped: Counter[str] = Counter()
     with zipfile.ZipFile(archive) as z:
         for name in sorted(z.namelist()):
-            if not name.endswith(".json"):
+            cohort = _cohort(name)
+            if cohort is None:
                 continue
-            # layout: <version>/<cohort>/<file>.json
-            cohort = name.split("/")[1] if name.count("/") >= 2 else ""
             try:
                 packet = json.loads(z.read(name))
             except ValueError:
@@ -118,6 +137,8 @@ def load(archive: Path) -> tuple[list[Case], Counter[str]]:
             result = parse(packet, cohort)
             if isinstance(result, str):
                 skipped[result] += 1
+            elif release_papers is not None and result.pmid not in release_papers:
+                cases.append(result.model_copy(update={"split": "external"}))
             else:
                 cases.append(result)
     return cases, skipped

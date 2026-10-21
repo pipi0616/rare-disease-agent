@@ -50,6 +50,11 @@ def test_each_disorder_takes_its_preferred_validated_measure(tmp_path: Path) -> 
         "ORPHA:2": "1 in 100,000 or more",
         "ORPHA:3": "under 1 in 1,000,000",
     }
+    assert prevalence.classes(path) == {  # Orphanet's own class, finer than the bands
+        "ORPHA:1": "1-9 / 1 000 000",
+        "ORPHA:2": "1-5 / 10 000",
+        "ORPHA:3": "<1 / 1 000 000",
+    }
 
 
 def test_an_omim_disease_takes_its_exact_matches_most_common_class(tmp_path: Path) -> None:
@@ -80,3 +85,4 @@ def test_an_omim_disease_takes_its_exact_matches_most_common_class(tmp_path: Pat
         + "</DisorderList></JDBOR>"
     )
     assert prevalence.omim_bands(prevalences, disorders) == {"OMIM:100001": "1–9 in 1,000,000"}
+    assert prevalence.omim_classes(prevalences, disorders) == {"OMIM:100001": "1-9 / 1 000 000"}

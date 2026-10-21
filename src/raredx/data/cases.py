@@ -4,6 +4,10 @@ Whatever the source, a case ends up as a `Case`: observed phenotype, confirmed
 diagnosis, causal gene and variants, source paper. Everything downstream —
 manifests, the scorer, the agent — reads cases from the processed layer, never
 from a raw download.
+
+The pinned Phenopacket Store release is split in two, design and heldout. Cases
+from anywhere else — the store's later cases, another dataset — are "external":
+only ever tested on, never developed against, never in the patient bank.
 """
 
 import json
@@ -12,7 +16,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-Split = Literal["design", "heldout"]
+Split = Literal["design", "heldout", "external"]
 
 
 class Variant(BaseModel):
@@ -27,13 +31,16 @@ class Case(BaseModel):
     cohort: str  # the store's folder, usually the gene or syndrome name
     hpo_ids: list[str]  # features the authors observed; `excluded` ones are dropped
     hpo_labels: list[str]
-    disease_id: str  # OMIM:nnnnnn
+    disease_id: str  # OMIM:nnnnnn, or the source's own code when it names no OMIM entry
     disease_label: str
     gene: str | None  # None for e.g. chromosomal-deletion cohorts
     variants: list[Variant]
-    pmid: str  # PMID:nnnnnnnn — also decides the split
+    pmid: str | None  # PMID:nnnnnnnn — also decides the split; None: no paper (a clinic's)
     sex: str | None
     split: Split
+    # Other OMIM entries that count as the diagnosis too: a source may list several for
+    # one patient (RareBench does). Empty for Phenopacket Store: one disease per case.
+    also_accepted: list[str] = []
 
 
 CASES_FILE = "cases.jsonl"

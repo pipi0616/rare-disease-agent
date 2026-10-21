@@ -17,6 +17,35 @@ role = "primary: design split for development, held-out split for the final run"
 [phenopacket-store.files]
 "all_phenopackets.zip" = "d0c70005bb09b87035087516252b6b539fbc0415be7c664b73c9cde7eedf205a"
 
+# The store's main branch at a fixed commit, after the pinned release: the cases curated
+# since (2026-10-07: 403 cases from 102 papers 0.1.27 does not have). Never read by a tool,
+# never in the patient bank; the papers first public after the model's training cutoff
+# make the temporal test (evals/splits.py). No release has them yet, so the commit is the pin.
+[phenopacket-store-snapshot]
+version = "85ffd78"
+url = "https://github.com/monarch-initiative/phenopacket-store/archive/"
+homepage = "https://github.com/monarch-initiative/phenopacket-store"
+license = "BSD-3-Clause"
+role = "evaluation: cases added after 0.1.27, for the temporal test"
+
+[phenopacket-store-snapshot.files]
+"85ffd78f3c17442a7dbb143df916ed6f8680066e.zip" = "18120cfd018d367080d065836ef16b55bdce077819083dce77fb2badd3a4569a"
+
+# RareBench (Chen et al., KDD 2024): four public sets of patients as HPO terms and
+# diagnoses, from other sources than Phenopacket Store. HMS (88 patients of a clinic at
+# Hannover Medical School) and RAMEDIS (624, a registry of metabolic disease cases) make
+# the external test; MME and LIRICAL come from published case reports, overlap the store's
+# papers, and cannot be masked (docs/external_plan.md). Pinned to a dataset revision.
+[rarebench]
+version = "6f054e0"
+url = "https://huggingface.co/datasets/chenxz/RareBench/resolve/6f054e04071953ef2c1779b279074245f2ab398c/"
+homepage = "https://huggingface.co/datasets/chenxz/RareBench"
+license = "Apache-2.0"
+role = "evaluation: HMS and RAMEDIS, patients from other sources, for the external test"
+
+[rarebench.files]
+"data.zip" = "458ebbbd7b8f2975aa9c3a1773e9c1fb103563a291775b6fd5e979375ed1ab3c"
+
 [hpo]
 version = "v2026-09-01"
 url = "https://github.com/obophenotype/human-phenotype-ontology/releases/download/v2026-09-01/"
@@ -70,13 +99,14 @@ latest_only = true
 "en_product1.xml" = "df8d562a0c6011af36a74eb4000ce81ca7d723e8031010819fb71727c0962bbb"
 
 # How rare each disease is: Orphanet's prevalence classes, from the same release as its
-# definitions above. Analysis only — the results split by it; no tool reads it.
+# definitions above. The results split by it, and the hypothesis agent is shown each
+# candidate's; no tool reads it.
 [orphanet-prevalence]
 version = "2026-06-23"
 url = "https://www.orphadata.com/data/xml/"
 homepage = "https://www.orphadata.com"
 license = "CC BY 4.0; cite Orphanet (www.orpha.net)"
-role = "analysis: each disease's prevalence class, to split the held-out results by it"
+role = "analysis and the hypothesis agent's evidence: each disease's prevalence class"
 latest_only = true
 
 [orphanet-prevalence.files]

@@ -1,7 +1,9 @@
 """How rare each disease is: Orphanet's prevalence classes, mapped to OMIM.
 
 For splitting results by rarity — "relatively common" rare diseases apart from
-those known from a handful of families. No tool reads this.
+those known from a handful of families — in bands; and, as Orphanet writes the
+class ("1-5 / 10 000"), for the hypothesis agent to weigh how common a candidate
+is. No tool reads this.
 
 A disorder's class is Orphanet's validated point prevalence, worldwide if it
 gives one, else for any region; failing that, its prevalence at birth, then its
@@ -34,32 +36,40 @@ _BAND_OF_CLASS: dict[str, Band] = {
     "1-9 / 1 000 000": "1–9 in 1,000,000",
     "<1 / 1 000 000": "under 1 in 1,000,000",
 }
+# Orphanet's classes, most common first
+CLASSES = tuple(_BAND_OF_CLASS)
+CASE_REPORTS = "<1 / 1 000 000"  # a disorder known only by counting its published cases
 # Orphanet's measures, in the order they are preferred (the names as the file writes them)
 _TYPES = ("Point prevalence", "Prevalence at birth", "Lifetime Prevalence", "Annual incidence")
 EXACT = "E ("  # Orphanet's mapping relation: "E (Exact mapping: the two concepts are equivalent)"
 
 
-def bands(path: Path) -> dict[str, Band]:
-    """Each Orphanet disorder's band, by ORPHA code ("ORPHA:166024")."""
-    found: dict[str, Band] = {}
+def classes(path: Path) -> dict[str, str]:
+    """Each Orphanet disorder's class as Orphanet writes it, by ORPHA code ("ORPHA:166024")."""
+    found: dict[str, str] = {}
     for disorder in ET.parse(path).getroot().iter("Disorder"):
-        ranked: list[tuple[int, int, Band]] = []
+        ranked: list[tuple[int, int, int]] = []
         case_reports = False
         for p in disorder.iter("Prevalence"):
             if p.findtext("PrevalenceValidationStatus/Name") != "Validated":
                 continue
             kind = p.findtext("PrevalenceType/Name") or ""
-            band = _BAND_OF_CLASS.get(p.findtext("PrevalenceClass/Name") or "")
+            cls = p.findtext("PrevalenceClass/Name") or ""
             if kind == "Cases/families":
                 case_reports = True
-            elif kind in _TYPES and band is not None:
+            elif kind in _TYPES and cls in CLASSES:
                 worldwide = p.findtext("PrevalenceGeographic/Name") == "Worldwide"
-                ranked.append((_TYPES.index(kind), 0 if worldwide else 1, band))
+                ranked.append((_TYPES.index(kind), 0 if worldwide else 1, CLASSES.index(cls)))
         if ranked:
-            found[f"ORPHA:{disorder.findtext('OrphaCode')}"] = min(ranked)[2]
+            found[f"ORPHA:{disorder.findtext('OrphaCode')}"] = CLASSES[min(ranked)[2]]
         elif case_reports:
-            found[f"ORPHA:{disorder.findtext('OrphaCode')}"] = "under 1 in 1,000,000"
+            found[f"ORPHA:{disorder.findtext('OrphaCode')}"] = CASE_REPORTS
     return found
+
+
+def bands(path: Path) -> dict[str, Band]:
+    """Each Orphanet disorder's band, by ORPHA code."""
+    return {code: _BAND_OF_CLASS[cls] for code, cls in classes(path).items()}
 
 
 def omim_mapping(path: Path) -> dict[str, set[str]]:
@@ -75,12 +85,17 @@ def omim_mapping(path: Path) -> dict[str, set[str]]:
     return dict(mapped)
 
 
-def omim_bands(prevalence: Path, disorders: Path) -> dict[str, Band]:
-    """Each OMIM disease's band; a disease absent here is of unknown prevalence."""
-    of_orpha = bands(prevalence)
-    out: dict[str, Band] = {}
+def omim_classes(prevalence: Path, disorders: Path) -> dict[str, str]:
+    """Each OMIM disease's class; a disease absent here is of unknown prevalence."""
+    of_orpha = classes(prevalence)
+    out: dict[str, str] = {}
     for omim, orphas in omim_mapping(disorders).items():
         known = [of_orpha[o] for o in orphas if o in of_orpha]
         if known:
-            out[omim] = min(known, key=BANDS.index)  # the most common
+            out[omim] = min(known, key=CLASSES.index)  # the most common
     return out
+
+
+def omim_bands(prevalence: Path, disorders: Path) -> dict[str, Band]:
+    """Each OMIM disease's band; a disease absent here is of unknown prevalence."""
+    return {omim: _BAND_OF_CLASS[cls] for omim, cls in omim_classes(prevalence, disorders).items()}

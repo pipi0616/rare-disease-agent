@@ -117,4 +117,26 @@ def test_split_is_by_pmid_and_fixed() -> None:
 def test_design_and_heldout_partition_the_cases(archive: Path) -> None:
     cases, _ = pp.load(archive)
     assert sorted(c.id for c in pp.design(cases) + pp.heldout(cases)) == sorted(c.id for c in cases)
-    assert all(c.split == pp.split_of(c.pmid) for c in cases)
+    assert all(c.pmid and c.split == pp.split_of(c.pmid) for c in cases)
+
+
+def test_the_repository_at_a_commit_reads_like_a_release(tmp_path: Path) -> None:
+    """A snapshot: phenopackets under notebooks/<cohort>/phenopackets/, other JSON beside
+    them; a case from a paper the pinned release lacks is external."""
+    path = tmp_path / "commit.zip"
+    seizure = [("HP:0001250", "Seizure", False)]
+    with zipfile.ZipFile(path, "w") as z:
+        root = "phenopacket-store-85ffd78/notebooks/ESAM"
+        z.writestr(
+            f"{root}/phenopackets/old.json", json.dumps(packet("old", "PMID:1", features=seizure))
+        )
+        z.writestr(
+            f"{root}/phenopackets/new.json", json.dumps(packet("new", "PMID:9", features=seizure))
+        )
+        z.writestr(f"{root}/ESAM_individuals.json", json.dumps({"not": "a phenopacket"}))
+        z.writestr("phenopacket-store-85ffd78/notebooks/ESAM.json", "{}")
+    cases, skipped = pp.load(path, release_papers={"PMID:1"})
+    by_id = {c.id: c for c in cases}
+    assert set(by_id) == {"old", "new"} and skipped == {}
+    assert by_id["old"].cohort == "ESAM" and by_id["old"].split == pp.split_of("PMID:1")
+    assert by_id["new"].split == "external"

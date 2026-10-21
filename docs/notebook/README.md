@@ -63,3 +63,5 @@ VS Code 打开 `.ipynb`，右上角 **Select Kernel** 选 **raredx (.venv)**，�
 | [25](25_compare_deeprare.ipynb) | 和 DeepRare 比：同一个模型，两种 agent 设计；两种判法、它读到病人论文了吗、慢在哪 |
 | [26](26_note_to_hpo.ipynb) | 读病历：医生写的字变成 HPO 编号；公开语料上评测（主要结论没成立，照实报告）；病历不留底 |
 | [27](27_delivery.ipynb) | 交付：架构图、按罕见程度拆开看、自动录屏、结果报告页、README 第一屏、求职材料 |
+| [28](28_temporal.ipynb) | 时间外验证：只考模型训练截止以后才发表的病例（论文哪天公开的、怎么选题、模型记忆占多少分） |
+| [29](29_external.ipynb) | 外部验证：换一批别人整理的病人（查重叠、诊断编号怎么认、先算地板） |

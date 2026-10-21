@@ -1,0 +1,1202 @@
+[
+ {
+  "case_id": "RareBench_RAMEDIS_001",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 3
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_002",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_003",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_006",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_008",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_009",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_011",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_013",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_017",
+  "deeprare": 5,
+  "agent": 3,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_018",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 3
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_019",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_025",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_029",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_032",
+  "deeprare": 4,
+  "agent": null,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_035",
+  "deeprare": 1,
+  "agent": 3,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_042",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_043",
+  "deeprare": null,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_045",
+  "deeprare": 1,
+  "agent": 4,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_048",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_050",
+  "deeprare": 2,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_051",
+  "deeprare": 2,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_052",
+  "deeprare": null,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_060",
+  "deeprare": 3,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_063",
+  "deeprare": 4,
+  "agent": null,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_065",
+  "deeprare": 2,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_067",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_071",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_074",
+  "deeprare": null,
+  "agent": 5,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_076",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_077",
+  "deeprare": 2,
+  "agent": 2,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_081",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_083",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_084",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_086",
+  "deeprare": 4,
+  "agent": null,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_088",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_089",
+  "deeprare": null,
+  "agent": 1,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_091",
+  "deeprare": 1,
+  "agent": 4,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_093",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_098",
+  "deeprare": 3,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_100",
+  "deeprare": 4,
+  "agent": null,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_103",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_107",
+  "deeprare": null,
+  "agent": 5,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_109",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_118",
+  "deeprare": 4,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_119",
+  "deeprare": 3,
+  "agent": 5,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_127",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_130",
+  "deeprare": 1,
+  "agent": 5,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_131",
+  "deeprare": 1,
+  "agent": 2,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_140",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_143",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_145",
+  "deeprare": 1,
+  "agent": 2,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_157",
+  "deeprare": 1,
+  "agent": 4,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_158",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_163",
+  "deeprare": 2,
+  "agent": 2,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_167",
+  "deeprare": null,
+  "agent": 5,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_169",
+  "deeprare": 5,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_171",
+  "deeprare": 1,
+  "agent": 3,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_173",
+  "deeprare": 2,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_175",
+  "deeprare": 2,
+  "agent": null,
+  "hypothesis-agent": 5
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_176",
+  "deeprare": 2,
+  "agent": 2,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_178",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_179",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_185",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_186",
+  "deeprare": null,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_190",
+  "deeprare": 1,
+  "agent": 4,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_191",
+  "deeprare": 1,
+  "agent": 2,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_196",
+  "deeprare": 2,
+  "agent": null,
+  "hypothesis-agent": 5
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_199",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_204",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_205",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_206",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_210",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": 5
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_211",
+  "deeprare": 2,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_222",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_224",
+  "deeprare": 1,
+  "agent": null,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_227",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": 5
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_228",
+  "deeprare": 1,
+  "agent": 2,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_231",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_233",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_235",
+  "deeprare": null,
+  "agent": 2,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_236",
+  "deeprare": 1,
+  "agent": 2,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_237",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_239",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 3
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_240",
+  "deeprare": null,
+  "agent": 5,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_253",
+  "deeprare": 3,
+  "agent": null,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_257",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_258",
+  "deeprare": 5,
+  "agent": 5,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_259",
+  "deeprare": null,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_262",
+  "deeprare": 1,
+  "agent": 2,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_263",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_272",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_279",
+  "deeprare": 1,
+  "agent": 2,
+  "hypothesis-agent": 3
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_283",
+  "deeprare": null,
+  "agent": 1,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_287",
+  "deeprare": null,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_288",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_289",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_293",
+  "deeprare": null,
+  "agent": 2,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_297",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_298",
+  "deeprare": null,
+  "agent": 2,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_299",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_300",
+  "deeprare": 1,
+  "agent": 2,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_301",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_302",
+  "deeprare": null,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_309",
+  "deeprare": null,
+  "agent": 5,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_310",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_318",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_324",
+  "deeprare": 1,
+  "agent": 4,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_325",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": 5
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_329",
+  "deeprare": null,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_345",
+  "deeprare": 2,
+  "agent": null,
+  "hypothesis-agent": 5
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_348",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_350",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_352",
+  "deeprare": 1,
+  "agent": 2,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_354",
+  "deeprare": 2,
+  "agent": 5,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_372",
+  "deeprare": 1,
+  "agent": 3,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_375",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_377",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_381",
+  "deeprare": 2,
+  "agent": 1,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_383",
+  "deeprare": 2,
+  "agent": 2,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_387",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_394",
+  "deeprare": null,
+  "agent": 5,
+  "hypothesis-agent": 5
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_395",
+  "deeprare": 1,
+  "agent": 2,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_401",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_404",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_406",
+  "deeprare": 2,
+  "agent": null,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_409",
+  "deeprare": 2,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_411",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_416",
+  "deeprare": 4,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_417",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 3
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_421",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_423",
+  "deeprare": 3,
+  "agent": 5,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_424",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_432",
+  "deeprare": 1,
+  "agent": 4,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_435",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_437",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_440",
+  "deeprare": 4,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_441",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_442",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_448",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_460",
+  "deeprare": 1,
+  "agent": 3,
+  "hypothesis-agent": 3
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_461",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_462",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_463",
+  "deeprare": null,
+  "agent": 2,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_464",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_465",
+  "deeprare": 2,
+  "agent": null,
+  "hypothesis-agent": 5
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_469",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_470",
+  "deeprare": 4,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_471",
+  "deeprare": 1,
+  "agent": 4,
+  "hypothesis-agent": 3
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_474",
+  "deeprare": 2,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_476",
+  "deeprare": null,
+  "agent": 3,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_479",
+  "deeprare": null,
+  "agent": 5,
+  "hypothesis-agent": 5
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_483",
+  "deeprare": 1,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_490",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_495",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_496",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": 5
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_501",
+  "deeprare": 2,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_502",
+  "deeprare": 5,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_503",
+  "deeprare": 4,
+  "agent": null,
+  "hypothesis-agent": 5
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_508",
+  "deeprare": 2,
+  "agent": null,
+  "hypothesis-agent": 5
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_509",
+  "deeprare": 1,
+  "agent": 3,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_514",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_518",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_520",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": 3
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_523",
+  "deeprare": null,
+  "agent": 3,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_524",
+  "deeprare": null,
+  "agent": 4,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_528",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_532",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_533",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_534",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_538",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_542",
+  "deeprare": null,
+  "agent": 5,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_543",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_544",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_545",
+  "deeprare": null,
+  "agent": 4,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_548",
+  "deeprare": 5,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_553",
+  "deeprare": 2,
+  "agent": 2,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_560",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_561",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_563",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_564",
+  "deeprare": 2,
+  "agent": 5,
+  "hypothesis-agent": 4
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_568",
+  "deeprare": 4,
+  "agent": 4,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_570",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": 3
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_573",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_574",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_576",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_581",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_586",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_587",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_589",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_597",
+  "deeprare": 2,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_598",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_600",
+  "deeprare": 1,
+  "agent": 1,
+  "hypothesis-agent": 2
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_603",
+  "deeprare": 1,
+  "agent": null,
+  "hypothesis-agent": 3
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_604",
+  "deeprare": null,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_608",
+  "deeprare": 1,
+  "agent": 4,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_612",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_616",
+  "deeprare": 2,
+  "agent": 1,
+  "hypothesis-agent": 1
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_622",
+  "deeprare": null,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_623",
+  "deeprare": 4,
+  "agent": null,
+  "hypothesis-agent": null
+ },
+ {
+  "case_id": "RareBench_RAMEDIS_624",
+  "deeprare": 4,
+  "agent": null,
+  "hypothesis-agent": null
+ }
+]

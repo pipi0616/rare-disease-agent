@@ -2,7 +2,7 @@
 
 A manifest is a TSV of case_id and pmid. The cases themselves stay out of git;
 the manifest is what makes "the dev set" mean the same cases for everyone,
-forever. There are six:
+forever. Six come from the pinned release:
 
     design              every design-split case         confirming a change at full size
     dev-200             200 design cases, one/paper     day-to-day iteration
@@ -10,6 +10,17 @@ forever. There are six:
     heldout             every held-out case             the full held-out set
     heldout-papers      one case per held-out paper     the final run, once
     heldout-papers-200  200 of heldout-papers           comparisons billed per case
+
+and five come from outside it:
+
+    temporal-2026-10       one case per paper first public on or after CUTOFF   temporal test
+    rarebench-hms          every HMS patient of RareBench                        practice
+    rarebench-ramedis      every RAMEDIS patient of RareBench                    practice
+    rarebench-ramedis-200  200 of rarebench-ramedis                              practice
+    rarebench-mme          every MME patient of RareBench                        external test
+
+HMS and RAMEDIS tested v1.0 once, after it was frozen; it lost to the bare model
+there, and they have been practice sets since (PRACTICE).
 
 The final run takes one case from every held-out paper, as dev-200 does from the
 design split and for the same reason; it is the held-out set at the dev set's grain.
@@ -27,6 +38,7 @@ unless forced, and a forced change should be a new, deliberately named version.
 
 import random
 from collections import defaultdict
+from datetime import date
 from pathlib import Path
 
 from raredx.data.cases import Case
@@ -46,11 +58,16 @@ class FrozenManifestError(Exception):
     pass
 
 
+def paper(case: Case) -> str:
+    """What sampling counts as one report: the case's paper; a case with none, itself."""
+    return case.pmid or case.id
+
+
 def sample_dev(design_cases: list[Case], n: int = DEV_SIZE, seed: int = SEED) -> list[Case]:
     """n design cases from n different papers, chosen by a fixed seed."""
     by_paper: dict[str, list[Case]] = defaultdict(list)
     for case in design_cases:
-        by_paper[case.pmid].append(case)
+        by_paper[paper(case)].append(case)
     rng = random.Random(seed)
     papers = rng.sample(sorted(by_paper), n)
     return [rng.choice(sorted(by_paper[p], key=lambda c: c.id)) for p in papers]
@@ -60,7 +77,7 @@ def sample_per_paper(cases: list[Case], seed: int = HELDOUT_SEED) -> list[Case]:
     """One case from every paper, chosen by a fixed seed."""
     by_paper: dict[str, list[Case]] = defaultdict(list)
     for case in cases:
-        by_paper[case.pmid].append(case)
+        by_paper[paper(case)].append(case)
     rng = random.Random(seed)
     return [rng.choice(sorted(by_paper[p], key=lambda c: c.id)) for p in sorted(by_paper)]
 
@@ -72,7 +89,7 @@ def build(cases: list[Case]) -> dict[str, list[Row]]:
     ci = random.Random(SEED).sample(sorted(dev, key=lambda c: c.id), CI_SIZE)
 
     def rows(selected: list[Case]) -> list[Row]:
-        return sorted((c.id, c.pmid) for c in selected)
+        return sorted((c.id, c.pmid or "") for c in selected)
 
     per_paper = sorted(sample_per_paper(heldout), key=lambda c: c.id)
     sample = random.Random(HELDOUT_SEED + 1).sample(per_paper, min(HELDOUT_SAMPLE, len(per_paper)))
@@ -103,7 +120,12 @@ def read(path: Path) -> list[Row]:
 
 def make_all(cases: list[Case], splits_dir: Path, *, force: bool = False) -> dict[str, str]:
     """Write the manifests, or confirm they are unchanged. Checks all before writing any."""
-    built = {name: render(rows) for name, rows in build(cases).items()}
+    return _write_frozen(
+        {name: render(rows) for name, rows in build(cases).items()}, splits_dir, force
+    )
+
+
+def _write_frozen(built: dict[str, str], splits_dir: Path, force: bool) -> dict[str, str]:
     status: dict[str, str] = {}
     for name, text in built.items():
         path = splits_dir / f"{name}.tsv"
@@ -173,7 +195,7 @@ def check_against(cases: list[Case], splits_dir: Path) -> list[str]:
         for case_id, pmid in read(splits_dir / f"{name}.tsv"):
             if case_id not in by_id:
                 problems.append(f"{name}: {case_id} is not in the dataset")
-            elif by_id[case_id].pmid != pmid:
+            elif (by_id[case_id].pmid or "") != pmid:
                 problems.append(
                     f"{name}: {case_id} has pmid {by_id[case_id].pmid}, manifest says {pmid}"
                 )
@@ -183,3 +205,145 @@ def check_against(cases: list[Case], splits_dir: Path) -> list[str]:
         if listed != actual:
             problems.append(f"{split}.tsv does not list exactly the {split} cases of the dataset")
     return problems
+
+
+# ── testing v1.0 again: cases from outside the pinned release ──────
+#
+# Temporal: the held-out half can still have been read by the model while it was
+# trained, so a score on it may owe something to memory. A paper first public after
+# the model's training data ends cannot have been: one case from each such paper the
+# systems were never developed on — the held-out half (the very case heldout-papers
+# asks) and the papers the store added after the pinned release (one case each, by a
+# fixed seed). Design papers never: they were developed on, and fill the patient bank.
+#
+# External: patients from other sources than Phenopacket Store, curated by other
+# people. RareBench's HMS and RAMEDIS; LIRICAL is left out (rarebench.py). MME, left
+# out at first too, is the external test of the hypothesis agent: no system had run on
+# it when HMS and RAMEDIS became practice sets.
+
+TEMPORAL = "temporal-2026-10"
+# deepseek-flash, the model inside every system here, is reported to have been
+# trained on data up to May 2025. DeepSeek publishes no date: the figure is third-party
+# (docs/temporal_plan.md), and a month's margin would not change which papers count.
+CUTOFF = date(2025, 6, 1)
+TEMPORAL_SEED = SEED + 3
+RAMEDIS_SEED = SEED + 4
+RAMEDIS_SAMPLE = 200
+RAREBENCH_SETS = {
+    "rarebench-hms": "HMS",
+    "rarebench-ramedis": "RAMEDIS",
+    "rarebench-mme": "MME",
+}
+# manifest -> the registered dataset its cases are read from
+EXTERNAL: dict[str, str] = {
+    TEMPORAL: "phenopacket-store-snapshot",
+    "rarebench-hms": "rarebench",
+    "rarebench-ramedis": "rarebench",
+    "rarebench-ramedis-200": "rarebench",
+    "rarebench-mme": "rarebench",
+}
+# External sets developed on since v1.0 lost there (its errors were read to find why):
+# run any number of times, and no longer a test of anything.
+PRACTICE = frozenset({"rarebench-hms", "rarebench-ramedis", "rarebench-ramedis-200"})
+
+
+def temporal(
+    snapshot: list[Case],
+    heldout_papers: list[Row],
+    dates: dict[str, date],
+    cutoff: date = CUTOFF,
+) -> list[Row]:
+    """One case per paper first public on or after the cutoff that no system was
+    developed on. A paper without a known date is left out."""
+
+    def after(pmid: str | None) -> bool:
+        return pmid is not None and dates.get(pmid, date.min) >= cutoff
+
+    present = {c.id for c in snapshot}
+    rows = [
+        (case_id, pmid) for case_id, pmid in heldout_papers if after(pmid) and case_id in present
+    ]
+    new = [c for c in snapshot if c.split == "external" and after(c.pmid)]
+    rows += [(c.id, c.pmid or "") for c in sample_per_paper(new, TEMPORAL_SEED)]
+    return sorted(rows)
+
+
+def build_external(
+    snapshot: list[Case], rarebench: list[Case], heldout_papers: list[Row], dates: dict[str, date]
+) -> dict[str, list[Row]]:
+    sets = {
+        name: sorted((c.id, "") for c in rarebench if c.cohort == cohort)
+        for name, cohort in RAREBENCH_SETS.items()
+    }
+    ramedis = sets["rarebench-ramedis"]
+    sample = random.Random(RAMEDIS_SEED).sample(ramedis, min(RAMEDIS_SAMPLE, len(ramedis)))
+    return {
+        TEMPORAL: temporal(snapshot, heldout_papers, dates),
+        **sets,
+        "rarebench-ramedis-200": sorted(sample),
+    }
+
+
+def make_external(
+    snapshot: list[Case],
+    rarebench: list[Case],
+    dates: dict[str, date],
+    splits_dir: Path,
+    *,
+    force: bool = False,
+) -> dict[str, str]:
+    """Write the four external manifests, or confirm they are unchanged; frozen like the rest."""
+    heldout_papers = read(splits_dir / "heldout-papers.tsv")
+    built = build_external(snapshot, rarebench, heldout_papers, dates)
+    return _write_frozen({n: render(rows) for n, rows in built.items()}, splits_dir, force)
+
+
+def check_external(splits_dir: Path, dates: dict[str, date] | None = None) -> list[str]:
+    """Rules the external manifests keep on their own, when they exist; no case data
+    needed, so CI runs it. `dates`: the papers' first public days, from git."""
+    present = [n for n in EXTERNAL if (splits_dir / f"{n}.tsv").exists()]
+    if not present:
+        return []
+    if len(present) < len(EXTERNAL):
+        return [f"missing manifest: {n}.tsv" for n in EXTERNAL if n not in present]
+    m = {n: read(splits_dir / f"{n}.tsv") for n in EXTERNAL}
+    problems = [
+        f"{n}: a case is listed twice"
+        for n, rows in m.items()
+        if len({r[0] for r in rows}) != len(rows)
+    ]
+    design = {pmid for _, pmid in read(splits_dir / "design.tsv")}
+    heldout_papers = set(read(splits_dir / "heldout-papers.tsv"))
+    heldout = {pmid for _, pmid in heldout_papers}
+    papers = [pmid for _, pmid in m[TEMPORAL]]
+    if len(set(papers)) != len(papers) or "" in papers:
+        problems.append(f"{TEMPORAL}: not exactly one case per paper")
+    if set(papers) & design:
+        problems.append(f"{TEMPORAL}: a design paper is in it")
+    if any(
+        pmid in heldout and row not in heldout_papers for row in m[TEMPORAL] for pmid in [row[1]]
+    ):
+        problems.append(f"{TEMPORAL}: a held-out paper with another case than heldout-papers asks")
+    if dates is not None and any(dates.get(p, date.min) < CUTOFF for p in papers):
+        problems.append(f"{TEMPORAL}: a paper first public before {CUTOFF}")
+    for name, cohort in RAREBENCH_SETS.items():
+        if any(not case_id.startswith(f"RareBench_{cohort}_") for case_id, _ in m[name]):
+            problems.append(f"{name}: a case from another set")
+    ramedis, sample = set(m["rarebench-ramedis"]), m["rarebench-ramedis-200"]
+    if not set(sample) <= ramedis:
+        problems.append("rarebench-ramedis-200 contains cases that are not in rarebench-ramedis")
+    if len(sample) != min(RAMEDIS_SAMPLE, len(ramedis)):
+        problems.append(f"rarebench-ramedis-200 has {len(sample)} cases")
+    return problems
+
+
+def check_external_against(
+    snapshot: list[Case], rarebench: list[Case], dates: dict[str, date], splits_dir: Path
+) -> list[str]:
+    """Rules that need the data: built again from it, every external manifest is the same."""
+    built = build_external(snapshot, rarebench, read(splits_dir / "heldout-papers.tsv"), dates)
+    return [
+        f"{name}.tsv is not what its data and rules give"
+        for name, rows in built.items()
+        if read(splits_dir / f"{name}.tsv") != rows
+    ]

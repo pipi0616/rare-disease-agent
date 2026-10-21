@@ -55,7 +55,8 @@ Answer with a json object only, in exactly this format:
 {"ranking": [{"disease_id": "OMIM:123456", "reason": "one sentence"}]}"""
 
 
-def _evidence(report: MatchReport, profile: DiseaseProfile) -> list[str]:
+def evidence(report: MatchReport, profile: DiseaseProfile) -> list[str]:
+    """One candidate's evidence as lines: its name and facts, then what it explains and not."""
     facts = [f"genes {', '.join(profile.genes) or 'unknown'}"]
     facts += profile.inheritance + profile.onset_and_course
     explained = [
@@ -84,7 +85,7 @@ def candidates_block(shown: list[tuple[MatchReport, DiseaseProfile]]) -> str:
     """The tools' candidates, numbered in their order, each with its evidence."""
     lines = ["Candidates, in the order the phenotype tools rank them:"]
     for i, (report, profile) in enumerate(shown, 1):
-        first, *rest = _evidence(report, profile)
+        first, *rest = evidence(report, profile)
         lines += [f"[{i}] {first}", *rest]
     return "\n".join(lines)
 

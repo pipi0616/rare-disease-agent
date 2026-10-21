@@ -40,6 +40,8 @@ llm_app = typer.Typer(help="The model endpoint.", no_args_is_help=True)
 app.add_typer(llm_app, name="llm")
 
 DATASET = "phenopacket-store"
+SNAPSHOT = "phenopacket-store-snapshot"  # the store after the pinned release
+RAREBENCH = "rarebench"
 
 DataDir = Annotated[
     Path, typer.Option(help="Raw and processed data. Default: RAREDX_DATA_DIR or ./data.")
@@ -58,11 +60,19 @@ def _source(evals_dir: Path) -> sources.Source:
     return sources.load_sources(evals_dir / "datasets.toml")[DATASET]
 
 
-def _processed(data_dir: Path, evals_dir: Path) -> tuple[Path, list[Case]]:
-    out_dir = sources.processed_dir(_source(evals_dir), data_dir)
+def _processed(data_dir: Path, evals_dir: Path, name: str = DATASET) -> tuple[Path, list[Case]]:
+    """A case source's processed cases: the pinned release unless another is named."""
+    out_dir = sources.processed_dir(
+        sources.load_sources(evals_dir / "datasets.toml")[name], data_dir
+    )
     if not (out_dir / case_store.CASES_FILE).exists():
-        _fail(f"{out_dir} has no cases yet — run `raredx data build` first")
+        build = "raredx data build" + ("" if name == DATASET else f" {name}")
+        _fail(f"{out_dir} has no cases yet — run `{build}` first")
     return out_dir, case_store.read(out_dir)
+
+
+def _dates_file(evals_dir: Path) -> Path:
+    return evals_dir / "pubmed_dates.tsv"
 
 
 # ── data ────────────────────────────────────────────────────────────
@@ -88,21 +98,41 @@ def fetch(
             typer.echo(f"ok  {path}  ({source.name} {source.version}, sha256 verified)")
 
 
+CASE_SOURCES = (DATASET, SNAPSHOT, RAREBENCH)
+
+
 @data_app.command()
-def build(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir) -> None:
-    """Parse the raw download into data/processed: one case per line."""
-    source = _source(evals_dir)
-    raw = sources.raw_dir(source, data_dir) / phenopackets.ARCHIVE
+def build(
+    name: Annotated[str, typer.Argument(help=" | ".join(CASE_SOURCES))] = DATASET,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Parse a raw download of cases into data/processed: one case per line."""
+    if name not in CASE_SOURCES:
+        _fail(f"{name} holds no cases: choose {', '.join(CASE_SOURCES)}")
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    source = registry[name]
+    file = next(iter(source.files))
+    raw = sources.raw_dir(source, data_dir) / file
     if not raw.exists():
-        _fail(f"{raw} missing — run `raredx data fetch` first")
-    cases, skipped = phenopackets.load(raw)
-    info = {
-        "source": source.name,
-        "version": source.version,
-        "raw_sha256": source.files[phenopackets.ARCHIVE],
-        "cases": len(cases),
-        "skipped": dict(skipped),
-    }
+        _fail(f"{raw} missing — run `raredx data fetch {name}` first")
+    info: dict[str, Any] = {"source": source.name, "version": source.version}
+    if name == DATASET:
+        cases, skipped = phenopackets.load(raw)
+    elif name == SNAPSHOT:  # what is new is told apart from the pinned release's papers
+        _, release = _processed(data_dir, evals_dir)
+        cases, skipped = phenopackets.load(raw, {c.pmid for c in release if c.pmid})
+        info["release"] = f"{DATASET} {registry[DATASET].version}"
+    else:
+        from raredx.data import rarebench
+
+        orphanet = sources.raw_dir(registry["orphanet"], data_dir) / "en_product1.xml"
+        if not orphanet.exists():
+            _fail("the Orphanet mappings are not downloaded — run `raredx data fetch orphanet`")
+        knowledge = _knowledge(evals_dir, data_dir)
+        cases, skipped = rarebench.load(raw, knowledge, rarebench.Orphanet(orphanet))
+        info["hpo_release"] = knowledge.release
+    info |= {"raw_sha256": source.files[file], "cases": len(cases), "skipped": dict(skipped)}
     path = case_store.write(cases, sources.processed_dir(source, data_dir), info)
     typer.echo(f"ok  {path}  ({len(cases)} cases, skipped {dict(skipped) or 'none'})")
 
@@ -194,8 +224,11 @@ def deeprare_queries(
     from raredx.baselines import deeprare
 
     knowledge = _knowledge(evals_dir, data_dir)
-    _, cases = _processed(data_dir, evals_dir)
-    by_id = {c.id: c for c in cases}
+    by_id = {
+        c.id: c
+        for dataset in {splits.EXTERNAL.get(name, DATASET) for name in split}
+        for c in _processed(data_dir, evals_dir, dataset)[1]
+    }
     texts = [
         deeprare.query_text([knowledge.term(t)[1] for t in by_id[case_id].hpo_ids])
         for name in split
@@ -208,6 +241,24 @@ def deeprare_queries(
     cache = _deeprare_queries(data_dir)
     done = deeprare.embed_queries(texts, cache, client)
     typer.echo(f"ok  {cache}: {done} embedded now, {len(set(texts)) - done} already there")
+
+
+@data_app.command("pubmed-dates")
+def pubmed_dates(
+    data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir
+) -> None:
+    """Look up when each paper the temporal test could draw on was first public (PubMed),
+    into evals/pubmed_dates.tsv: the held-out papers, and those the snapshot added."""
+    from raredx.data import pubmed
+
+    _, release = _processed(data_dir, evals_dir)
+    _, snapshot = _processed(data_dir, evals_dir, SNAPSHOT)
+    papers = {c.pmid for c in release if c.split == "heldout" and c.pmid}
+    papers |= {c.pmid for c in snapshot if c.split == "external" and c.pmid}
+    path = _dates_file(evals_dir)
+    added = pubmed.update(path, papers)
+    known = pubmed.read(path)
+    typer.echo(f"ok  {path}  ({added} looked up now; {len(known)} of {len(papers)} papers dated)")
 
 
 @data_app.command()
@@ -241,12 +292,28 @@ def stats(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.
 def make_splits(
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
+    external: Annotated[
+        bool, typer.Option(help="The temporal and RareBench manifests, from their datasets.")
+    ] = False,
     force: bool = False,
 ) -> None:
-    """Create the manifests in evals/splits, or confirm they are unchanged."""
-    _, cases = _processed(data_dir, evals_dir)
+    """Create the manifests in evals/splits, or confirm they are unchanged. With
+    --external, the four that test v1.0 on cases from outside the pinned release."""
     try:
-        status = splits.make_all(cases, evals_dir / "splits", force=force)
+        if external:
+            from raredx.data import pubmed
+
+            _, snapshot = _processed(data_dir, evals_dir, SNAPSHOT)
+            _, rarebench = _processed(data_dir, evals_dir, RAREBENCH)
+            dates = pubmed.read(_dates_file(evals_dir))
+            if not dates:
+                _fail("no publication dates — run `raredx data pubmed-dates` first")
+            status = splits.make_external(
+                snapshot, rarebench, dates, evals_dir / "splits", force=force
+            )
+        else:
+            _, cases = _processed(data_dir, evals_dir)
+            status = splits.make_all(cases, evals_dir / "splits", force=force)
     except splits.FrozenManifestError as e:
         _fail(str(e))
     for name, state in status.items():
@@ -260,16 +327,25 @@ def check(
     splits_dir: Annotated[Path | None, typer.Option(help="Default: <evals-dir>/splits.")] = None,
 ) -> None:
     """Check the manifests: their own rules, and against the data when it is present."""
+    from raredx.data import pubmed
+
     folder = splits_dir or evals_dir / "splits"
-    problems = splits.check(folder)
-    out_dir = sources.processed_dir(_source(evals_dir), data_dir)
+    dates = pubmed.read(_dates_file(evals_dir))
+    problems = splits.check(folder) + splits.check_external(folder, dates or None)
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    out_dir = sources.processed_dir(registry[DATASET], data_dir)
     if not problems and (out_dir / case_store.CASES_FILE).exists():
         problems = splits.check_against(case_store.read(out_dir), folder)
+    others = [sources.processed_dir(registry[n], data_dir) for n in (SNAPSHOT, RAREBENCH)]
+    external = [n for n in splits.EXTERNAL if (folder / f"{n}.tsv").exists()]
+    if not problems and external and all((d / case_store.CASES_FILE).exists() for d in others):
+        snapshot, rarebench = (case_store.read(d) for d in others)
+        problems = splits.check_external_against(snapshot, rarebench, dates, folder)
     for problem in problems:
         typer.echo(f"problem  {problem}")
     if problems:
         raise typer.Exit(1)
-    typer.echo(f"ok  {folder}: {', '.join(splits.NAMES)} pass every rule")
+    typer.echo(f"ok  {folder}: {', '.join([*splits.NAMES, *external])} pass every rule")
 
 
 SYSTEMS = (
@@ -285,6 +361,7 @@ SYSTEMS = (
     "fixed-pipeline",
     "agent",
     "seeded-agent",
+    "hypothesis-agent",
     "llm-direct",
     "llm-direct-thinking",
     "judge-table",
@@ -364,6 +441,22 @@ def _text_search(evals_dir: Path, data_dir: Path) -> "SearchDiseaseTexts":
 OPENROUTER = "openrouter:"
 
 
+def _prevalence(evals_dir: Path, data_dir: Path) -> dict[str, str]:
+    """Each OMIM disease's Orphanet prevalence class, for the hypothesis agent."""
+    from raredx.knowledge import prevalence
+
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    folders = {name: sources.raw_dir(registry[name], data_dir) for name in ORPHANET_SOURCES}
+    files = (
+        folders["orphanet-prevalence"] / prevalence.PREVALENCE,
+        folders["orphanet"] / "en_product1.xml",
+    )
+    missing = [str(f) for f in files if not f.exists()]
+    if missing:
+        _fail(f"no Orphanet prevalence: {', '.join(missing)} — run `raredx data fetch` first")
+    return prevalence.omim_classes(*files)
+
+
 def _deeprare_queries(data_dir: Path) -> Path:
     from raredx.baselines.deeprare import QUERY_EMBEDDINGS
 
@@ -372,6 +465,8 @@ def _deeprare_queries(data_dir: Path) -> Path:
 
 # Tools an agent can be given beyond the four core ones; --without leaves one out.
 EXTRA_TOOLS = ("find_similar_patients", "search_disease_texts", "rank_candidate_genes")
+AGENTS = ("agent", "seeded-agent", "hypothesis-agent")
+ORPHANET_SOURCES = ("orphanet-prevalence", "orphanet")
 
 
 def _model_client() -> "OpenAI":
@@ -395,11 +490,12 @@ def _system(
     with_texts: bool = False,
     llm_model: str | None = None,
     budget_usd: float | None = None,
+    asked: list[Case] | None = None,
 ) -> System:
     if llm_model and name not in ("llm-direct", "llm-direct-thinking"):
         _fail("--model applies to llm-direct only")
     if name == "oracle":
-        return Oracle.from_cases(cases)
+        return Oracle.from_cases(asked or cases)
     if name == "popularity":
         dev_papers = {pmid for _, pmid in splits.read(evals_dir / "splits" / "dev-200.tsv")}
         pool = [c for c in cases if c.split == "design" and c.pmid not in dev_papers]
@@ -472,7 +568,7 @@ def _system(
             CheckMatch(ranker.hpo),
             LookupDisease(ranker.hpo),
         )
-    if name in ("agent", "seeded-agent"):
+    if name in AGENTS:
         from raredx import llm
         from raredx.agent import Agent
 
@@ -485,14 +581,19 @@ def _system(
         if "find_similar_patients" not in without:
             extra.append(_patient_bank(cases, evals_dir, data_dir))
         # Off by default since chapter 20: on dev-200 the text search added nothing (4 cases
-        # to 2 at top-1, p = 0.69) and cost 18% more tokens. --with-texts adds it back.
-        if with_texts and "search_disease_texts" not in without:
+        # to 2 at top-1, p = 0.69) and cost 18% more tokens. --with-texts adds it back. On
+        # by default for the hypothesis agent: the diseases HPO annotates thinly, which the
+        # model may name itself, are what the texts describe.
+        texts = with_texts or name == "hypothesis-agent"
+        if texts and "search_disease_texts" not in without:
             extra.append(_text_search(evals_dir, data_dir))
         if with_genes and "rank_candidate_genes" not in without:
             from raredx.tools.rank_candidate_genes import RankCandidateGenes
 
             extra.append(RankCandidateGenes(knowledge))
-        label = name + (" (with search_disease_texts)" if with_texts else "")
+        label = name
+        if with_texts and name != "hypothesis-agent":
+            label += " (with search_disease_texts)"
         if without:
             label += f" (without {', '.join(without)})"
         return Agent(
@@ -500,6 +601,8 @@ def _system(
             settings.llm_model,
             knowledge,
             seeded=name == "seeded-agent",
+            hypotheses=name == "hypothesis-agent",
+            prevalence=_prevalence(evals_dir, data_dir) if name == "hypothesis-agent" else None,
             extra_tools=extra,
             name=label,
         )
@@ -627,19 +730,24 @@ def run_system(
     """Evaluate a system on a manifest with MLflow; the run and every answer are recorded."""
     if split.startswith("heldout") and not final:
         _fail("heldout is the final exam: run it once, with --final, when the design is frozen")
+    if split in splits.EXTERNAL and split not in splits.PRACTICE and not final:
+        _fail(f"{split} tests the frozen system again: run it once, with --final")
     left_out = tuple(sorted(set(without or [])))
     unknown = [t for t in left_out if t not in EXTRA_TOOLS]
     if unknown:
         _fail(f"--without takes {', '.join(EXTRA_TOOLS)}; not {', '.join(unknown)}")
-    if left_out and system not in ("agent", "seeded-agent"):
+    if left_out and system not in AGENTS:
         _fail("--without applies to the agents only")
     if model and system not in ("llm-direct", "llm-direct-thinking"):
         _fail("--model applies to llm-direct only")
     if model and budget_usd is None:
         _fail("a run billed through OpenRouter needs a cap: give --budget-usd")
-    out_dir, cases = _processed(data_dir, evals_dir)
+    # The systems are built on the pinned release (its design half fills the patient
+    # bank) whatever the manifest; an external manifest's cases come from its own dataset.
+    _, cases = _processed(data_dir, evals_dir)
+    out_dir, asked = _processed(data_dir, evals_dir, splits.EXTERNAL.get(split, DATASET))
     manifest = _manifest(evals_dir, split)
-    by_id = {c.id: c for c in cases}
+    by_id = {c.id: c for c in asked}
     selected = [by_id[case_id] for case_id, _ in splits.read(manifest)]
     lost: dict[str, str] = {}
     if fill_in:
@@ -662,6 +770,7 @@ def run_system(
         with_texts,
         model,
         budget_usd,
+        selected,
     )
     billed = getattr(chosen, "provider", None) == "openrouter"
     recorded = getattr(chosen, "evidence", None)
@@ -691,6 +800,8 @@ def run_system(
         knowledge = _knowledge(evals_dir, data_dir)
         without_gene = [c.id for c in selected if c.gene is None]
         selected = [c for c in selected if c.gene is not None]  # nothing to sequence otherwise
+        if not selected:
+            _fail(f"no case in {split} has a causal gene: there is nothing to sequence")
         genes = {c.id: candidates.candidate_genes(c, knowledge) for c in selected}
         params["cases_without_a_causal_gene_left_out"] = len(without_gene)
         label = f"{split}+genes"
@@ -820,6 +931,109 @@ def compare_runs(
     typer.echo(f"  only {name_b} ({run_b[:8]}) right: {only_b:>4}")
     typer.echo(f"  both right: {both}   neither: {len(hits_a) - both - only_a - only_b}")
     typer.echo(f"  sign test, two-sided: {scoring.p_value(scoring.sign_test(only_a, only_b))}")
+
+
+@eval_app.command("hits")
+def hits_table(
+    split: Annotated[str, typer.Option(help="The manifest whose cases make the rows.")],
+    run: Annotated[
+        list[str],
+        typer.Option(
+            help="NAME=RUN_ID, a column per run in this order; repeatable. NAME=RUN_ID+FILL_ID: "
+            "a run completed by the run that asked again the cases it lost (--fill-in)."
+        ),
+    ],
+    out: Annotated[Path, typer.Option(help="The table to write (TSV).")],
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Write each case's verdict under several runs, side by side, for paired comparisons.
+    A run that failed its leak audit, or lost cases to the model API that no later run
+    answered, is refused."""
+    from mlflow.exceptions import MlflowException
+
+    from raredx.evals import hits
+
+    _, pool = _processed(data_dir, evals_dir, splits.EXTERNAL.get(split, DATASET))
+    by_id = {c.id: c for c in pool}
+    cases = [by_id[case_id] for case_id, _ in splits.read(_manifest(evals_dir, split))]
+    harness = _harness()
+    columns = {}
+    for item in run:
+        name, _, chain = item.partition("=")
+        parts = []
+        for run_id in chain.split("+"):
+            try:
+                recorded = harness.client.get_run(run_id)
+            except MlflowException:
+                _fail(f"{name}: no such run {run_id!r}")
+            if recorded.info.status != "FINISHED":
+                _fail(f"{name}: run {run_id} did not finish: it is void")
+            if recorded.data.tags.get("leak_audit") == "failed":
+                _fail(f"{name}: run {run_id} failed its leak audit")
+            got = {k: harness.hits(run_id, k) for k in scoring.KS}
+            parts.append((got, set(harness.lost_cases(run_id))))
+        verdicts, lost = hits.combine(parts)
+        if lost & {c.id for c in cases}:
+            _fail(f"{name}: {len(lost)} cases were lost to the model API and never asked again")
+        columns[name] = verdicts
+    try:
+        rows = hits.table(cases, columns, _knowledge(evals_dir, data_dir))
+    except ValueError as e:
+        _fail(str(e))
+    hits.write(rows, out)
+    answerable = sum(r["answerable"] == "1" for r in rows)
+    typer.echo(f"ok  {out}  ({len(rows)} cases, {answerable} answerable; {', '.join(columns)})")
+
+
+@eval_app.command("lenient")
+def lenient_judge(
+    split: Annotated[str, typer.Option(help="The manifest whose cases are judged.")],
+    run: Annotated[
+        list[str],
+        typer.Option(help="NAME=RUN_ID (or RUN_ID+FILL_ID): a system's run to judge; repeatable."),
+    ],
+    out: Annotated[Path, typer.Option(help="Where the ranks are kept (JSON); read back first.")],
+    budget_usd: Annotated[
+        float, typer.Option(help="Stop calling the judge once this much is spent.")
+    ] = 0.5,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Judge recorded answers DeepRare's way: deepseek-flash reads each system's five
+    names and the confirmed diagnosis, and gives the rank it is named at, or none."""
+    from raredx import llm
+    from raredx.evals import lenient
+    from raredx.evals.harness import candidates_of
+
+    _, pool = _processed(data_dir, evals_dir, splits.EXTERNAL.get(split, DATASET))
+    by_id = {c.id: c for c in pool}
+    cases = [by_id[case_id] for case_id, _ in splits.read(_manifest(evals_dir, split))]
+    harness = _harness()
+    names: dict[str, dict[str, list[str]]] = {c.id: {} for c in cases}
+    for item in run:
+        system, _, chain = item.partition("=")
+        for run_id in chain.split("+"):  # a fill-in run's answers replace the lost ones
+            for trace in harness.answers(run_id):
+                case_id = trace.data.spans[0].inputs["question"]["case_id"]
+                if case_id in names:
+                    found = candidates_of(trace.data.spans[0].outputs)
+                    names[case_id][system] = [c.disease_name for c in found]
+        missing = [c.id for c in cases if system not in names[c.id]]
+        if missing:
+            _fail(f"{system}: no recorded answer to {len(missing)} of the cases")
+    prices = (settings.llm_price_input, settings.llm_price_cached_input, settings.llm_price_output)
+    budget = llm.Budget(budget_usd, prices)
+    judge = lenient.Judge(_model_client(), settings.llm_model, budget)
+    rows = lenient.judge_all(judge, names, {c.id: c.disease_label for c in cases}, out)
+    for item in run:
+        system = item.partition("=")[0]
+        ranks = [row[system] for row in rows]
+        top = {k: sum(isinstance(r, int) and r <= k for r in ranks) for k in (1, 5)}
+        typer.echo(
+            f"{system:<12} top-1 {top[1] / len(rows):6.1%}   top-5 {top[5] / len(rows):6.1%}"
+        )
+    typer.echo(f"ok  {out}  ({len(rows)} cases; about ${budget.spent:.4f} at peak price)")
 
 
 @eval_app.command("runs")

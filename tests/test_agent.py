@@ -5,6 +5,7 @@ answer are real.
 """
 
 import itertools
+import json
 from collections.abc import Callable, Iterator
 
 import pytest
@@ -13,6 +14,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from conftest import OFFERED, RECEIVED, ScriptedModel, answer, call
 from raredx.agent import (
     FILLED,
+    FILLED_BOTH,
     FUSED,
     LAST_TURN,
     MAX_MODEL_CALLS,
@@ -20,7 +22,10 @@ from raredx.agent import (
     NoFinalAnswer,
     as_langchain_tool,
     fuse,
+    merge,
+    system_prompt,
 )
+from raredx.baselines import llm_direct
 from raredx.baselines.rank_then_check import RankThenCheck
 from raredx.data.cases import Case
 from raredx.evals.systems import Candidate, question_of
@@ -266,3 +271,205 @@ def test_without_candidate_genes_nothing_is_fused(hpo: HPO, case: Case) -> None:
         ScriptedModel(messages=moves), "deepseek-flash", hpo, extra_tools=[RankCandidateGenes(hpo)]
     )
     assert [c.disease_id for c in system.predict(question_of(case))] == ["OMIM:690005"]
+
+
+# ── the hypothesis agent: the model's own answer first, then the tools' ──
+
+
+def first_answer(*guesses: tuple[str, str]) -> AIMessage:
+    """The hypothesis agent's first move: the bare model's answer, as (name, id) rows."""
+    rows = [{"disease_name": name, "disease_id": disease_id} for name, disease_id in guesses]
+    return AIMessage(content=json.dumps({"candidates": rows}))
+
+
+def hypothesis(hpo: HPO, moves: Iterator[AIMessage]) -> Agent:
+    return Agent(ScriptedModel(messages=moves), "deepseek-flash", hpo, hypotheses=True)
+
+
+def test_the_hypothesis_agent_asks_the_bare_question_before_any_tool(hpo: HPO, case: Case) -> None:
+    RECEIVED.clear()
+    moves = iter(
+        [
+            first_answer(("Hearing-retina syndrome", "OMIM:690002")),
+            answer(("OMIM:690002", "Hearing-retina syndrome", "my own")),
+        ]
+    )
+    hypothesis(hpo, moves).predict(question_of(case))
+    asked = RECEIVED[0]
+    assert [m.content for m in asked] == [
+        llm_direct.SYSTEM_PROMPT,
+        llm_direct.user_prompt(question_of(case)),
+    ]
+    system, first = str(RECEIVED[1][0].content), str(RECEIVED[1][1].content)
+    assert "Before any tool ran, you answered from your own knowledge alone" in system
+    # its own list first, checked; then the tools', which point to a disease already shown
+    assert first.index("[H1] OMIM:690002 Hearing-retina syndrome") < first.index("[T1]")
+    assert "explains 1 of 2 findings" in first
+    assert "= [H1] Hearing-retina syndrome" in first
+
+
+def test_a_number_hpo_knows_is_kept_under_hpos_name(hpo: HPO, case: Case) -> None:
+    RECEIVED.clear()
+    moves = iter(
+        [
+            first_answer(("Hearing-ovarian syndrome", "OMIM:690003")),  # 690003: seizures
+            answer(("OMIM:690001", "Hearing-ovarian syndrome", "fits")),
+        ]
+    )
+    hypothesis(hpo, moves).predict(question_of(case))
+    first = str(RECEIVED[1][1].content)
+    assert "[H1] OMIM:690003 Seizure disorder" in first  # HPO's name, beside the evidence
+    assert "you wrote" not in first
+
+
+def test_a_number_hpo_does_not_know_is_found_by_its_name(hpo: HPO, case: Case) -> None:
+    RECEIVED.clear()
+    moves = iter(
+        [
+            first_answer(("Hearing ovarian syndrome", "OMIM:999999")),
+            answer(("OMIM:690001", "Hearing-ovarian syndrome", "fits")),
+        ]
+    )
+    hypothesis(hpo, moves).predict(question_of(case))
+    first = str(RECEIVED[1][1].content)
+    assert "[H1] OMIM:690001 Hearing-ovarian syndrome" in first
+    assert "(you wrote Hearing ovarian syndrome (OMIM:999999))" in first
+
+
+def test_a_name_sharing_only_a_common_word_is_not_taken_for_the_disease(
+    hpo: HPO, case: Case
+) -> None:
+    RECEIVED.clear()
+    moves = iter(
+        [
+            first_answer(("Wolfram syndrome", "OMIM:999999")),  # 86 to Hearing-ovarian syndrome
+            answer(("OMIM:690001", "Hearing-ovarian syndrome", "fits")),
+        ]
+    )
+    hypothesis(hpo, moves).predict(question_of(case))
+    first = str(RECEIVED[1][1].content)
+    assert "[H1] Wolfram syndrome (OMIM:999999): no disease of this name" in first
+
+
+def test_a_disease_hpo_does_not_know_is_listed_unchecked(hpo: HPO, case: Case) -> None:
+    RECEIVED.clear()
+    moves = iter(
+        [
+            first_answer(("Zzyzx qwerty", "OMIM:123456")),
+            answer(("OMIM:690001", "Hearing-ovarian syndrome", "fits")),
+        ]
+    )
+    hypothesis(hpo, moves).predict(question_of(case))
+    first = str(RECEIVED[1][1].content)
+    assert (
+        "[H1] Zzyzx qwerty (OMIM:123456): no disease of this name in the HPO annotations" in first
+    )
+
+
+def test_the_mask_hides_a_guessed_disease_known_only_from_the_masked_paper(
+    hpo: HPO, case: Case
+) -> None:
+    RECEIVED.clear()
+    moves = iter(
+        [
+            first_answer(("Amenorrhea known from one paper", "OMIM:690004")),
+            answer(("OMIM:690001", "Hearing-ovarian syndrome", "fits")),
+        ]
+    )
+    with masking.masked(["PMID:1004"]):
+        hypothesis(hpo, moves).predict(question_of(case))
+    first = str(RECEIVED[1][1].content)
+    assert "no disease of this name in the HPO annotations" in first
+    assert "OMIM:690004" not in first.split("[T1]")[0].replace("(OMIM:690004)", "")
+
+
+def test_an_unreadable_first_answer_is_asked_again_once_then_left_out(hpo: HPO, case: Case) -> None:
+    RECEIVED.clear()
+    moves = iter(
+        [
+            AIMessage(content="not json"),
+            AIMessage(content="still not json"),
+            answer(("OMIM:690001", "Hearing-ovarian syndrome", "fits")),
+        ]
+    )
+    answers = hypothesis(hpo, moves).predict(question_of(case))
+    assert "not in the required format" in str(RECEIVED[1][-1].content)
+    assert "(none: your first answer could not be read)" in str(RECEIVED[2][1].content)
+    assert answers[0].disease_id == "OMIM:690001"
+
+
+def test_a_short_answer_is_filled_from_both_lists_merged(hpo: HPO, case: Case) -> None:
+    moves = iter(
+        [
+            first_answer(
+                ("Seizure disorder", "OMIM:690003"), ("Frequency-test syndrome", "OMIM:690005")
+            ),
+            answer(("OMIM:690004", "Amenorrhea known from one paper", "my pick")),
+        ]
+    )
+    answers = hypothesis(hpo, moves).predict(question_of(case))
+    tools_order = [
+        m.disease_id
+        for m, _ in RankThenCheck(RankDiseases(hpo), CheckMatch(hpo)).ordered(question_of(case))
+    ]
+    merged = merge(["OMIM:690003", "OMIM:690005"], tools_order)
+    assert [c.disease_id for c in answers] == ["OMIM:690004"] + [
+        d for d in merged if d != "OMIM:690004"
+    ]
+    assert answers[0].reason == "my pick"
+    assert all(c.reason == FILLED_BOTH for c in answers[1:])
+
+
+def test_merging_puts_first_what_both_lists_rank_and_then_takes_turns() -> None:
+    assert merge(["A", "B", "D"], ["B", "C"]) == ["B", "A", "C", "D"]
+
+
+def test_the_hypothesis_agent_records_its_first_answer_seed_and_fill(hpo: HPO) -> None:
+    system = hypothesis(hpo, iter([]))
+    params = system.params()
+    assert system.name == "hypothesis-agent" and params["prompt_version"] == "hypotheses-v1"
+    assert params["first_answer"].startswith(llm_direct.PROMPT_VERSION)
+    assert "reciprocal rank" in params["fill"]
+
+
+def test_the_text_search_is_named_in_the_hypothesis_prompt_only_when_offered() -> None:
+    core = ["rank_diseases", "check_match", "lookup_disease", "find_disease"]
+    assert "search_disease_texts" not in system_prompt(core, hypotheses=True)
+    with_texts = system_prompt([*core, "search_disease_texts"], hypotheses=True)
+    assert "read how it is described with search_disease_texts" in with_texts
+
+
+def test_given_prevalence_each_disease_shows_how_common_it_is(hpo: HPO, case: Case) -> None:
+    RECEIVED.clear()
+    moves = iter(
+        [
+            first_answer(("Hearing-retina syndrome", "OMIM:690002")),
+            answer(("OMIM:690002", "Hearing-retina syndrome", "my own")),
+        ]
+    )
+    common = {"OMIM:690002": "1-5 / 10 000"}
+    system = Agent(
+        ScriptedModel(messages=moves), "deepseek-flash", hpo, hypotheses=True, prevalence=common
+    )
+    system.predict(question_of(case))
+    prompt, first = str(RECEIVED[1][0].content), str(RECEIVED[1][1].content)
+    assert "the more common is the likelier" in prompt
+    assert "An unknown prevalence is not evidence of rarity" in prompt
+    head = next(line for line in first.splitlines() if line.startswith("[H1]"))
+    assert head.endswith("· prevalence 1-5 / 10 000 (Orphanet)")
+    assert "· prevalence unknown (Orphanet)" in first  # the tools' others, not classed
+    assert system.params()["prompt_version"] == "hypotheses-v2"
+
+
+def test_without_prevalence_neither_the_prompt_nor_the_lists_mention_it(
+    hpo: HPO, case: Case
+) -> None:
+    RECEIVED.clear()
+    moves = iter(
+        [
+            first_answer(("Hearing-retina syndrome", "OMIM:690002")),
+            answer(("OMIM:690002", "Hearing-retina syndrome", "my own")),
+        ]
+    )
+    hypothesis(hpo, moves).predict(question_of(case))
+    assert "prevalence" not in str(RECEIVED[1][0].content) + str(RECEIVED[1][1].content)

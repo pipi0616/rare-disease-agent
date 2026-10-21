@@ -85,7 +85,7 @@ class Popularity:
         genes: dict[str, Counter[str]] = defaultdict(Counter)
         labels: dict[str, str] = {}
         for c in pool:
-            papers[c.disease_id].add(c.pmid)
+            papers[c.disease_id].add(c.pmid or c.id)  # an unpublished case: its own report
             labels[c.disease_id] = c.disease_label
             if c.gene:
                 genes[c.disease_id][c.gene] += 1

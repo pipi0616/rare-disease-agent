@@ -150,6 +150,28 @@ def test_masking_can_be_turned_off_to_measure_a_leak(harness: h.Harness, cases: 
     assert run.info.run_name == "peeker (unmasked)" and run.data.params["knowledge_mask"] == "none"
 
 
+def test_a_case_without_a_paper_masks_nothing_and_its_outputs_are_still_read(
+    harness: h.Harness, make_case: Callable[..., Case]
+) -> None:
+    cases = [make_case("1"), make_case("clinic", pmid=None, split="external")]
+    peeker = Peeker()
+    harness.evaluate(peeker, "toy-clinic", "sha-c", cases, {"system": "peeker"})
+    assert peeker.masked == {"1": {"PMID:1"}, "clinic": frozenset()}
+    run_id, _ = harness.evaluate(Leaky(leak=True), "toy-clinic", "sha-c", cases, {"system": "l"})
+    run = harness.client.get_run(run_id).data
+    assert run.metrics["leak/tool_outputs_read"] == 2 and run.metrics["leak/own_paper_shown"] == 1
+
+
+def test_any_omim_entry_a_source_lists_is_the_diagnosis(make_case: Callable[..., Case]) -> None:
+    case = make_case("hms", disease_id="OMIM:106300", also_accepted=["OMIM:183840"], gene=None)
+    expectations = h.record_of(case)["expectations"]
+    assert expectations["also_accepted"] == "OMIM:183840"
+    answer = {"candidates": [{"disease_name": "x", "disease_id": "OMIM:183840"}]}
+    assert checks(answer, expectations)["disease_top1"]
+    assert not checks(answer, {"disease_id": "OMIM:106300"})["disease_top1"]
+    assert "also_accepted" not in h.record_of(make_case("1"))["expectations"]
+
+
 def test_each_cases_verdict_can_be_read_back_for_a_paired_comparison(
     harness: h.Harness, cases: list[Case]
 ) -> None:
