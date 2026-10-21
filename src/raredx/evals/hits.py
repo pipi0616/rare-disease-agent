@@ -18,9 +18,11 @@ Verdicts = dict[int, dict[str, bool]]  # k -> case id -> hit
 
 def answerable(case: Case, hpo: HPO) -> bool:
     """Whether a system reading the masked knowledge could name the diagnosis at all:
-    one of its accepted OMIM entries is a disease in the release, and not one known only
-    from the case's own paper (which the mask makes not exist)."""
-    accepted = [d for d in (case.disease_id, *case.also_accepted) if d in hpo.names]
+    one of its accepted entries names a disease in the knowledge (through disease
+    identity, when the knowledge has it), and not one known only from the case's own
+    paper (which the mask makes not exist)."""
+    named = (hpo.canonical(d) for d in (case.disease_id, *case.also_accepted))
+    accepted = [d for d in named if d is not None]
     hidden = hpo.known_only_from(frozenset({case.pmid})) if case.pmid else set()
     return any(d not in hidden for d in accepted)
 

@@ -109,5 +109,5 @@ def test_the_model_is_asked_for_json_with_reasoning_off(
     assert request["extra_body"] == {"thinking": {"type": "disabled"}}
     assert request["temperature"] == 0.0
     assert system.name == "fixed-pipeline"
-    assert system.params()["prompt_version"] == "pipeline-v1"
+    assert system.params()["prompt_version"] == "pipeline-v2"
     assert (system.params()["pool"], system.params()["shown"]) == ("30", "10")

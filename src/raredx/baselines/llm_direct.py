@@ -22,17 +22,20 @@ from pydantic import BaseModel
 from raredx import llm
 from raredx.evals.systems import Candidate, Question
 
-PROMPT_VERSION = "direct-v1"
+# v2 (chapter 31): a rare disease, not only a Mendelian one; an Orphanet code for a disease
+# with no OMIM entry.
+PROMPT_VERSION = "direct-v2"
 MAX_CANDIDATES = 10
 
 SYSTEM_PROMPT = """\
 You are a clinical geneticist. You will be given the phenotype of a patient with a \
-suspected rare Mendelian disease, as Human Phenotype Ontology (HPO) terms.
+suspected rare disease, as Human Phenotype Ontology (HPO) terms.
 
 List the 10 most likely diagnoses, most likely first. For each, give:
 - disease_name: the name of the disease
-- disease_id: its OMIM phenotype number, written OMIM:nnnnnn (six digits)
-- gene: the HGNC symbol of the causal gene
+- disease_id: its OMIM phenotype number, written OMIM:nnnnnn (six digits); for a disease \
+with no OMIM entry, its Orphanet code, written ORPHA:n
+- gene: the HGNC symbol of the causal gene, if it has one
 
 Answer with a json object only, in exactly this format:
 {"candidates": [{"disease_name": "...", "disease_id": "OMIM:123456", "gene": "ABC1"}]}"""

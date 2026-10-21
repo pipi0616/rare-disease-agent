@@ -2,7 +2,7 @@
 
 The same tools as the fixed pipeline, plus find_disease, and no fixed order.
 The model calls tools in a loop — LangChain's create_agent, built on LangGraph —
-until it gives its final answer: up to ten OMIM diseases, best first, each with
+until it gives its final answer: up to ten diseases, best first, each with
 a reason. Unlike the fixed pipeline it can check a disease the ranking did not
 propose: one it thinks of, found by name.
 
@@ -67,7 +67,7 @@ from raredx.baselines.gene_rank import GeneRank
 from raredx.baselines.llm_direct import user_prompt
 from raredx.baselines.phenotype_rank import candidate
 from raredx.baselines.rank_then_check import RankThenCheck
-from raredx.evals.scoring import normalize_omim
+from raredx.evals.scoring import normalize_disease
 from raredx.evals.systems import Candidate, Question
 from raredx.knowledge.hpo import HPO
 from raredx.tools.check_match import CheckMatch, MatchReport
@@ -76,29 +76,31 @@ from raredx.tools.ids import UnknownDisease
 from raredx.tools.lookup_disease import LookupDisease
 from raredx.tools.rank_diseases import RankDiseases
 
-PROMPT_VERSION = "agent-v3"
-SEEDED_PROMPT_VERSION = "seeded-v1"
-HYPOTHESES_PROMPT_VERSION = "hypotheses-v1"
-HYPOTHESES_PREVALENCE_PROMPT_VERSION = "hypotheses-v2"  # v1, and how common each disease is
+# Each one later (chapter 31): a rare disease, not only a Mendelian one; OMIM or ORPHA ids.
+PROMPT_VERSION = "agent-v4"
+SEEDED_PROMPT_VERSION = "seeded-v2"
+HYPOTHESES_PROMPT_VERSION = "hypotheses-v3"
+HYPOTHESES_PREVALENCE_PROMPT_VERSION = "hypotheses-v4"  # v3, and how common each disease is
 MAX_MODEL_CALLS = 8
 
 _ROLE = """\
 You are a clinical geneticist. Your task is to diagnose a patient with a suspected \
-rare Mendelian disease from their phenotype, given as Human Phenotype Ontology (HPO) \
+rare disease from their phenotype, given as Human Phenotype Ontology (HPO) \
 terms.
 
 Your tools work over the HPO disease annotations:"""
 
 # One line per tool in the system prompt, in the order the tools are given. A run
 # without a tool (an ablation) does not mention it; with the four core tools only, the
-# prompt is exactly the one agent-v3 and seeded-v1 were measured with.
+# prompt is exactly the one agent-v4 and seeded-v2 are measured with.
 GUIDES = {
-    "rank_diseases": "every OMIM disease ranked by how well its phenotype matches. Start here.",
+    "rank_diseases": "every disease (OMIM's, and Orphanet's) ranked by how well its "
+    "phenotype matches. Start here.",
     "check_match": "the patient's findings against one disease: which it explains, which "
     "it does not, which its patients were found not to have, and its frequent features "
     "the patient lacks.",
     "lookup_disease": "one disease's features and their frequencies, inheritance, onset, genes.",
-    "find_disease": "the OMIM id of a disease you have in mind, by name.",
+    "find_disease": "the id (OMIM or ORPHA) of a disease you have in mind, by name.",
     "find_similar_patients": "published patients whose phenotype resembles this one, with "
     "their confirmed diagnoses (from Phenopacket Store, not the HPO annotations). Call it "
     "beside rank_diseases: a disease several similar patients share is a strong candidate, "
@@ -133,7 +135,8 @@ propose, find it by name and check it too. {_WEIGHING}
 Your budget is {MAX_MODEL_CALLS} turns, and the last one is for your answer. A few \
 rounds are usually enough: rank, check the leading candidates (several calls at \
 once), check any you suspect, then answer. When you have enough, give your final \
-answer: up to 10 OMIM diseases, most likely first, each with a one-sentence reason."""
+answer: up to 10 diseases (OMIM or ORPHA ids), most likely first, each with a \
+one-sentence reason."""
 
 _INVESTIGATE_SEEDED = f"""
 
@@ -143,8 +146,8 @@ they cannot do: a disease they may have missed (one you suspect, found by name a
 checked), and a closer look where candidates are close. {_WEIGHING}
 
 Your budget is {MAX_MODEL_CALLS} turns, and the last one is for your answer; answer \
-sooner if the evidence is clear. Give your final answer: up to 10 OMIM diseases, most \
-likely first, each with a one-sentence reason."""
+sooner if the evidence is clear. Give your final answer: up to 10 diseases (OMIM or \
+ORPHA ids), most likely first, each with a one-sentence reason."""
 
 
 _HOW_COMMON = """ Each disease shows how common Orphanet says it is. Where diseases \
@@ -176,8 +179,8 @@ specific, needs another reason.{common} Spend your turns where the lists disagre
 or on a disease neither has. {_WEIGHING}
 
 Your budget is {MAX_MODEL_CALLS} turns, and the last one is for your answer; answer \
-sooner if the evidence is clear. Give your final answer: up to 10 OMIM diseases, most \
-likely first, each with a one-sentence reason."""
+sooner if the evidence is clear. Give your final answer: up to 10 diseases (OMIM or \
+ORPHA ids), most likely first, each with a one-sentence reason."""
 
 
 def system_prompt(
@@ -243,7 +246,7 @@ def merge(first: list[str], tools: list[str]) -> list[str]:
 
 
 class Diagnosis(BaseModel):
-    disease_id: str = Field(description="OMIM id, e.g. OMIM:621101")
+    disease_id: str = Field(description="OMIM or ORPHA id, e.g. OMIM:621101 or ORPHA:81")
     disease_name: str
     reason: str = Field(description="One sentence: the evidence for it, and against")
 
@@ -309,7 +312,7 @@ class Agent:
         """The four core tools, plus any extra ones (each named in GUIDES). `name` is the
         system's name in the evaluation; by default "agent", "seeded-agent" or
         "hypothesis-agent". A hypothesis agent is seeded too, with both lists; given
-        `prevalence` (OMIM id -> Orphanet's class), each disease in them shows it."""
+        `prevalence` (disease id -> Orphanet's class), each disease in them shows it."""
         self.model = model
         self.model_name = model_name
         self.hpo = hpo
@@ -373,7 +376,7 @@ class Agent:
                 "fill": f"first answer and the tools' order, reciprocal rank (k={RRF_K})",
             }
             if self.prevalence is not None:
-                params["prevalence"] = "Orphanet's class, by exact OMIM mapping"
+                params["prevalence"] = "Orphanet's class, by disease identity"
         elif self.seeded:
             params |= {"seed": f"rank-then-check top {SHOWN}", "fill": "the tools' order"}
         for tool in self.extra_tools:
@@ -428,7 +431,8 @@ class Agent:
                 continue
             shown[disease_id] = tag
             head, *rest = self._evidence(question, disease_id)
-            if normalize_omim(guess.disease_id) != disease_id:  # found by name instead
+            written_id = normalize_disease(guess.disease_id)
+            if written_id is None or self.hpo.canonical(written_id) != disease_id:  # by name
                 head += f" (you wrote {written})"
             lines += [f"[{tag}] {head}", *rest]
         if not guesses:
@@ -485,7 +489,9 @@ class Agent:
             raise NoFinalAnswer(f"no final answer within {MAX_MODEL_CALLS} model calls")
         candidates: list[Candidate] = []
         for d in answer.diagnoses:
-            disease_id = normalize_omim(d.disease_id)
+            written_id = normalize_disease(d.disease_id)
+            # An Orphanet code merged into an OMIM disease answers as that disease.
+            disease_id = written_id and (self.hpo.canonical(written_id) or written_id)
             if disease_id is None or any(c.disease_id == disease_id for c in candidates):
                 continue
             genes = self.hpo.genes.get(disease_id, ())

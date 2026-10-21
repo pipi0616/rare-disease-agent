@@ -112,6 +112,20 @@ latest_only = true
 [orphanet-prevalence.files]
 "en_product9_prev.xml" = "6b492b3cc61e5a0327de12f59386a07a071760a938d0bbd8f525bc4a5f71b7f0"
 
+# Which OMIM and Orphanet ids name the same disease: Mondo's exact matches, in its
+# SSSOM mapping file at the release dated like the HPO release. HPO annotates diseases
+# under both ids; the knowledge merges each Orphanet annotation into the OMIM disease
+# Mondo makes it equal to, and the answer keys accept every equivalent id.
+[mondo]
+version = "v2026-09-01"
+url = "https://raw.githubusercontent.com/monarch-initiative/mondo/v2026-09-01/src/ontology/mappings/"
+homepage = "https://mondo.monarchinitiative.org"
+license = "CC BY 4.0; cite Mondo (Vasilevsky et al. 2025) and the version used"
+role = "knowledge: disease identity across OMIM and Orphanet"
+
+[mondo.files]
+"mondo.sssom.tsv" = "317ac4bf93be1deff4406b4d7d18bb730ead3c4f5c7c814f75d24be7f6ef302f"
+
 [medlineplus]
 version = "2026-10-09"
 url = "https://medlineplus.gov/download/"

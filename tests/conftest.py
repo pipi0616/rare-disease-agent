@@ -17,6 +17,7 @@ from langchain_core.outputs import ChatResult
 
 from raredx.data.cases import Case
 from raredx.knowledge import texts
+from raredx.knowledge.diseases import MAPPINGS, Identity
 from raredx.knowledge.hpo import HPO, load
 from raredx.knowledge.text_index import TextIndex
 from raredx.phenotyping.reader import Label, labels
@@ -48,6 +49,20 @@ def hpo() -> HPO:
     test may load the real release.
     """
     return load(FIXTURES / "hpo")
+
+
+@pytest.fixture(scope="session")
+def identity() -> Identity:
+    """A miniature of Mondo's mappings (tests/fixtures/mondo): ORPHA:9001 is OMIM:690001,
+    ORPHA:9004 is OMIM:690004, ORPHA:9002 is OMIM:699998 (which HPO does not annotate)."""
+    return Identity(FIXTURES / "mondo" / MAPPINGS)
+
+
+@pytest.fixture(scope="session")
+def knowledge(identity: Identity) -> HPO:
+    """The miniature release with Orphanet's annotations merged in by disease identity:
+    ORPHA:9001 and ORPHA:9004 into their OMIM diseases, ORPHA:9002 a disease of its own."""
+    return load(FIXTURES / "hpo", identity)
 
 
 @pytest.fixture

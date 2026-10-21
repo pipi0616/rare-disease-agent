@@ -1,0 +1,12 @@
+# curie_map:
+#   MONDO: http://purl.obolibrary.org/obo/MONDO_
+# A miniature of Mondo's SSSOM mappings, for tests
+subject_id	subject_label	predicate_id	object_id	object_label	mapping_justification
+MONDO:9000001	hearing-ovarian syndrome	skos:exactMatch	OMIM:690001	Hearing-ovarian syndrome	semapv:UnspecifiedMatching
+MONDO:9000001	hearing-ovarian syndrome	skos:exactMatch	Orphanet:9001	An Orphanet entry	semapv:UnspecifiedMatching
+MONDO:9000002	an orphanet-only syndrome	skos:exactMatch	Orphanet:9002	An Orphanet-only syndrome	semapv:UnspecifiedMatching
+MONDO:9000002	an orphanet-only syndrome	skos:exactMatch	OMIM:699998	A syndrome HPO does not annotate	semapv:UnspecifiedMatching
+MONDO:9000004	amenorrhea syndrome	skos:exactMatch	OMIM:690004	Amenorrhea known from one paper	semapv:UnspecifiedMatching
+MONDO:9000004	amenorrhea syndrome	skos:exactMatch	Orphanet:9004	Amenorrhea, as Orphanet describes it	semapv:UnspecifiedMatching
+MONDO:9000005	frequency-test syndrome	skos:broadMatch	Orphanet:9005	A broader entry	semapv:UnspecifiedMatching
+MONDO:9000003	seizure disorder	skos:exactMatch	DOID:9003	Seizure disorder	semapv:UnspecifiedMatching

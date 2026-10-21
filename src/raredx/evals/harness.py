@@ -109,21 +109,35 @@ def candidates_of(outputs: Any) -> list[Candidate]:
     return [Candidate.model_validate(c) for c in outputs.get("candidates", [])]
 
 
-@scorer
-def diagnosis(outputs: Any, expectations: dict[str, Any]) -> list[Feedback]:
-    """Code check: is the confirmed disease (and gene) among the top k candidates?"""
-    candidates = candidates_of(outputs)
-    disease_rank, gene_rank = scoring.ranks(
-        candidates,
-        expectations["disease_id"],
-        expectations.get("gene"),
-        expectations.get("also_accepted", "").split(),
-    )
-    feedback = [Feedback(name="answered", value=bool(candidates))]
-    feedback += [Feedback(name=f"disease_top{k}", value=scoring.found(disease_rank, k)) for k in KS]
-    if expectations.get("gene"):
-        feedback += [Feedback(name=f"gene_top{k}", value=scoring.found(gene_rank, k)) for k in KS]
-    return feedback
+def scorer_for(same: scoring.Same | None = None) -> Any:
+    """The diagnosis scorer; with disease identity (`same`), an answer naming any id equal
+    to the confirmed one counts too (ORPHA:117 for OMIM:109650: Behçet disease)."""
+
+    @scorer(name="diagnosis")
+    def diagnosis(outputs: Any, expectations: dict[str, Any]) -> list[Feedback]:
+        """Code check: is the confirmed disease (and gene) among the top k candidates?"""
+        candidates = candidates_of(outputs)
+        disease_rank, gene_rank = scoring.ranks(
+            candidates,
+            expectations["disease_id"],
+            expectations.get("gene"),
+            expectations.get("also_accepted", "").split(),
+            same,
+        )
+        feedback = [Feedback(name="answered", value=bool(candidates))]
+        feedback += [
+            Feedback(name=f"disease_top{k}", value=scoring.found(disease_rank, k)) for k in KS
+        ]
+        if expectations.get("gene"):
+            feedback += [
+                Feedback(name=f"gene_top{k}", value=scoring.found(gene_rank, k)) for k in KS
+            ]
+        return feedback
+
+    return diagnosis
+
+
+diagnosis = scorer_for()  # by the ids as written: what every run before chapter 31 used
 
 
 def summary_of(metrics: dict[str, float], n_cases: int, n_gene: int) -> scoring.Summary:
@@ -158,10 +172,13 @@ def wilson_metrics(summary: scoring.Summary) -> dict[str, float]:
 
 
 class Harness:
-    def __init__(self, tracking_uri: str, artifact_root: Path) -> None:
+    def __init__(
+        self, tracking_uri: str, artifact_root: Path, same: scoring.Same | None = None
+    ) -> None:
         self.tracking_uri = tracking_uri
         self.artifact_root = artifact_root
         self.client = MlflowClient(tracking_uri=tracking_uri)
+        self.scorer = scorer_for(same)  # with identity, equal ids count as the same disease
 
     def _use(self, manifest: str) -> str:
         """Point MLflow at this store and the manifest's experiment; returns its id."""
@@ -247,7 +264,7 @@ class Harness:
         with mlflow.start_run(run_name=run_name) as run:
             mlflow.log_params({**params, "knowledge_mask": mask})
             started = time.monotonic()
-            result = mlflow.genai.evaluate(data=data, predict_fn=predict, scorers=[diagnosis])
+            result = mlflow.genai.evaluate(data=data, predict_fn=predict, scorers=[self.scorer])
             mlflow.log_metric("usage/wall_seconds", round(time.monotonic() - started, 1))
             self._check_complete(run.info.run_id, expected=len(cases))
             api_errors, first = self.model_api_errors(run.info.run_id)
@@ -388,7 +405,7 @@ class Harness:
         n_gene = sum(any(a.name == "gene" for a in t.info.assessments) for t in traces)
         with mlflow.start_run(run_name=f"{params['system']} (rescored)") as run:
             mlflow.log_params({**params, "rescored_from": run_id})
-            result = mlflow.genai.evaluate(data=traces, scorers=[diagnosis])
+            result = mlflow.genai.evaluate(data=traces, scorers=[self.scorer])
             summary = summary_of(result.metrics, len(traces), n_gene)
             mlflow.log_metrics(wilson_metrics(summary))
         return str(run.info.run_id), summary, params

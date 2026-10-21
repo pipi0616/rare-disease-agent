@@ -32,6 +32,8 @@ from typing import Any, Literal, NamedTuple
 
 from pyhpo import BasicHPOSet, Ontology
 
+from raredx.knowledge.diseases import Identity
+
 ANNOTATIONS = "phenotype.hpoa"
 ONTOLOGY = "hp.obo"
 PHENOTYPE_ROOT = "HP:0000118"  # Phenotypic abnormality: every finding is below it
@@ -66,15 +68,16 @@ def _loaded_release() -> str | None:
         return None
 
 
-def load(folder: Path) -> "HPO":
-    """The release in folder, loaded into this process if it is not already."""
+def load(folder: Path, identity: Identity | None = None) -> "HPO":
+    """The release in folder, loaded into this process if it is not already; with
+    disease identity, Orphanet's annotations merged in (HPO)."""
     release = release_of(folder)
     loaded = _loaded_release()
     if loaded is None:
         Ontology(str(folder))
     elif loaded != release:
         raise WrongRelease(f"HPO {loaded} is loaded in this process; cannot also load {release}")
-    return HPO(folder, release)
+    return HPO(folder, release, identity)
 
 
 # ── frequencies ─────────────────────────────────────────────────────
@@ -146,6 +149,7 @@ class Line(NamedTuple):
     term: str
     refs: frozenset[str]  # the sources it was curated from
     frequency: str  # as written
+    catalogue: str = "OMIM"  # whose disease entry it annotates: OMIM or ORPHA
 
 
 class Feature(NamedTuple):
@@ -164,18 +168,22 @@ def _rows(path: Path) -> Iterator[dict[str, str]]:
         yield from csv.DictReader((line for line in f if not line.startswith("#")), delimiter="\t")
 
 
-def _annotations(path: Path) -> tuple[dict[str, list[Line]], dict[str, str]]:
+def _annotations(
+    path: Path, catalogues: tuple[str, ...] = ("OMIM",)
+) -> tuple[dict[str, list[Line]], dict[str, str]]:
     lines: dict[str, list[Line]] = defaultdict(list)
     names: dict[str, str] = {}
     for row in _rows(path):
         disease = row["database_id"]
-        if not disease.startswith("OMIM:"):
+        catalogue = disease.partition(":")[0]
+        if catalogue not in catalogues:
             continue
         names[disease] = row["disease_name"]
         if row["qualifier"] == "NOT":
             continue
         refs = frozenset(r.strip() for r in row["reference"].split(";") if r.strip())
-        lines[disease].append(Line(row["aspect"], row["hpo_id"], refs, row["frequency"].strip()))
+        frequency = row["frequency"].strip()
+        lines[disease].append(Line(row["aspect"], row["hpo_id"], refs, frequency, catalogue))
     return lines, names
 
 
@@ -196,13 +204,33 @@ def _genes(path: Path) -> dict[str, tuple[str, ...]]:
 
 
 class HPO:
-    """One HPO release: every OMIM disease's annotations, name and genes."""
+    """One HPO release: every OMIM disease's annotations, name and genes; given disease
+    identity (Mondo), Orphanet's annotations too.
 
-    def __init__(self, folder: Path, release: str) -> None:
+    With identity, each Orphanet entry Mondo makes equal to exactly one OMIM disease is
+    merged into it: its lines join the OMIM disease's, under the OMIM id and name, and
+    its ORPHA id becomes an alias (Behçet disease: OMIM:109650's 15 features and
+    ORPHA:117's 85, as one disease). An Orphanet entry with no such OMIM disease is a
+    disease of its own, under its ORPHA id (antisynthetase syndrome, ORPHA:81).
+    """
+
+    def __init__(self, folder: Path, release: str, identity: Identity | None = None) -> None:
         self.release = release
+        self.identity = identity
         self._ontology_file = folder / ONTOLOGY
         self._annotations_file = folder / ANNOTATIONS
-        self._lines, self.names = _annotations(self._annotations_file)
+        catalogues = ("OMIM", "ORPHA") if identity else ("OMIM",)
+        self._lines, self.names = _annotations(self._annotations_file, catalogues)
+        self.aliases: dict[str, str] = {}  # an Orphanet entry merged -> its OMIM disease
+        if identity:
+            for orpha in sorted(d for d in self.names if d.startswith("ORPHA:")):
+                equal = [
+                    d for d in identity.same(orpha) if d.startswith("OMIM:") and d in self.names
+                ]
+                if len(equal) == 1:
+                    self._lines[equal[0]] += self._lines.pop(orpha, [])
+                    del self.names[orpha]
+                    self.aliases[orpha] = equal[0]
         self.genes = _genes(folder / GENES)
         # Each gene's diseases, those with phenotype annotations only: the others have no
         # name or profile here, so nothing can be said or scored about them.
@@ -223,7 +251,27 @@ class HPO:
                     self._citing[ref].add(disease)
 
     def __repr__(self) -> str:  # how the release appears in a trace
-        return f"HPO({self.release}, {len(self.disease_ids)} OMIM diseases)"
+        if self.identity is None:
+            return f"HPO({self.release}, {len(self.disease_ids)} OMIM diseases)"
+        orpha = sum(d.startswith("ORPHA:") for d in self.disease_ids)
+        return (
+            f"HPO({self.release}, {len(self.disease_ids) - orpha} OMIM diseases with "
+            f"{len(self.aliases)} Orphanet entries merged in, {orpha} Orphanet diseases)"
+        )
+
+    def canonical(self, disease: str) -> str | None:
+        """The disease here an OMIM or ORPHA id names: itself; the OMIM disease an
+        Orphanet entry was merged into; or the disease here Mondo makes it equal to
+        (OMIM first). None when none is here."""
+        if disease in self.names:
+            return disease
+        if disease in self.aliases:
+            return self.aliases[disease]
+        if self.identity is not None:
+            here = sorted(d for d in self.identity.same(disease) if d in self.names)
+            if here:
+                return here[0]
+        return None
 
     def lines(self, disease: str, aspect: str, masked: frozenset[str] = frozenset()) -> list[Line]:
         """The disease's annotation lines of one aspect, without those resting only on
@@ -259,22 +307,32 @@ class HPO:
     def known_only_from(self, masked: frozenset[str]) -> set[str]:
         """Diseases citing a masked source with no observed feature left once it is
         masked: what HPO knows of them comes from the masked papers alone. Any other
-        description of such a disease likely rests on the same papers."""
+        description of such a disease likely rests on the same papers.
+
+        Only the OMIM annotation is weighed: Orphanet's cites no paper (its references
+        are its own entries), so it cannot be masked, and its description of a disease
+        known from one paper likely rests on that paper too. Such a disease is hidden
+        whole, the Orphanet lines merged into it with it."""
         affected: set[str] = set()
         for ref in masked:
             affected |= self._citing.get(ref, set())
         return {
             disease
             for disease in affected
-            if not any(not absent(line.frequency) for line in self.lines(disease, "P", masked))
+            if not any(
+                not absent(line.frequency) and line.catalogue == "OMIM"
+                for line in self.lines(disease, "P", masked)
+            )
         }
 
     def write_annotations(self, target: Path, masked: frozenset[str] = frozenset()) -> None:
         """The release's phenotype.hpoa, for another program to read under the same mask:
         without the lines resting only on masked sources, and without any line of a
         disease known only from them — to that program too, such a disease does not
-        exist. With nothing masked, the file as published."""
+        exist; nor of an Orphanet entry merged into one (known_only_from). With nothing
+        masked, the file as published."""
         hidden = self.known_only_from(masked)
+        hidden |= {orpha for orpha, omim in self.aliases.items() if omim in hidden}
         with self._annotations_file.open(newline="") as source, target.open("w", newline="") as out:
             for line in source:
                 if masked and not line.startswith("#"):

@@ -130,7 +130,7 @@ def test_the_tools_reach_the_model_with_their_own_schemas(hpo: HPO) -> None:
     assert arguments["hpo_ids"]["items"]["pattern"] == r"^HP:\d{7}$"
     params = agent(hpo, iter([])).params()
     assert params["tools"] == "rank_diseases, check_match, lookup_disease, find_disease"
-    assert (params["prompt_version"], params["max_model_calls"]) == ("agent-v3", MAX_MODEL_CALLS)
+    assert (params["prompt_version"], params["max_model_calls"]) == ("agent-v4", MAX_MODEL_CALLS)
 
 
 def seeded(hpo: HPO, moves: Iterator[AIMessage]) -> Agent:
@@ -170,7 +170,7 @@ def test_the_plain_agent_does_not_fill(hpo: HPO, case: Case) -> None:
 def test_the_seeded_agent_records_its_seed_and_fill(hpo: HPO) -> None:
     system = seeded(hpo, iter([]))
     params = system.params()
-    assert system.name == "seeded-agent" and params["prompt_version"] == "seeded-v1"
+    assert system.name == "seeded-agent" and params["prompt_version"] == "seeded-v2"
     assert (params["seed"], params["fill"]) == ("rank-then-check top 10", "the tools' order")
 
 
@@ -427,7 +427,7 @@ def test_merging_puts_first_what_both_lists_rank_and_then_takes_turns() -> None:
 def test_the_hypothesis_agent_records_its_first_answer_seed_and_fill(hpo: HPO) -> None:
     system = hypothesis(hpo, iter([]))
     params = system.params()
-    assert system.name == "hypothesis-agent" and params["prompt_version"] == "hypotheses-v1"
+    assert system.name == "hypothesis-agent" and params["prompt_version"] == "hypotheses-v3"
     assert params["first_answer"].startswith(llm_direct.PROMPT_VERSION)
     assert "reciprocal rank" in params["fill"]
 
@@ -458,7 +458,7 @@ def test_given_prevalence_each_disease_shows_how_common_it_is(hpo: HPO, case: Ca
     head = next(line for line in first.splitlines() if line.startswith("[H1]"))
     assert head.endswith("· prevalence 1-5 / 10 000 (Orphanet)")
     assert "· prevalence unknown (Orphanet)" in first  # the tools' others, not classed
-    assert system.params()["prompt_version"] == "hypotheses-v2"
+    assert system.params()["prompt_version"] == "hypotheses-v4"
 
 
 def test_without_prevalence_neither_the_prompt_nor_the_lists_mention_it(

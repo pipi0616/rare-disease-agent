@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field, validate_call
 
 from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO, Feature, Relation
-from raredx.tools.ids import HpoId, OmimId, require_disease
+from raredx.tools.ids import DiseaseId, HpoId, require_disease
 
 MISSING_FROM = 0.5  # a feature counts as missing when at least this share of patients have it
 MAX_MISSING = 10
@@ -90,7 +90,7 @@ class CheckMatch:
             Field(min_length=1, description="The patient's phenotype as HPO term ids"),
         ],
         disease_id: Annotated[
-            OmimId, Field(description="An OMIM disease id as rank_diseases returns it")
+            DiseaseId, Field(description="A disease id (OMIM or ORPHA) as rank_diseases returns it")
         ],
     ) -> MatchReport:
         """Compare the patient's findings with one disease: which it explains, which it
@@ -99,7 +99,7 @@ class CheckMatch:
 
         Use it to weigh a candidate from rank_diseases against the patient.
         """
-        require_disease(self.hpo, disease_id)
+        disease_id = require_disease(self.hpo, disease_id)
         patient, unrecognized = self.hpo.patient(hpo_ids)
         findings = [self._finding(str(term.id)) for term in patient]
         features = self.hpo.features(disease_id, masking.current())
