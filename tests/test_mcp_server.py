@@ -48,7 +48,7 @@ async def test_a_host_finds_four_read_only_tools_described_for_a_model(client: C
     assert all(t.annotations and t.annotations.read_only_hint for t in tools.values())
     rank = tools["rank_diseases"]
     assert rank.title == "Rank diseases by phenotype"
-    assert (rank.description or "").startswith("Rank every OMIM disease")
+    assert (rank.description or "").startswith("Rank every disease")
     assert rank.annotations is not None
     assert rank.annotations.read_only_hint is True and rank.annotations.open_world_hint is False
     # The input schema comes from the tool's signature: names, descriptions, limits.

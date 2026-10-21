@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from openai import OpenAI
 
     from raredx.evals.harness import Harness
+    from raredx.knowledge.diseases import Identity
     from raredx.knowledge.hpo import HPO
     from raredx.llm import Budget
     from raredx.phenotyping.reader import NoteReader, Reader
@@ -371,15 +372,31 @@ SYSTEMS = (
 )
 
 
+def _mondo_version(evals_dir: Path) -> str:
+    return sources.load_sources(evals_dir / "datasets.toml")["mondo"].version
+
+
+@functools.cache
+def _identity(evals_dir: Path, data_dir: Path) -> "Identity":
+    """Disease identity across OMIM and Orphanet: the pinned Mondo mappings."""
+    from raredx.knowledge.diseases import MAPPINGS, Identity
+
+    folder = sources.raw_dir(sources.load_sources(evals_dir / "datasets.toml")["mondo"], data_dir)
+    if not (folder / MAPPINGS).exists():
+        _fail(f"{folder} has no Mondo mappings — run `raredx data fetch mondo` first")
+    return Identity(folder / MAPPINGS)
+
+
 @functools.cache  # one release per process (hpo3 holds one ontology); load it once
 def _knowledge(evals_dir: Path, data_dir: Path) -> "HPO":
-    """The pinned HPO release, loaded; a clear message if it was never fetched."""
+    """The pinned HPO release, loaded with Orphanet's annotations merged in by disease
+    identity (chapter 31); a clear message if it was never fetched."""
     from raredx.knowledge import hpo
 
     folder = sources.raw_dir(sources.load_sources(evals_dir / "datasets.toml")["hpo"], data_dir)
     if not (folder / "hp.obo").exists():
         _fail(f"{folder} has no HPO release — run `raredx data fetch hpo` first")
-    return hpo.load(folder)
+    return hpo.load(folder, _identity(evals_dir, data_dir))
 
 
 def _ranker(evals_dir: Path, data_dir: Path, similarity: str | None) -> "RankDiseases":
@@ -458,10 +475,12 @@ def _orphanet_prevalence_files(evals_dir: Path, data_dir: Path) -> tuple[Path, P
 
 
 def _prevalence(evals_dir: Path, data_dir: Path) -> dict[str, str]:
-    """Each OMIM disease's Orphanet prevalence class, for the hypothesis agent."""
+    """Each disease's Orphanet prevalence class (OMIM ids through disease identity), for
+    the hypothesis agent."""
     from raredx.knowledge import prevalence
 
-    return prevalence.omim_classes(*_orphanet_prevalence_files(evals_dir, data_dir))
+    files = _orphanet_prevalence_files(evals_dir, data_dir)
+    return prevalence.disease_classes(*files, _identity(evals_dir, data_dir).same)
 
 
 def _deeprare_queries(data_dir: Path) -> Path:
@@ -671,10 +690,13 @@ def _hidden_of(evals_dir: Path, data_dir: Path) -> "Callable[[str], set[str]] | 
     return lambda pmid: knowledge.known_only_from(frozenset({pmid}))
 
 
-def _harness() -> "Harness":
+def _harness(identity: "Identity | None" = None) -> "Harness":
+    """The evaluation harness; given disease identity, its scorer counts an answer naming
+    any id equal to the confirmed one (it scores; reading recorded runs needs none)."""
     from raredx.evals.harness import Harness  # imported here: mlflow is slow to load
 
-    return Harness(settings.mlflow_tracking_uri, settings.mlflow_artifact_root)
+    same = identity.same if identity is not None else None
+    return Harness(settings.mlflow_tracking_uri, settings.mlflow_artifact_root, same)
 
 
 def _manifest(evals_dir: Path, split: str) -> Path:
@@ -792,6 +814,8 @@ def run_system(
         "dataset": f"{build['source']} {build['version']}",
         "dataset_sha256": build["raw_sha256"],
         "code": code_version(),
+        # Scored by ids, any id Mondo makes equal to the confirmed one counting (chapter 31).
+        "disease_identity": f"mondo {_mondo_version(evals_dir)}",
     }
     system_params = getattr(chosen, "params", None)
     if callable(system_params):  # e.g. the model, thinking mode and prompt version
@@ -816,7 +840,7 @@ def run_system(
         params |= {"label": label, "track": "phenotype+genes", "candidates": candidates.SPEC}
     from raredx.evals.harness import IncompleteRun
 
-    harness = _harness()
+    harness = _harness(_identity(evals_dir, data_dir))
     try:
         run_id, summary = harness.evaluate(
             chosen,
@@ -888,10 +912,12 @@ def run_system(
 @eval_app.command("score")
 def score_run(
     run_id: Annotated[str, typer.Argument(help="An MLflow run id, from `raredx eval runs`.")],
+    data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
-    """Score a recorded run again from its traces, as a new run. Nothing is re-asked."""
-    harness = _harness()
+    """Score a recorded run again from its traces, as a new run. Nothing is re-asked.
+    Scored as runs are scored now: any id Mondo makes equal to the confirmed one counts."""
+    harness = _harness(_identity(evals_dir, data_dir))
     params = dict(harness.client.get_run(run_id).data.params)
     manifest = _manifest(evals_dir, params["manifest"])
     from raredx.evals.harness import IncompleteRun, ManifestMismatch
@@ -903,6 +929,7 @@ def score_run(
         new_id, summary, _ = harness.rescore(run_id, sources.sha256_of(manifest), expected)
     except (ManifestMismatch, IncompleteRun) as e:
         _fail(str(e))
+    harness.client.log_param(new_id, "disease_identity", f"mondo {_mondo_version(evals_dir)}")
     typer.echo(scoring.render(summary, f"{params['system']} · {params['manifest']} · rescored"))
     label = params.get("label", params["manifest"])
     typer.echo(f"recorded in MLflow: experiment eval/{label}, run {new_id}")
@@ -1100,7 +1127,8 @@ def calibrate(
     _, release = _processed(data_dir, evals_dir)
     ranker = _ranker(evals_dir, data_dir, None)
     patients = SimilarPatientsRank(_patient_bank(release, evals_dir, data_dir))
-    bands = prevalence.omim_bands(*_orphanet_prevalence_files(evals_dir, data_dir))
+    files = _orphanet_prevalence_files(evals_dir, data_dir)
+    bands = prevalence.disease_bands(*files, _identity(evals_dir, data_dir).same)
     pool = Pool(ranker, CheckMatch(ranker.hpo), patients, bands)
     rows: list[Row] = []
     mlflow.tracing.disable()  # tens of thousands of tool calls, none of them an evaluation's
@@ -1110,7 +1138,7 @@ def calibrate(
                 agent = [
                     d
                     for c in answers["v1.1"][case.id]
-                    if (d := scoring.normalize_omim(c.disease_id))
+                    if (d := scoring.normalize_disease(c.disease_id))
                 ]
                 rows += pool.rows(split, case, answers["model"][case.id], {"v1.1": agent})
     finally:
@@ -1233,6 +1261,48 @@ def lenient_judge(
             f"{system:<12} top-1 {top[1] / len(rows):6.1%}   top-5 {top[5] / len(rows):6.1%}"
         )
     typer.echo(f"ok  {out}  ({len(rows)} cases; about ${budget.spent:.4f} at peak price)")
+
+
+@eval_app.command("coverage")
+def coverage(
+    split: Annotated[list[str], typer.Option(help="A manifest whose cases to count; repeatable.")],
+    show: Annotated[
+        int, typer.Option(help="List up to this many cases that one version alone can answer.")
+    ] = 10,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """How many cases a system could answer at all, with Orphanet's annotations and without:
+    the confirmed diagnosis names a disease in the knowledge that the case's mask does not
+    hide. A case answerable only with Orphanet is listed: its own paper may be behind
+    Orphanet's entry too (chapter 31's leak check). No model is called."""
+    from raredx.evals import hits
+    from raredx.knowledge import hpo
+
+    tests = [s for s in split if s.startswith("heldout") or s == splits.TEMPORAL]
+    if tests:
+        _fail(f"{', '.join(tests)}: a test set is not looked into while developing")
+    with_orphanet = _knowledge(evals_dir, data_dir)
+    folder = sources.raw_dir(sources.load_sources(evals_dir / "datasets.toml")["hpo"], data_dir)
+    omim_only = hpo.load(folder)  # the same release; only which annotations are read differs
+    typer.echo(f"{'cases answerable':<24}{'cases':>7}{'OMIM only':>11}{'+ Orphanet':>12}")
+    for name in split:
+        _, pool = _processed(data_dir, evals_dir, splits.EXTERNAL.get(name, DATASET))
+        by_id = {c.id: c for c in pool}
+        cases = [by_id[case_id] for case_id, _ in splits.read(_manifest(evals_dir, name))]
+        before = {c.id for c in cases if hits.answerable(c, omim_only)}
+        after = {c.id for c in cases if hits.answerable(c, with_orphanet)}
+        typer.echo(f"{name:<24}{len(cases):>7}{len(before):>11}{len(after):>12}")
+        for sign, ids in (("+", after - before), ("-", before - after)):
+            listed = [c for c in cases if c.id in ids]
+            for case in listed[:show]:
+                here = with_orphanet.canonical(case.disease_id) or "-"
+                typer.echo(
+                    f"   {sign} {case.id:<34}{case.disease_id:<13}{here:<13}"
+                    f"{case.disease_label[:44]}"
+                )
+            if len(listed) > show:
+                typer.echo(f"   {sign} … and {len(listed) - show} more")
 
 
 @eval_app.command("runs")

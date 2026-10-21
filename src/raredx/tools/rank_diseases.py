@@ -1,6 +1,7 @@
 """T2 · rank diseases by phenotype: the traditional method, as a tool.
 
-Every OMIM disease in the HPO release is scored by how closely its annotated
+Every disease in the knowledge — OMIM's, and with disease identity Orphanet's,
+merged into them or of their own — is scored by how closely its annotated
 phenotype matches the patient's, and the best are returned. The score follows
 the standard approach of phenotype-driven diagnosis (Phenomizer; Köhler et
 al., 2009), computed by hpo3:
@@ -34,7 +35,7 @@ METHOD, COMBINE = "resnik", "funSimAvg"  # the default; see above for why
 
 
 class Match(BaseModel):
-    disease_id: str = Field(description="OMIM id, e.g. OMIM:619340")
+    disease_id: str = Field(description="OMIM or ORPHA id, e.g. OMIM:619340 or ORPHA:81")
     disease_name: str
     genes: list[str] = Field(description="Genes known to cause it (Mendelian), if any")
     score: float = Field(description="Phenotype similarity; compare within one ranking only")
@@ -72,7 +73,7 @@ class RankDiseases:
         ],
         top_k: Annotated[int, Field(ge=1, le=50, description="How many diseases to return")] = 10,
     ) -> Ranking:
-        """Rank every OMIM disease by how well its known phenotype matches the patient's.
+        """Rank every disease by how well its known phenotype matches the patient's.
 
         Use it on the patient's HPO terms to get candidate diagnoses. It knows only
         what HPO has annotated: a disease with few annotations ranks low whatever

@@ -4,7 +4,7 @@ A model remembers diseases by name; it often gets their OMIM numbers wrong.
 This tool closes that gap, so an agent can check a disease it suspects itself,
 not only those rank_diseases proposed. Names are matched fuzzily (rapidfuzz's
 WRatio: word order, partial names and punctuation are forgiven), against every
-OMIM disease in the HPO release.
+disease in the knowledge: OMIM's, and Orphanet's of their own.
 
 A disease described only in a masked paper is not found: its very name comes
 from that paper (in evaluation, the case's own).
@@ -17,7 +17,7 @@ from mlflow.entities import SpanType
 from pydantic import BaseModel, Field, validate_call
 from rapidfuzz import fuzz, process, utils
 
-from raredx.evals.scoring import normalize_omim
+from raredx.evals.scoring import normalize_disease
 from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
 
@@ -55,7 +55,7 @@ class FindDisease:
         ],
         limit: Annotated[int, Field(ge=1, le=20, description="How many names to return")] = 5,
     ) -> Found:
-        """Find OMIM diseases by name, to get the id of a disease you have in mind.
+        """Find diseases by name, to get the id (OMIM or ORPHA) of a disease you have in mind.
 
         Use it before check_match or lookup_disease on a disease rank_diseases did not
         propose. Several close matches can come back (numbered subtypes, say); read
@@ -76,13 +76,15 @@ class FindDisease:
 
 
 def resolve(written_id: str | None, name: str, find: FindDisease) -> str | None:
-    """The HPO disease a model's guess means: the id it wrote, when HPO knows it; else
-    the disease of the closest name, when close (NAME_MATCH); else none. A disease the
-    mask hides is unknown, as everywhere."""
+    """The disease a model's guess means: the one the id it wrote names here (an
+    Orphanet code merged into an OMIM disease names that disease); else the disease of
+    the closest name, when close (NAME_MATCH); else none. A disease the mask hides is
+    unknown, as everywhere."""
     hpo = find.hpo
-    written = normalize_omim(written_id)
-    if written in hpo.names and written not in hpo.known_only_from(masking.current()):
-        return written
+    written = normalize_disease(written_id)
+    here = hpo.canonical(written) if written else None
+    if here and here not in hpo.known_only_from(masking.current()):
+        return here
     name = name.strip()
     found = find(name, limit=1).matches if len(name) >= 3 else []
     if found and found[0].similarity >= NAME_MATCH:

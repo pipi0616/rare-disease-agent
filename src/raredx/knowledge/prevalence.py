@@ -16,6 +16,7 @@ disease is never made rarer than Orphanet says.
 
 import xml.etree.ElementTree as ET
 from collections import defaultdict
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Literal
 
@@ -99,3 +100,31 @@ def omim_classes(prevalence: Path, disorders: Path) -> dict[str, str]:
 def omim_bands(prevalence: Path, disorders: Path) -> dict[str, Band]:
     """Each OMIM disease's band; a disease absent here is of unknown prevalence."""
     return {omim: _BAND_OF_CLASS[cls] for omim, cls in omim_classes(prevalence, disorders).items()}
+
+
+def disease_classes(
+    prevalence: Path, disorders: Path, same: Callable[[str], Iterable[str]]
+) -> dict[str, str]:
+    """Each disease's class, by its ORPHA code or its OMIM id. An OMIM disease takes the
+    classes of the Orphanet disorders mapped to it exactly, by Orphanet or by disease
+    identity (Mondo: systemic lupus erythematosus, OMIM:152700, is ORPHA:536, which
+    Orphanet maps only to two susceptibility loci); if those disagree, the most common."""
+    of_orpha = classes(prevalence)
+    found: dict[str, set[str]] = defaultdict(set)
+    for omim, orphas in omim_mapping(disorders).items():
+        found[omim] |= {of_orpha[o] for o in orphas if o in of_orpha}
+    for orpha, cls in of_orpha.items():
+        for disease in same(orpha):
+            if disease.startswith("OMIM:"):
+                found[disease].add(cls)
+    by_omim = {omim: min(cls, key=CLASSES.index) for omim, cls in found.items() if cls}
+    return by_omim | of_orpha
+
+
+def disease_bands(
+    prevalence: Path, disorders: Path, same: Callable[[str], Iterable[str]]
+) -> dict[str, Band]:
+    """Each disease's band, by its ORPHA code or its OMIM id (disease_classes)."""
+    return {
+        d: _BAND_OF_CLASS[cls] for d, cls in disease_classes(prevalence, disorders, same).items()
+    }

@@ -49,3 +49,15 @@ def test_a_run_and_its_fill_ins_make_one_column() -> None:
     assert merged[1] == {"a": True, "b": True, "c": False} and lost == {"c"}
     merged, lost = hits.combine([first, again, last])
     assert merged[1] == {"a": True, "b": True, "c": True} and lost == set()
+
+
+def test_with_identity_an_orphanet_diagnosis_is_answerable_through_its_disease(
+    knowledge: HPO, make_case: Callable[..., Case]
+) -> None:
+    merged = make_case("e", disease_id="ORPHA:9001", pmid=None, split="external")
+    assert hits.answerable(merged, knowledge)  # merged into OMIM:690001
+    own = make_case("f", disease_id="ORPHA:9002", pmid=None, split="external")
+    assert hits.answerable(own, knowledge)
+    # hidden with its OMIM disease when that is known only from the case's own paper
+    hidden = make_case("g", disease_id="ORPHA:9004", pmid="PMID:1004")
+    assert not hits.answerable(hidden, knowledge)

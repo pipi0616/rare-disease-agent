@@ -94,7 +94,7 @@ def test_the_agent_answers_with_evidence_and_an_account_of_its_steps(
     assert result.steps[2].detail == "explains 1 of 2 findings"
     assert result.usage.model_calls == 2
     assert result.system.model_available and result.system.agent is not None
-    assert result.system.agent["prompt_version"] == "seeded-v1"
+    assert result.system.agent["prompt_version"] == "seeded-v2"
 
 
 def test_without_a_model_the_tools_ranking_answers_and_says_so(

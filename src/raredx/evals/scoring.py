@@ -2,9 +2,11 @@
 
 The rules are fixed before any model is run:
 
-- A disease is found when a candidate's OMIM number equals the case's. Names
-  are not compared: one disease has many spellings. Where a source lists several
-  OMIM entries for one patient, any of them is found (Case.also_accepted).
+- A disease is found when a candidate's id equals the case's: an OMIM number or
+  an Orphanet code (ORPHA). Names are not compared: one disease has many
+  spellings. Where a source lists several entries for one patient, any of them is
+  found (Case.also_accepted); with disease identity (Mondo), so is any id it
+  makes equal to one of them (OMIM:109650 and ORPHA:117 are both Behçet disease).
 - A gene is found when a candidate names the causal gene, ignoring case. Cases
   without a causal gene are left out of the gene numbers.
 - The rank is the candidate's position in the answer, best first.
@@ -17,6 +19,7 @@ difference between two runs is noise.
 
 import math
 import re
+from collections.abc import Callable, Iterable
 
 from pydantic import BaseModel
 
@@ -26,10 +29,20 @@ from raredx.evals.systems import Candidate
 KS = (1, 3, 5, 10)
 
 
-def normalize_omim(value: str | None) -> str | None:
-    """'OMIM:621101', 'MIM 621101', '621101' -> 'OMIM:621101'; anything else -> None."""
+_ORPHA = re.compile(r"^\s*orpha(?:net)?\s*[:_ ]?\s*(\d+)\s*$", re.IGNORECASE)
+
+
+def normalize_disease(value: str | None) -> str | None:
+    """'ORPHA:117', 'Orphanet:117' -> 'ORPHA:117'; 'OMIM:621101', 'MIM 621101',
+    '621101' -> 'OMIM:621101'; anything else -> None."""
+    orpha = _ORPHA.match(value or "")
+    if orpha:
+        return f"ORPHA:{orpha.group(1)}"
     match = re.search(r"(?<!\d)(\d{6})(?!\d)", value or "")
     return f"OMIM:{match.group(1)}" if match else None
+
+
+Same = Callable[[str], Iterable[str]]  # every id naming the same disease as this one
 
 
 class CaseScore(BaseModel):
@@ -40,16 +53,25 @@ class CaseScore(BaseModel):
     gene_rank: int | None
 
 
+def accepted_ids(
+    disease_id: str, also_accepted: list[str] | None = None, same: Same | None = None
+) -> set[str]:
+    """Every id that counts as the diagnosis: the case's, and with identity their equals."""
+    listed = {disease_id, *(also_accepted or [])}
+    return listed | {e for d in listed for e in same(d)} if same else listed
+
+
 def ranks(
     candidates: list[Candidate],
     disease_id: str,
     gene: str | None,
     also_accepted: list[str] | None = None,
+    same: Same | None = None,
 ) -> tuple[int | None, int | None]:
     """Where the confirmed disease and gene first appear in an answer (1 = top); None = absent."""
-    accepted = {disease_id, *(also_accepted or [])}
+    accepted = accepted_ids(disease_id, also_accepted, same)
     disease_rank = next(
-        (i for i, c in enumerate(candidates, 1) if normalize_omim(c.disease_id) in accepted),
+        (i for i, c in enumerate(candidates, 1) if normalize_disease(c.disease_id) in accepted),
         None,
     )
     gene_rank = None

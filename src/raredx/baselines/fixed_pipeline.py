@@ -27,18 +27,19 @@ from pydantic import BaseModel
 from raredx import llm
 from raredx.baselines.phenotype_rank import candidate
 from raredx.baselines.rank_then_check import RankThenCheck
-from raredx.evals.scoring import normalize_omim
+from raredx.evals.scoring import normalize_disease
 from raredx.evals.systems import Candidate, Question
 from raredx.tools.check_match import CheckMatch, MatchReport
 from raredx.tools.lookup_disease import DiseaseProfile, LookupDisease
 from raredx.tools.rank_diseases import RankDiseases
 
-PROMPT_VERSION = "pipeline-v1"
+# v2 (chapter 31): a rare disease, not only a Mendelian one; candidates may be Orphanet entries.
+PROMPT_VERSION = "pipeline-v2"
 SHOWN = 10
 
 SYSTEM_PROMPT = """\
 You are a clinical geneticist. You will be given the phenotype of a patient with a \
-suspected rare Mendelian disease, and up to 10 candidate diseases proposed by \
+suspected rare disease, and up to 10 candidate diseases proposed by \
 phenotype-matching tools. Each candidate comes with evidence from the Human Phenotype \
 Ontology (HPO) annotations: which of the patient's findings the disease explains and \
 how often its patients show them, which findings it does not explain, findings its \
@@ -52,7 +53,7 @@ count against it; inheritance and onset should fit the patient. Rank only the \
 candidates given, each once.
 
 Answer with a json object only, in exactly this format:
-{"ranking": [{"disease_id": "OMIM:123456", "reason": "one sentence"}]}"""
+{"ranking": [{"disease_id": "the id as given, e.g. OMIM:123456", "reason": "one sentence"}]}"""
 
 
 def evidence(report: MatchReport, profile: DiseaseProfile) -> list[str]:
@@ -113,7 +114,7 @@ def parse(content: str | None, candidate_ids: list[str]) -> list[tuple[str, str]
     ranking = ModelRanking.model_validate(json.loads(content or "")).ranking
     ordered: dict[str, str] = {}
     for item in ranking:
-        disease_id = normalize_omim(item.disease_id)
+        disease_id = normalize_disease(item.disease_id)
         if disease_id is not None and disease_id in candidate_ids and disease_id not in ordered:
             ordered[disease_id] = item.reason
     if not ordered:

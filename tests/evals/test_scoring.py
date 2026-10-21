@@ -16,12 +16,17 @@ PERRAULT_7 = Candidate(disease_name="Perrault syndrome 7", disease_id="OMIM:6211
     "raw", ["OMIM:621101", "MIM:621101", "OMIM 621101", "621101", " omim:621101 "]
 )
 def test_omim_numbers_are_recognised_however_written(raw: str) -> None:
-    assert scoring.normalize_omim(raw) == "OMIM:621101"
+    assert scoring.normalize_disease(raw) == "OMIM:621101"
 
 
-@pytest.mark.parametrize("raw", [None, "", "Perrault syndrome", "OMIM:62110", "ORPHA:3464"])
-def test_anything_without_a_six_digit_number_is_not_an_omim_id(raw: str | None) -> None:
-    assert scoring.normalize_omim(raw) is None
+@pytest.mark.parametrize("raw", [None, "", "Perrault syndrome", "OMIM:62110"])
+def test_anything_else_is_not_a_disease_id(raw: str | None) -> None:
+    assert scoring.normalize_disease(raw) is None
+
+
+@pytest.mark.parametrize("raw", ["ORPHA:3464", "Orphanet:3464", "orpha 3464", " ORPHA_3464 "])
+def test_an_orphanet_code_is_kept_as_one(raw: str) -> None:
+    assert scoring.normalize_disease(raw) == "ORPHA:3464"
 
 
 def test_rank_is_the_position_of_the_first_match(make_case: Callable[..., Case]) -> None:
@@ -85,3 +90,20 @@ def test_a_tiny_p_value_is_not_printed_as_zero() -> None:
     assert scoring.p_value(4.04e-09) == "p < 0.001"
     assert scoring.p_value(0.0131) == "p = 0.013"
     assert scoring.p_value(1.0) == "p = 1.000"
+
+
+def test_with_disease_identity_an_equal_id_is_found_too() -> None:
+    answer = [Candidate(disease_name="Behçet disease", disease_id="ORPHA:117")]
+
+    def same(disease: str) -> set[str]:
+        return (
+            {"OMIM:109650", "ORPHA:117"} if disease in ("OMIM:109650", "ORPHA:117") else {disease}
+        )
+
+    assert scoring.ranks(answer, "OMIM:109650", None) == (None, None)  # by the ids as written
+    assert scoring.ranks(answer, "OMIM:109650", None, [], same) == (1, None)
+    assert scoring.accepted_ids("OMIM:109650", ["OMIM:999999"], same) == {
+        "OMIM:109650",
+        "ORPHA:117",
+        "OMIM:999999",
+    }

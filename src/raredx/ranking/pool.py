@@ -23,7 +23,7 @@ from pydantic import BaseModel
 
 from raredx.baselines.similar_patients import SimilarPatientsRank
 from raredx.data.cases import Case
-from raredx.evals.scoring import normalize_omim
+from raredx.evals.scoring import normalize_disease
 from raredx.evals.systems import Candidate, question_of
 from raredx.knowledge import masking
 from raredx.knowledge.prevalence import Band
@@ -61,7 +61,7 @@ class Row(BaseModel):
 
 def accepted(case: Case) -> set[str]:
     """The OMIM entries that count as the case's diagnosis."""
-    return {d for d in map(normalize_omim, (case.disease_id, *case.also_accepted)) if d}
+    return {d for d in map(normalize_disease, (case.disease_id, *case.also_accepted)) if d}
 
 
 def reciprocal(ranked: list[str], disease: str) -> float:

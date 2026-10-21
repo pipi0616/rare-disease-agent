@@ -1,6 +1,6 @@
 """T3 · look up a disease: what HPO records about it, sized for a model to read.
 
-For one OMIM disease: its features with how often patients show them, its
+For one disease (OMIM, or Orphanet's own): its features with how often patients show them, its
 inheritance, onset and course, its genes, and the sources all of it was
 curated from — the evidence an answer can cite.
 
@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field, validate_call
 
 from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
-from raredx.tools.ids import OmimId, require_disease
+from raredx.tools.ids import DiseaseId, require_disease
 
 
 class Feature(BaseModel):
@@ -64,7 +64,7 @@ class LookupDisease:
     def __call__(
         self,
         disease_id: Annotated[
-            OmimId, Field(description="An OMIM disease id as rank_diseases returns it")
+            DiseaseId, Field(description="A disease id (OMIM or ORPHA) as rank_diseases returns it")
         ],
         max_features: Annotated[
             int, Field(ge=1, le=300, description="How many features to return at most")
@@ -75,7 +75,7 @@ class LookupDisease:
 
         Use it to check a candidate from rank_diseases against the patient.
         """
-        require_disease(self.hpo, disease_id)
+        disease_id = require_disease(self.hpo, disease_id)
         masked = masking.current()
         found = self.hpo.features(disease_id, masked)
         seen = [f for f in found if not f.absent]  # absent everywhere: not a feature of it

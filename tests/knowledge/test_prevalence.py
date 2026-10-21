@@ -86,3 +86,28 @@ def test_an_omim_disease_takes_its_exact_matches_most_common_class(tmp_path: Pat
     )
     assert prevalence.omim_bands(prevalences, disorders) == {"OMIM:100001": "1–9 in 1,000,000"}
     assert prevalence.omim_classes(prevalences, disorders) == {"OMIM:100001": "1-9 / 1 000 000"}
+
+
+def test_with_identity_an_omim_disease_takes_the_class_of_its_equal_orphanet_disorder(
+    tmp_path: Path,
+) -> None:
+    prevalences = tmp_path / prevalence.PREVALENCE
+    prevalences.write_text(
+        "<JDBOR><DisorderList>"
+        + disorder(536, prevalence_entry("Point prevalence", "1-5 / 10 000"))
+        + disorder(81, prevalence_entry("Point prevalence", "1-9 / 100 000"))
+        + "</DisorderList></JDBOR>"
+    )
+    disorders = tmp_path / "en_product1.xml"  # Orphanet maps neither exactly to OMIM
+    disorders.write_text("<JDBOR><DisorderList></DisorderList></JDBOR>")
+
+    def same(disease: str) -> set[str]:  # Mondo: ORPHA:536 is OMIM:152700
+        pair = {"OMIM:152700", "ORPHA:536"}
+        return pair if disease in pair else {disease}
+
+    classes = prevalence.disease_classes(prevalences, disorders, same)
+    assert classes["OMIM:152700"] == "1-5 / 10 000"  # through Mondo
+    assert classes["ORPHA:81"] == "1-9 / 100 000"  # an Orphanet disease's own
+    assert prevalence.disease_bands(prevalences, disorders, same)["OMIM:152700"] == (
+        "1 in 100,000 or more"
+    )

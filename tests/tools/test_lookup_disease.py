@@ -74,10 +74,17 @@ def test_an_unknown_disease_is_an_error_the_model_can_act_on(lookup: LookupDisea
         lookup("OMIM:999999")
 
 
-@pytest.mark.parametrize("disease_id", ["690001", "OMIM:12", "ORPHA:9001"])
+@pytest.mark.parametrize("disease_id", ["690001", "OMIM:12", "Orphanet:9001", "ORPHA:"])
 def test_a_malformed_id_is_refused(lookup: LookupDisease, disease_id: str) -> None:
     with pytest.raises(ValidationError):
         lookup(disease_id)
+
+
+def test_an_orphanet_id_is_well_formed_but_unknown_to_knowledge_without_it(
+    lookup: LookupDisease,
+) -> None:
+    with pytest.raises(UnknownDisease):
+        lookup("ORPHA:9001")
 
 
 def test_each_lookup_is_recorded_as_a_tool_span(lookup: LookupDisease) -> None:
