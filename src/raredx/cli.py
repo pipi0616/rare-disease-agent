@@ -388,15 +388,24 @@ def _identity(evals_dir: Path, data_dir: Path) -> "Identity":
 
 
 @functools.cache  # one release per process (hpo3 holds one ontology); load it once
-def _knowledge(evals_dir: Path, data_dir: Path) -> "HPO":
-    """The pinned HPO release, loaded with Orphanet's annotations merged in by disease
-    identity (chapter 31); a clear message if it was never fetched."""
+def _knowledge(evals_dir: Path, data_dir: Path, orphanet: bool | None = None) -> "HPO":
+    """The pinned HPO release, loaded; with Orphanet's annotations merged in by disease
+    identity when asked or set (settings.orphanet, chapter 31); a clear message if it was
+    never fetched."""
     from raredx.knowledge import hpo
 
     folder = sources.raw_dir(sources.load_sources(evals_dir / "datasets.toml")["hpo"], data_dir)
     if not (folder / "hp.obo").exists():
         _fail(f"{folder} has no HPO release — run `raredx data fetch hpo` first")
-    return hpo.load(folder, _identity(evals_dir, data_dir))
+    merged = settings.orphanet if orphanet is None else orphanet
+    return hpo.load(folder, _identity(evals_dir, data_dir) if merged else None)
+
+
+def _knowledge_label(evals_dir: Path) -> str:
+    """Which knowledge a run read, as recorded with it."""
+    if settings.orphanet:
+        return f"HPO OMIM + Orphanet, merged by mondo {_mondo_version(evals_dir)}"
+    return "HPO OMIM"
 
 
 def _ranker(evals_dir: Path, data_dir: Path, similarity: str | None) -> "RankDiseases":
@@ -711,6 +720,10 @@ def run_system(
     system: Annotated[str, typer.Option(help=" | ".join(SYSTEMS))],
     split: Annotated[str, typer.Option(help="Manifest to run on.")] = "dev-200",
     final: Annotated[bool, typer.Option(help="Required for heldout: the final run.")] = False,
+    orphanet: Annotated[
+        bool,
+        typer.Option(help="Read Orphanet's annotations too, merged in by disease identity."),
+    ] = settings.orphanet,
     similarity: Annotated[
         str | None,
         typer.Option(help="The phenotype systems: hpo3 method/combination, e.g. lin/funSimAvg."),
@@ -757,6 +770,7 @@ def run_system(
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
     """Evaluate a system on a manifest with MLflow; the run and every answer are recorded."""
+    settings.orphanet = orphanet  # before any knowledge is loaded in this process
     if split.startswith("heldout") and not final:
         _fail("heldout is the final exam: run it once, with --final, when the design is frozen")
     if split in splits.EXTERNAL and split not in splits.PRACTICE and not final:
@@ -816,6 +830,7 @@ def run_system(
         "code": code_version(),
         # Scored by ids, any id Mondo makes equal to the confirmed one counting (chapter 31).
         "disease_identity": f"mondo {_mondo_version(evals_dir)}",
+        "knowledge": _knowledge_label(evals_dir),
     }
     system_params = getattr(chosen, "params", None)
     if callable(system_params):  # e.g. the model, thinking mode and prompt version
@@ -1277,14 +1292,12 @@ def coverage(
     hide. A case answerable only with Orphanet is listed: its own paper may be behind
     Orphanet's entry too (chapter 31's leak check). No model is called."""
     from raredx.evals import hits
-    from raredx.knowledge import hpo
 
     tests = [s for s in split if s.startswith("heldout") or s == splits.TEMPORAL]
     if tests:
         _fail(f"{', '.join(tests)}: a test set is not looked into while developing")
-    with_orphanet = _knowledge(evals_dir, data_dir)
-    folder = sources.raw_dir(sources.load_sources(evals_dir / "datasets.toml")["hpo"], data_dir)
-    omim_only = hpo.load(folder)  # the same release; only which annotations are read differs
+    with_orphanet = _knowledge(evals_dir, data_dir, orphanet=True)
+    omim_only = _knowledge(evals_dir, data_dir, orphanet=False)  # the same release
     typer.echo(f"{'cases answerable':<24}{'cases':>7}{'OMIM only':>11}{'+ Orphanet':>12}")
     for name in split:
         _, pool = _processed(data_dir, evals_dir, splits.EXTERNAL.get(name, DATASET))

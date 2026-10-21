@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     llm_price_cached_input: float = 0.006
     llm_price_output: float = 1.20
 
+    # The knowledge the tools read: HPO's OMIM annotations; on, Orphanet's too, merged in by
+    # Mondo's disease identity (chapter 31). Off until the agent shows it helps on every
+    # development source: on HMS the no-model ranking gains, on RAMEDIS it loses.
+    orphanet: bool = False
+
     # DeepRare's checkout, with its own environment in .venv (comparison runs only).
     deeprare_dir: Path = Path("third_party/DeepRare")
     # The `java` that runs LIRICAL (comparison runs only), version 17 or later. Unset:
