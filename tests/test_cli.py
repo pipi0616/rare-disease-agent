@@ -196,3 +196,13 @@ def test_a_test_corpus_of_notes_is_read_only_for_the_final_run(tmp_path: Path) -
     )
     assert result.exit_code == 1
     assert "--final" in result.output
+
+
+@pytest.mark.parametrize("split", ["heldout-papers-200", "temporal-2026-10"])
+def test_calibration_never_reads_a_test_manifest(tmp_path: Path, split: str) -> None:
+    config = tmp_path / "calibration.toml"
+    config.write_text(f'[[source]]\nsplit = "{split}"\nmodel = "x"\n"v1.0" = "y"\n"v1.1" = "z"\n')
+    result = runner.invoke(
+        app, ["eval", "calibrate", "--config", str(config), "--data-dir", str(tmp_path)]
+    )
+    assert result.exit_code == 1 and "never calibrate on them" in result.output

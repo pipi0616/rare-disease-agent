@@ -441,8 +441,8 @@ def _text_search(evals_dir: Path, data_dir: Path) -> "SearchDiseaseTexts":
 OPENROUTER = "openrouter:"
 
 
-def _prevalence(evals_dir: Path, data_dir: Path) -> dict[str, str]:
-    """Each OMIM disease's Orphanet prevalence class, for the hypothesis agent."""
+def _orphanet_prevalence_files(evals_dir: Path, data_dir: Path) -> tuple[Path, Path]:
+    """Orphanet's prevalence file and its disorder file (for the mapping to OMIM)."""
     from raredx.knowledge import prevalence
 
     registry = sources.load_sources(evals_dir / "datasets.toml")
@@ -454,7 +454,14 @@ def _prevalence(evals_dir: Path, data_dir: Path) -> dict[str, str]:
     missing = [str(f) for f in files if not f.exists()]
     if missing:
         _fail(f"no Orphanet prevalence: {', '.join(missing)} — run `raredx data fetch` first")
-    return prevalence.omim_classes(*files)
+    return files
+
+
+def _prevalence(evals_dir: Path, data_dir: Path) -> dict[str, str]:
+    """Each OMIM disease's Orphanet prevalence class, for the hypothesis agent."""
+    from raredx.knowledge import prevalence
+
+    return prevalence.omim_classes(*_orphanet_prevalence_files(evals_dir, data_dir))
 
 
 def _deeprare_queries(data_dir: Path) -> Path:
@@ -984,6 +991,198 @@ def hits_table(
     hits.write(rows, out)
     answerable = sum(r["answerable"] == "1" for r in rows)
     typer.echo(f"ok  {out}  ({len(rows)} cases, {answerable} answerable; {', '.join(columns)})")
+
+
+CALIBRATION = "calibration.toml"
+CALIBRATED = ("model", "v1.0", "v1.1")  # the recorded runs read per source
+
+
+def _show_pool(case: Case, rows: list[Any], names: dict[str, str]) -> None:
+    """One case's pool as a table: where each route put a candidate, and its evidence."""
+    import math
+
+    def place(value: float) -> str:  # a route's feature is 1 / the place; 0 if not named
+        return str(round(1 / value)) if value else "-"
+
+    def count(value: float) -> str:  # counts are kept as log(1 + n)
+        return str(round(math.expm1(value)))
+
+    def band(f: dict[str, float]) -> str:
+        return next((b for b in ("common", "uncommon", "rarest") if f[b]), "unknown")
+
+    typer.echo(
+        f"{case.id}: confirmed {case.disease_label} ({case.disease_id}); "
+        f"{len(case.hpo_ids)} findings; {len(rows)} candidates"
+    )
+    header = ("model", "phenotype", "patients", "explained", "contradicted", "missing")
+    typer.echo(
+        f"{'disease':<36}"
+        + "".join(f"{h:>13}" for h in header)
+        + f"{'annotated':>10}{'prevalence':>11}{'v1.1':>6}  right"
+    )
+    order = sorted(rows, key=lambda r: [-r.features[x] for x in ("model", "phenotype", "patients")])
+    for r in order:
+        f = r.features
+        typer.echo(
+            f"{names[r.disease_id][:35]:<36}{place(f['model']):>13}{place(f['phenotype']):>13}"
+            f"{place(f['patients']):>13}{f['explained']:>13.0%}{f['contradicted']:>13.0f}"
+            f"{count(f['missing']):>13}{count(f['annotations']):>10}{band(f):>11}"
+            f"{place(f['v1.1']):>6}  {'yes' if r.correct else ''}"
+        )
+
+
+@eval_app.command("calibrate")
+def calibrate(
+    config: Annotated[
+        Path | None,
+        typer.Option(help="The recorded runs per source. Default: evals/calibration.toml."),
+    ] = None,
+    out: Annotated[
+        Path | None,
+        typer.Option(help="Write each case's verdicts (TSV), for paired comparisons."),
+    ] = None,
+    show: Annotated[
+        str | None,
+        typer.Option(help="Only print one case's pool, a row of evidence per candidate."),
+    ] = None,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Rank every route's candidates by weights learned on the other development sources,
+    beside the recorded agents (chapter 30). No model is called."""
+    import tomllib
+
+    import mlflow
+
+    from raredx.baselines.similar_patients import SimilarPatientsRank
+    from raredx.evals import hits
+    from raredx.evals.harness import candidates_of
+    from raredx.evals.systems import Candidate
+    from raredx.knowledge import prevalence
+    from raredx.ranking import model as scorer
+    from raredx.ranking.pool import FEATURES, Pool, Row, accepted
+    from raredx.tools.check_match import CheckMatch
+
+    path = config or evals_dir / CALIBRATION
+    listed = tomllib.loads(path.read_text(encoding="utf-8"))["source"]
+    tests = [
+        s["split"]
+        for s in listed
+        if s["split"].startswith("heldout")
+        or (s["split"] in splits.EXTERNAL and s["split"] not in splits.PRACTICE)
+    ]
+    if tests:
+        _fail(f"{path}: {', '.join(tests)} test a frozen system — never calibrate on them")
+    harness = _harness()
+
+    def recorded(run_id: str) -> dict[str, list[Candidate]]:
+        return {
+            t.data.spans[0].inputs["question"]["case_id"]: candidates_of(t.data.spans[0].outputs)
+            for t in harness.answers(run_id)
+        }
+
+    to_score = []
+    for source in listed:
+        split = source["split"]
+        _, asked = _processed(data_dir, evals_dir, splits.EXTERNAL.get(split, DATASET))
+        by_id = {c.id: c for c in asked}
+        cases = [by_id[case_id] for case_id, _ in splits.read(_manifest(evals_dir, split))]
+        if show:
+            cases = [c for c in cases if c.id == show]
+            if not cases:
+                continue
+        answers = {name: recorded(source[name]) for name in CALIBRATED}
+        for name, got in answers.items():
+            if {c.id for c in cases} - set(got):
+                _fail(f"{split}: run {source[name]} ({name}) did not answer every case")
+        to_score.append((split, cases, answers))
+
+    _, release = _processed(data_dir, evals_dir)
+    ranker = _ranker(evals_dir, data_dir, None)
+    patients = SimilarPatientsRank(_patient_bank(release, evals_dir, data_dir))
+    bands = prevalence.omim_bands(*_orphanet_prevalence_files(evals_dir, data_dir))
+    pool = Pool(ranker, CheckMatch(ranker.hpo), patients, bands)
+    rows: list[Row] = []
+    mlflow.tracing.disable()  # tens of thousands of tool calls, none of them an evaluation's
+    try:
+        for split, cases, answers in to_score:
+            for case in cases:
+                agent = [
+                    d
+                    for c in answers["v1.1"][case.id]
+                    if (d := scoring.normalize_omim(c.disease_id))
+                ]
+                rows += pool.rows(split, case, answers["model"][case.id], {"v1.1": agent})
+    finally:
+        mlflow.tracing.enable()
+    if show:
+        if not to_score:
+            _fail(f"{show} is in none of the sources of {path}")
+        _show_pool(to_score[0][1][0], rows, ranker.hpo.names)
+        return
+
+    variants = {"scorer": FEATURES, "scorer+v1.1": (*FEATURES, "v1.1")}
+    orders = {name: scorer.other_sources(rows, f) for name, f in variants.items()}
+    orders |= {f"{name}/same": scorer.same_source(rows, f) for name, f in variants.items()}
+    in_pool = {r.case_id for r in rows if r.correct}
+    table = []
+    for split, cases, answers in to_score:
+        for case in cases:
+            truth = accepted(case)
+            rank = {
+                name: scoring.ranks(got[case.id], case.disease_id, None, case.also_accepted)[0]
+                for name, got in answers.items()
+            }
+            for name, order in orders.items():
+                ids = order.get(case.id, [])
+                rank[name] = next((i for i, d in enumerate(ids, 1) if d in truth), None)
+            row = {
+                "source": split,
+                "case_id": case.id,
+                "answerable": str(int(hits.answerable(case, ranker.hpo))),
+                "in_pool": str(int(case.id in in_pool)),
+            }
+            row |= {
+                f"{n}@{k}": str(int(scoring.found(r, k)))
+                for n, r in rank.items()
+                for k in scoring.KS
+            }
+            table.append(row)
+
+    names = (*CALIBRATED, *orders)
+    typer.echo(
+        f"First place ({len(rows)} candidates). scorer: weights learned on the other sources; "
+        "/same: on other folds of the same source (optimistic)."
+    )
+    typer.echo(f"{'source':<19}{'cases':>6}{'in pool':>9}" + "".join(f"{n:>17}" for n in names))
+    for split, _, _ in to_score:
+        mine = [r for r in table if r["source"] == split]
+
+        def share(column: str, of: list[dict[str, str]] = mine) -> str:
+            return f"{sum(r[column] == '1' for r in of) / len(of):.1%}"
+
+        typer.echo(
+            f"{split:<19}{len(mine):>6}{share('in_pool'):>9}"
+            + "".join(f"{share(f'{n}@1'):>17}" for n in names)
+        )
+    typer.echo("\nPaired, first place (only the first right : only the second right):")
+    for split, _, _ in to_score:
+        mine = [r for r in table if r["source"] == split]
+        pairs = []
+        for a, b in (("scorer", "v1.1"), ("scorer+v1.1", "v1.1")):
+            w = sum(r[f"{a}@1"] == "1" and r[f"{b}@1"] == "0" for r in mine)
+            loss = sum(r[f"{b}@1"] == "1" and r[f"{a}@1"] == "0" for r in mine)
+            pairs.append(f"{a} vs {b} {w}:{loss} {scoring.p_value(scoring.sign_test(w, loss))}")
+        typer.echo(f"  {split:<19}" + "   ".join(pairs))
+    learned = scorer.weights(scorer.fit(rows, FEATURES), FEATURES)
+    typer.echo(
+        "\nWeights of scorer, learned on every source (per standard deviation), largest first:"
+    )
+    by_size = sorted(learned.items(), key=lambda fw: -abs(fw[1]))
+    typer.echo("  " + "  ".join(f"{f} {w:+.2f}" for f, w in by_size))
+    if out:
+        hits.write(table, out)
+        typer.echo(f"\nok  {out}  ({len(table)} cases)")
 
 
 @eval_app.command("lenient")
