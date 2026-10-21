@@ -10,18 +10,20 @@ import csv
 from pathlib import Path
 
 from raredx.data.cases import Case
-from raredx.evals.scoring import KS
+from raredx.evals.scoring import KS, Same, accepted_ids
 from raredx.knowledge.hpo import HPO
 
 Verdicts = dict[int, dict[str, bool]]  # k -> case id -> hit
 
 
-def answerable(case: Case, hpo: HPO) -> bool:
+def answerable(case: Case, hpo: HPO, same: Same | None = None) -> bool:
     """Whether a system reading the masked knowledge could name the diagnosis at all:
     one of its accepted entries names a disease in the knowledge (through disease
     identity, when the knowledge has it), and not one known only from the case's own
-    paper (which the mask makes not exist)."""
-    named = (hpo.canonical(d) for d in (case.disease_id, *case.also_accepted))
+    paper (which the mask makes not exist). With same, their equals count too, as the
+    scorer given it accepts them: an Orphanet diagnosis is answerable from OMIM-only
+    knowledge when Mondo makes it equal to an OMIM disease there."""
+    named = (hpo.canonical(d) for d in accepted_ids(case.disease_id, case.also_accepted, same))
     accepted = [d for d in named if d is not None]
     hidden = hpo.known_only_from(frozenset({case.pmid})) if case.pmid else set()
     return any(d not in hidden for d in accepted)

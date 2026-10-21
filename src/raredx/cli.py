@@ -1577,6 +1577,7 @@ def routes(data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings
         "M",
         "F+O",
         "F+C",
+        "F+O+C+P",  # the routes no model is asked for, recorded on every source
         "M+F",
         "M+F+O",
         "M+F+C",
@@ -1605,9 +1606,10 @@ def coverage(
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
     """How many cases a system could answer at all, with Orphanet's annotations and without:
-    the confirmed diagnosis names a disease in the knowledge that the case's mask does not
-    hide. A case answerable only with Orphanet is listed: its own paper may be behind
-    Orphanet's entry too (chapter 31's leak check). No model is called."""
+    the confirmed diagnosis, or a disease Mondo makes equal to it (as when scored), names a
+    disease in the knowledge that the case's mask does not hide. A case answerable only
+    with Orphanet is listed: its own paper may be behind Orphanet's entry too (chapter
+    31's leak check). No model is called."""
     from raredx.evals import hits
 
     tests = [s for s in split if s.startswith("heldout") or s == splits.TEMPORAL]
@@ -1615,13 +1617,14 @@ def coverage(
         _fail(f"{', '.join(tests)}: a test set is not looked into while developing")
     with_orphanet = _knowledge(evals_dir, data_dir, orphanet=True)
     omim_only = _knowledge(evals_dir, data_dir, orphanet=False)  # the same release
+    same = _identity(evals_dir, data_dir).same  # a diagnosis's equals count, as when scored
     typer.echo(f"{'cases answerable':<24}{'cases':>7}{'OMIM only':>11}{'+ Orphanet':>12}")
     for name in split:
         _, pool = _processed(data_dir, evals_dir, splits.dataset_of(name, DATASET))
         by_id = {c.id: c for c in pool}
         cases = [by_id[case_id] for case_id, _ in splits.read(_manifest(evals_dir, name))]
-        before = {c.id for c in cases if hits.answerable(c, omim_only)}
-        after = {c.id for c in cases if hits.answerable(c, with_orphanet)}
+        before = {c.id for c in cases if hits.answerable(c, omim_only, same)}
+        after = {c.id for c in cases if hits.answerable(c, with_orphanet, same)}
         typer.echo(f"{name:<24}{len(cases):>7}{len(before):>11}{len(after):>12}")
         for sign, ids in (("+", after - before), ("-", before - after)):
             listed = [c for c in cases if c.id in ids]

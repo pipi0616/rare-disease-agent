@@ -7,6 +7,7 @@ import pytest
 
 from raredx.data.cases import Case
 from raredx.evals import hits
+from raredx.knowledge.diseases import Identity
 from raredx.knowledge.hpo import HPO
 
 
@@ -61,3 +62,14 @@ def test_with_identity_an_orphanet_diagnosis_is_answerable_through_its_disease(
     # hidden with its OMIM disease when that is known only from the case's own paper
     hidden = make_case("g", disease_id="ORPHA:9004", pmid="PMID:1004")
     assert not hits.answerable(hidden, knowledge)
+
+
+def test_from_omim_only_knowledge_an_orphanet_diagnosis_is_answerable_through_its_equal(
+    hpo: HPO, identity: Identity, make_case: Callable[..., Case]
+) -> None:
+    case = make_case("h", disease_id="ORPHA:9001", pmid=None, split="external")
+    assert not hits.answerable(case, hpo)  # the knowledge alone cannot read the code
+    assert hits.answerable(case, hpo, identity.same)  # OMIM:690001, which the scorer accepts
+    # ORPHA:9002's OMIM equal is not a disease of the release
+    orphan = make_case("i", disease_id="ORPHA:9002", pmid=None, split="external")
+    assert not hits.answerable(orphan, hpo, identity.same)
