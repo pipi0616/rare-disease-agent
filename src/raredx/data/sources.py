@@ -28,6 +28,9 @@ class Source(BaseModel):
     # True when the upstream serves only its latest file at an unversioned URL: the
     # sha256 is then the only pin, and a changed upstream fails it rather than slip in.
     latest_only: bool = False
+    # The command that builds the files when they are not one download (an API read
+    # page by page, pinned by a manifest in git); fetch then only verifies them.
+    fetched_by: str | None = None
 
 
 def load_sources(path: Path) -> dict[str, Source]:
@@ -60,6 +63,13 @@ def verify(path: Path, expected: str) -> None:
 
 def fetch(source: Source, data_dir: Path, *, force: bool = False) -> list[Path]:
     """Download the source's files into the raw layer and verify each. Idempotent."""
+    if source.fetched_by:
+        folder = raw_dir(source, data_dir)
+        for name, sha256 in source.files.items():
+            if not (folder / name).exists():
+                raise FileNotFoundError(f"{folder / name} missing — run `{source.fetched_by}`")
+            verify(folder / name, sha256)
+        return [folder / name for name in source.files]
     return [
         _fetch_file(source.url + name, raw_dir(source, data_dir) / name, sha256, force=force)
         for name, sha256 in source.files.items()

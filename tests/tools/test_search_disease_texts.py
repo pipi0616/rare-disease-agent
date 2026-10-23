@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
-from raredx.knowledge.text_index import TextIndex
+from raredx.knowledge.text_index import Embedder, TextIndex
 from raredx.knowledge.texts import Passage
 from raredx.tools.search_disease_texts import SearchDiseaseTexts
 
@@ -63,3 +63,34 @@ def test_each_search_is_recorded_as_a_tool_span(search: SearchDiseaseTexts) -> N
     assert trace is not None
     [span] = trace.data.spans
     assert (span.name, span.span_type) == ("search_disease_texts", "TOOL")
+
+
+def test_given_a_disease_only_its_passages_are_searched(search: SearchDiseaseTexts) -> None:
+    result = search("hearing loss", top_k=5, disease_id="OMIM:690002")
+    assert result.hits and all(h.disease_ids == ["OMIM:690002"] for h in result.hits)
+    with pytest.raises(LookupError, match="not a disease"):
+        search("hearing loss", disease_id="OMIM:699999")
+
+
+def test_a_chunk_citing_a_masked_paper_is_never_returned(hpo: HPO, word_embedder: Embedder) -> None:
+    chunks = [
+        Passage(
+            text="night blindness",
+            disease_ids=["OMIM:690002"],
+            disease_name="x",
+            source="cites it",
+            pmids=["PMID:7"],
+        ),
+        Passage(
+            text="night blindness too",
+            disease_ids=["OMIM:690002"],
+            disease_name="x",
+            source="does not",
+            parent="The larger section it is part of.",
+        ),
+    ]
+    dense, sparse = word_embedder.passages([c.text for c in chunks])
+    tool = SearchDiseaseTexts(TextIndex(chunks, dense, sparse, word_embedder, {}), hpo)
+    with masking.masked(["PMID:7"]):
+        [hit] = tool("night blindness", top_k=5).hits
+    assert hit.source == "does not" and hit.text == "The larger section it is part of."

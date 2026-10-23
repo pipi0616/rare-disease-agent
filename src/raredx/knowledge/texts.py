@@ -34,6 +34,13 @@ class Passage(BaseModel):
     disease_ids: list[str]  # the OMIM diseases it is about
     disease_name: str
     source: str  # e.g. "Orphanet ORPHA:166024", or the MedlinePlus page
+    # Chapter 33's corpus also records, per chunk: its document, its section, the papers
+    # its paragraphs cite (for masking by reference), and, when what is searched is a
+    # small piece, the larger text returned in its place.
+    doc: str = ""
+    section: str = ""
+    pmids: list[str] = []
+    parent: str = ""
 
 
 def orphanet(path: Path) -> list[Passage]:

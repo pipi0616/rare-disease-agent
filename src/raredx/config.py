@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # MLflow: where evaluation runs are recorded. Local SQLite by default; point it at a
     # shared MLflow server (RAREDX_MLFLOW_TRACKING_URI) and nothing else changes.
     mlflow_tracking_uri: str = "sqlite:///mlflow.db"
+    # Where chapter 33's large text indexes are searched: a Qdrant server (started with
+    # docker, see docs/notebook/33_rag.ipynb), or ":memory:" to load them here instead.
+    qdrant_url: str = "http://localhost:6333"
     mlflow_artifact_root: Path = Path("mlruns")
 
     # The model: any OpenAI-compatible endpoint. DeepSeek here; a hospital's own vLLM

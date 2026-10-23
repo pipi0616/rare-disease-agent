@@ -21,6 +21,7 @@ from raredx.knowledge import masking
 from raredx.knowledge.hpo import HPO
 from raredx.knowledge.text_index import Mode, TextIndex
 from raredx.knowledge.texts import Passage
+from raredx.tools.ids import DiseaseId, require_disease
 
 MARGIN = 20  # passages fetched beyond top_k, so hiding a few still leaves top_k
 
@@ -45,11 +46,28 @@ class SearchDiseaseTexts:
         self.index = index
         self.hpo = hpo
 
-    def ranked(self, query: str, limit: int, mode: Mode = "hybrid") -> list[Passage]:
-        """The best passages for the query, those hidden by the mask left out."""
-        hidden = self.hpo.known_only_from(masking.current())
-        found = self.index.search(query, limit + MARGIN, mode)
-        return [p for p, _ in found if not hidden.intersection(p.disease_ids)][:limit]
+    def ranked(
+        self, query: str, limit: int, mode: Mode = "hybrid", disease: str | None = None
+    ) -> list[Passage]:
+        """The best passages for the query — only one disease's, when given — those the
+        mask hides left out: about a disease known only from a masked paper, or (chapter
+        33's corpus, which records them) citing a masked paper. A small piece of a
+        larger chunk stands for that chunk, once."""
+        masked = masking.current()
+        found = self.index.search(
+            query,
+            limit + MARGIN,
+            mode,
+            only=[disease] if disease else (),
+            hide_diseases=sorted(self.hpo.known_only_from(masked)),
+            hide_pmids=sorted(masked),
+        )
+        out, seen = [], set()
+        for p, _ in found:
+            if (key := p.parent or p.text) not in seen:
+                seen.add(key)
+                out.append(p)
+        return out[:limit]
 
     @mlflow.trace(name="search_disease_texts", span_type=SpanType.TOOL)
     @validate_call
@@ -64,24 +82,30 @@ class SearchDiseaseTexts:
             ),
         ],
         top_k: Annotated[int, Field(ge=1, le=20, description="How many passages to return")] = 5,
+        disease_id: Annotated[
+            DiseaseId | None,
+            Field(description="Only passages about this disease (OMIM:nnnnnn or ORPHA:n)"),
+        ] = None,
     ) -> TextHits:
         """Search what Orphanet and MedlinePlus Genetics write about diseases, in your
         own words: the patient's key findings, or a disease's name.
 
-        Use it to read how a candidate is described, or to find diseases whose
-        description fits findings the other tools weigh poorly. Each passage names
-        the OMIM diseases it is about and its source, to cite.
+        Use it to read how a candidate is described — with disease_id, only what is
+        written about that one, e.g. its inheritance or age of onset — or to find
+        diseases whose description fits findings the other tools weigh poorly. Each
+        passage names the diseases it is about and its source, to cite.
         """
+        disease = require_disease(self.hpo, disease_id) if disease_id else None
         hidden = self.hpo.known_only_from(masking.current())
         return TextHits(
             hits=[
                 TextHit(
                     disease_ids=p.disease_ids,
                     disease_name=p.disease_name,
-                    text=p.text,
+                    text=p.parent or p.text,
                     source=p.source,
                 )
-                for p in self.ranked(query, top_k)
+                for p in self.ranked(query, top_k, disease=disease)
             ],
             searched=sum(not hidden.intersection(p.disease_ids) for p in self.index.passages),
         )
