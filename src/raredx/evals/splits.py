@@ -249,6 +249,32 @@ EXTERNAL: dict[str, str] = {
 PRACTICE = frozenset(
     {"rarebench-hms", "rarebench-ramedis", "rarebench-ramedis-200", "rarebench-mme"}
 )
+# Development manifests drawn from other datasets (v2.0): developed on from the start,
+# never a test; written by the command that reads their cases.
+RAREARENA = "rarearena-dev"  # RareArena's case reports, read into HPO terms
+DEVELOPMENT: dict[str, str] = {RAREARENA: "rarearena-rds"}
+
+
+def dataset_of(manifest: str, default: str) -> str:
+    """The dataset whose processed cases a manifest lists."""
+    return EXTERNAL.get(manifest) or DEVELOPMENT.get(manifest) or default
+
+
+def check_development(splits_dir: Path) -> list[str]:
+    """Rules the development manifests keep, when they exist: each case once, each paper
+    once (a report per paper)."""
+    problems = []
+    for name in DEVELOPMENT:
+        path = splits_dir / f"{name}.tsv"
+        if not path.exists():
+            continue
+        rows = read(path)
+        if len({r[0] for r in rows}) != len(rows):
+            problems.append(f"{name}: a case is listed twice")
+        papers = [pmid for _, pmid in rows]
+        if len(set(papers)) != len(papers) or "" in papers:
+            problems.append(f"{name}: not exactly one case per paper")
+    return problems
 
 
 def temporal(

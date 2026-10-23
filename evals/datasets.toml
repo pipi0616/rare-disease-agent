@@ -126,6 +126,20 @@ role = "knowledge: disease identity across OMIM and Orphanet"
 [mondo.files]
 "mondo.sssom.tsv" = "317ac4bf93be1deff4406b4d7d18bb730ead3c4f5c7c814f75d24be7f6ef302f"
 
+# Development cases unlike Phenopacket Store's: RareArena's rare-disease screening set
+# (published case reports from PubMed Central, PMC-Patients), 10,000 of them as DeepRare
+# distributes them, each a free-text report with an Orphanet diagnosis. Read into HPO
+# terms by the note reader; development only (the model may have read the papers).
+[rarearena-rds]
+version = "e348a29"
+url = "https://huggingface.co/datasets/Angelakeke/DeepRare/resolve/e348a29593a646c2d92cf4ce876a931b5edf39e0/"
+homepage = "https://github.com/zhao-zy15/RareArena"
+license = "CC BY-NC-SA 4.0 (PMC-Patients, RareArena): non-commercial"
+role = "development cases: free-text case reports with Orphanet diagnoses"
+
+[rarearena-rds.files]
+"RDS_embeddings.csv" = "d89c806f3e453060bf3073908696b9938f14dc6d24add172fe11ef259ab4a78b"
+
 [medlineplus]
 version = "2026-10-09"
 url = "https://medlineplus.gov/download/"
