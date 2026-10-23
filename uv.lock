@@ -2151,6 +2151,18 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-text-splitters"
+version = "1.1.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/85/22/d401fffe8d3f1339f6ac880e5d637db73933efa95635304849b2d44ab0fe/langchain_text_splitters-1.1.3.tar.gz", hash = "sha256:929b6c76f99d611a5b1d8f5591ef302909b86a436ceb3217034d24e4757868d8", size = 308295, upload-time = "2026-10-02T15:46:33.173Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c7/51/2880d2e88cce13c1180178f7e8dc796c2f45b2dc09cc09ed407d116c08cc/langchain_text_splitters-1.1.3-py3-none-any.whl", hash = "sha256:50edeb318b3be6a6308dddd7d616ab82823a9ccbea59a9c14c58a7b91df60295", size = 38217, upload-time = "2026-10-02T15:46:32.271Z" },
+]
+
+[[package]]
 name = "langgraph"
 version = "1.2.14"
 source = { registry = "https://pypi.org/simple" }
@@ -4361,6 +4373,7 @@ name = "raredx"
 version = "1.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "beautifulsoup4" },
     { name = "fastapi" },
     { name = "fastembed" },
     { name = "hpo3" },
@@ -4368,6 +4381,7 @@ dependencies = [
     { name = "httpx2" },
     { name = "langchain" },
     { name = "langchain-openai" },
+    { name = "langchain-text-splitters" },
     { name = "mcp" },
     { name = "mlflow" },
     { name = "openai" },
@@ -4398,6 +4412,7 @@ record = [
 
 [package.metadata]
 requires-dist = [
+    { name = "beautifulsoup4", specifier = ">=4.12" },
     { name = "fastapi", specifier = ">=0.142.4" },
     { name = "fastembed", specifier = ">=0.9.0" },
     { name = "hpo3", specifier = ">=1.5.1" },
@@ -4405,6 +4420,7 @@ requires-dist = [
     { name = "httpx2", specifier = ">=2.12" },
     { name = "langchain", specifier = ">=1.4.3" },
     { name = "langchain-openai", specifier = ">=1.7.0" },
+    { name = "langchain-text-splitters", specifier = ">=1.0" },
     { name = "mcp", specifier = ">=2.3.0" },
     { name = "mlflow", specifier = ">=3.17.0" },
     { name = "openai", specifier = ">=3.26.1" },

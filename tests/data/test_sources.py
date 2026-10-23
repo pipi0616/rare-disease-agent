@@ -1,5 +1,6 @@
 """The dataset registry and the raw/processed layout. No network."""
 
+import hashlib
 import re
 from pathlib import Path
 
@@ -18,6 +19,8 @@ def test_every_registered_source_is_pinned_and_verifiable() -> None:
         for name, sha256 in source.files.items():
             assert re.fullmatch(r"[0-9a-f]{64}", sha256), f"{source.name}/{name}"
         assert source.url.startswith("https://") and source.url.endswith("/"), source.name
+        if source.fetched_by:  # read page by page; a manifest in git pins each page
+            continue
         if not source.latest_only:  # the address names the version, or each file does
             named = source.version in source.url or all(source.version in n for n in source.files)
             assert named, f"{source.name}: neither url nor files name the version"
@@ -61,3 +64,21 @@ def test_fetch_verifies_files_already_present_without_downloading(tmp_path: Path
     (folder / "b.txt").write_text("changed")
     with pytest.raises(ValueError, match="sha256"):
         sources.fetch(source, tmp_path)
+
+
+def test_a_source_built_by_a_command_is_verified_never_downloaded(tmp_path: Path) -> None:
+    source = sources.Source(
+        name="wiki",
+        version="1",
+        url="https://unreachable.invalid/",
+        files={"pages.jsonl.gz": hashlib.sha256(b"pages").hexdigest()},
+        homepage="",
+        license="",
+        role="",
+        fetched_by="raredx data wikipedia",
+    )
+    with pytest.raises(FileNotFoundError, match="raredx data wikipedia"):
+        sources.fetch(source, tmp_path)
+    (sources.raw_dir(source, tmp_path) / "pages.jsonl.gz").parent.mkdir(parents=True)
+    (sources.raw_dir(source, tmp_path) / "pages.jsonl.gz").write_bytes(b"pages")
+    assert sources.fetch(source, tmp_path) == [sources.raw_dir(source, tmp_path) / "pages.jsonl.gz"]

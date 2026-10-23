@@ -44,6 +44,10 @@ class Identity:
         """The Mondo class an OMIM or ORPHA id matches exactly, if any."""
         return self._mondo.get(disease)
 
+    def classes(self) -> dict[str, frozenset[str]]:
+        """Each Mondo class with the OMIM and ORPHA ids it matches exactly."""
+        return dict(self._members)
+
     def same(self, disease: str) -> frozenset[str]:
         """Every OMIM and ORPHA id naming the same disease, itself included."""
         mondo = self._mondo.get(disease)

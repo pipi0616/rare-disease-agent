@@ -2,6 +2,7 @@
 
 import functools
 import hashlib
+import json
 import statistics
 from datetime import datetime
 from pathlib import Path
@@ -24,7 +25,9 @@ if TYPE_CHECKING:
     from openai import OpenAI
 
     from raredx.evals.harness import Harness
+    from raredx.evals.rag import Question as RagQuestion
     from raredx.knowledge.case_bank import CaseBank
+    from raredx.knowledge.corpus import Document
     from raredx.knowledge.diseases import Identity
     from raredx.knowledge.hpo import HPO
     from raredx.llm import Budget
@@ -283,6 +286,44 @@ def pmc_ids(
     added = rarearena.update_pmids(path, papers)
     known = rarearena.read_pmids(path)
     typer.echo(f"ok  {path}  ({added} looked up now; {len(known)} of {len(papers)} papers mapped)")
+
+
+WIKIPEDIA = "wikipedia"
+WIKIPEDIA_REVISIONS = "wikipedia_revisions.tsv"
+
+
+@data_app.command("wikipedia")
+def fetch_wikipedia(
+    limit: Annotated[int | None, typer.Option(help="Fetch at most this many now.")] = None,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Wikipedia's articles on the knowledge's diseases: listed from Wikidata and pinned
+    by revision into evals/wikipedia_revisions.tsv (once), then fetched as that
+    revision's HTML into the raw layer, resuming where a run stopped. No model."""
+    from raredx.data import wikipedia
+
+    source = sources.load_sources(evals_dir / "datasets.toml")[WIKIPEDIA]
+    manifest = evals_dir / WIKIPEDIA_REVISIONS
+    http = wikipedia.client()
+    if manifest.exists():
+        articles = wikipedia.read_manifest(manifest)
+    else:
+        knowledge = _knowledge(evals_dir, data_dir, orphanet=True)
+        listed = wikipedia.disease_articles(http)
+        known = [a for a in listed if any(knowledge.canonical(d) for d in (*a.orpha, *a.omim))]
+        articles = wikipedia.with_revisions(known, http)
+        wikipedia.write_manifest(manifest, articles)
+        typer.echo(f"ok  {manifest}  ({len(listed)} listed, {len(articles)} on known diseases)")
+    path = sources.raw_dir(source, data_dir) / wikipedia.PAGES
+    done = len(wikipedia.fetched(path))
+    for i, _ in enumerate(wikipedia.fetch(articles, path, http), 1):
+        if i % 200 == 0:
+            typer.echo(f"   {done + i} of {len(articles)} fetched", err=True)
+        if limit and i >= limit:
+            break
+    have = len(wikipedia.fetched(path))
+    typer.echo(f"ok  {path}  ({have} of {len(articles)} articles)")
 
 
 @data_app.command("read-rarearena")
@@ -1526,6 +1567,492 @@ def rankers(
             + "".join(f"{c:>16}" for c in cells)
             + ("   PASS" if v["pass"] else "")
         )
+
+
+# Chapter 33: the RAG corpus (five text sources as structured documents), its indexes
+# (one per way of chunking and embedding model) and their evaluation. No model.
+
+RAG_TEXTS = (
+    "genereviews",
+    "genereviews-omim",
+    "wikipedia",
+    "orphanet",
+    "mondo-ontology",
+    "medlineplus",
+)
+RAG_SOURCES = (
+    "dev-200",
+    "rarebench-hms",
+    "rarebench-ramedis-200",
+    "rarebench-mme",
+    "rarearena-dev",
+)
+RAG_EXPERIMENT = "rag-retrieval"
+DOCUMENTS = "documents.jsonl"
+CHAPTER18 = "chapter18"  # eval rag's name for chapter 18's index
+RAG_SEED = 20261023  # which other GeneReviews chapters a sample draws
+
+
+def _rag_corpus_dir(evals_dir: Path, data_dir: Path) -> Path:
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    names = ("genereviews", "wikipedia", "orphanet", "mondo-ontology", "medlineplus")
+    versions = "_".join(f"{n}-{registry[n].version}" for n in names)
+    return data_dir / "processed" / "rag-corpus" / versions
+
+
+def _rag_documents(evals_dir: Path, data_dir: Path) -> list["Document"]:
+    from raredx.knowledge.corpus import Document
+
+    path = _rag_corpus_dir(evals_dir, data_dir) / DOCUMENTS
+    if not path.exists():
+        _fail(f"{path} missing — run `raredx data corpus` first")
+    with path.open(encoding="utf-8") as f:
+        return [Document.model_validate_json(line) for line in f]
+
+
+@data_app.command("corpus")
+def build_corpus(
+    data_dir: DataDir = settings.data_dir, evals_dir: EvalsDir = settings.evals_dir
+) -> None:
+    """Read the five text sources — GeneReviews, Wikipedia, Orphanet, Mondo, MedlinePlus
+    — into structured documents about the knowledge's diseases (Orphanet merged in).
+    Every file is verified first. No model."""
+    from raredx.data import wikipedia
+    from raredx.knowledge import corpus
+
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    for name in RAG_TEXTS:
+        sources.fetch(registry[name], data_dir)  # downloads what is missing; verifies all
+    raw = {name: sources.raw_dir(registry[name], data_dir) for name in RAG_TEXTS}
+    knowledge = _knowledge(evals_dir, data_dir, orphanet=True)
+    readers = {
+        "genereviews": corpus.genereviews(
+            raw["genereviews"] / corpus.GENEREVIEWS_BOOK,
+            raw["genereviews-omim"] / corpus.GENEREVIEWS_OMIM,
+        ),
+        "wikipedia": corpus.wikipedia(
+            wikipedia.pages(raw["wikipedia"] / wikipedia.PAGES),
+            {
+                a.revid: [*a.orpha, *a.omim]
+                for a in wikipedia.read_manifest(evals_dir / WIKIPEDIA_REVISIONS)
+            },
+        ),
+        "orphanet": corpus.orphanet(raw["orphanet"] / corpus.ORPHANET),
+        "mondo": corpus.mondo(
+            raw["mondo-ontology"] / corpus.MONDO, _identity(evals_dir, data_dir).classes()
+        ),
+        "medlineplus": corpus.medlineplus(raw["medlineplus"] / corpus.MEDLINEPLUS),
+    }
+    folder = _rag_corpus_dir(evals_dir, data_dir)
+    folder.mkdir(parents=True, exist_ok=True)
+    covered: set[str] = set()
+    counts = {}
+    with (folder / DOCUMENTS).open("w", encoding="utf-8") as f:
+        for name, read in readers.items():
+            docs = list(corpus.resolve(read, knowledge))
+            for doc in docs:
+                f.write(doc.model_dump_json() + "\n")
+            diseases = {d for doc in docs for d in doc.disease_ids}
+            covered |= diseases
+            counts[name] = {
+                "documents": len(docs),
+                "diseases": len(diseases),
+                "words": sum(doc.words() for doc in docs),
+            }
+            typer.echo(
+                f"   {name:<12} {len(docs):>6} documents  {len(diseases):>6} diseases  "
+                f"{counts[name]['words'] / 1e6:.1f}M words"
+            )
+    share = len(covered) / len(knowledge.names)
+    build = {
+        "sources": {n: registry[n].version for n in RAG_TEXTS},
+        "hpo_release": knowledge.release,
+        "knowledge": _knowledge_label(evals_dir),
+        "counts": counts,
+        "diseases_with_text": len(covered),
+        "diseases": len(knowledge.names),
+    }
+    (folder / "build.json").write_text(json.dumps(build, indent=2) + "\n", encoding="utf-8")
+    typer.echo(
+        f"ok  {folder}  ({len(covered)} of {len(knowledge.names)} diseases have a text, "
+        f"{share:.0%})"
+    )
+
+
+def _rag_questions(evals_dir: Path, data_dir: Path) -> list["RagQuestion"]:
+    """The questions of chapter 33, each fact question once (a source without papers
+    asks the same one of each case with the disease)."""
+    from raredx.evals import rag
+
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    key = rag.inheritance_key(
+        sources.raw_dir(registry["orphanet-ages"], data_dir) / "en_product9_ages.xml"
+    )
+    cases = {}
+    for name in RAG_SOURCES:
+        _, pool = _processed(data_dir, evals_dir, splits.dataset_of(name, DATASET))
+        by_id = {c.id: c for c in pool}
+        cases[name] = [by_id[case_id] for case_id, _ in splits.read(_manifest(evals_dir, name))]
+    asked = rag.questions(
+        cases,
+        _knowledge(evals_dir, data_dir, orphanet=True),
+        _identity(evals_dir, data_dir).same,
+        key,
+    )
+    seen, out = set(), []
+    for q in asked:
+        key_ = (q.kind, q.text, tuple(q.hide_pmids), q.source) if q.kind != "find" else q.case_id
+        if key_ not in seen:
+            seen.add(key_)
+            out.append(q)
+    return out
+
+
+def _rag_index_dir(data_dir: Path, name: str) -> Path:
+    return data_dir / "processed" / "rag-index" / name
+
+
+@data_app.command("rag-index")
+def rag_index(
+    name: Annotated[str, typer.Argument(help="The index's name, e.g. gr-section+context.")],
+    strategy: Annotated[
+        str, typer.Option(help="fixed | recursive | section | section+context | parent")
+    ] = "section+context",
+    model: Annotated[
+        str, typer.Option(help="The dense model (FastEmbed's name).")
+    ] = "BAAI/bge-small-en-v1.5",
+    source: Annotated[
+        list[str] | None, typer.Option(help="Only these corpus sources; repeatable.")
+    ] = None,
+    chapters: Annotated[
+        int,
+        typer.Option(
+            help="GeneReviews only: this many chapters — every one about a question's "
+            "disease, then others drawn at random."
+        ),
+    ] = 0,
+    threads: Annotated[int, typer.Option(help="CPU cores to embed with (leave some free).")] = 6,
+    force: Annotated[bool, typer.Option(help="Embed again though the index exists.")] = False,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Chunk the corpus one way and embed it with one model, into an index (kept: an
+    index already built is left as it is, unless --force). Embedding
+    is slow on a laptop (about 20 chunks a second); a progress line every 2,000."""
+    import random
+
+    import numpy as np
+
+    from raredx.knowledge import chunking
+    from raredx.knowledge.text_index import FastEmbedder, TextIndex
+
+    if strategy not in chunking.STRATEGIES:
+        _fail(f"{strategy}: choose one of {', '.join(chunking.STRATEGIES)}")
+    built = _rag_index_dir(data_dir, name) / "index.json"
+    if built.exists() and not force:
+        info = json.loads(built.read_text(encoding="utf-8"))
+        typer.echo(
+            f"ok  {built.parent}  (built before: {info['passages']} chunks, "
+            f"{info['strategy']}, {info['dense']}; --force to embed again)"
+        )
+        return
+    docs = [d for d in _rag_documents(evals_dir, data_dir) if not source or d.source in source]
+    if chapters:
+        asked = {q.disease for q in _rag_questions(evals_dir, data_dir)}
+        chosen = [d for d in docs if d.source == "genereviews"]
+        about = [d for d in chosen if asked & set(d.disease_ids)]
+        others = [d for d in chosen if d not in about]
+        random.Random(RAG_SEED).shuffle(others)
+        docs = sorted(about + others[: max(0, chapters - len(about))], key=lambda d: d.id)
+    chunks = [c for d in docs for c in chunking.chunk(d, strategy)]
+    typer.echo(
+        f"embedding {len(chunks)} chunks of {len(docs)} documents with {model} ...", err=True
+    )
+    embedder = FastEmbedder(data_dir / "models", model, threads)
+    dense_parts, sparse = [], []
+    for start in range(0, len(chunks), 2000):
+        d, s = embedder.passages([c.text for c in chunks[start : start + 2000]])
+        dense_parts.append(d)
+        sparse += s
+        typer.echo(f"   {min(start + 2000, len(chunks))} of {len(chunks)}", err=True)
+    info = {
+        "corpus": _rag_corpus_dir(evals_dir, data_dir).name,
+        "strategy": strategy,
+        "documents": len(docs),
+        "sources": sorted({d.source for d in docs}),
+    }
+    folder = _rag_index_dir(data_dir, name)
+    TextIndex.save(folder, chunks, np.vstack(dense_parts), sparse, info, dense_model=model)
+    typer.echo(f"ok  {folder}  ({len(chunks)} chunks)")
+
+
+@eval_app.command("rag")
+def eval_rag(
+    index: Annotated[
+        list[str], typer.Option(help="An index built by `data rag-index`; repeatable.")
+    ],
+    mode: Annotated[str, typer.Option(help="hybrid | dense | keyword")] = "hybrid",
+    filtered: Annotated[
+        bool, typer.Option(help="Fact questions search only the disease's chunks.")
+    ] = False,
+    rerank: Annotated[
+        str,
+        typer.Option(
+            help="A cross-encoder to rerank fact questions' 30 best, "
+            "e.g. Xenova/ms-marco-MiniLM-L-6-v2."
+        ),
+    ] = "",
+    covered: Annotated[
+        bool, typer.Option(help="Only questions on a disease the index has text on.")
+    ] = False,
+    kind: Annotated[
+        list[str] | None, typer.Option(help="find | inheritance | feature; repeatable.")
+    ] = None,
+    threads: Annotated[int, typer.Option(help="CPU cores for the query and rerank models.")] = 6,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Retrieval measured on chapter 33's questions, under each case's mask: per index,
+    the questions whose disease it has any text on (its coverage, reported first), and
+    each measure per kind and source. Each index's result is an MLflow run in the
+    rag-retrieval experiment. No model is called."""
+    import mlflow
+    from mlflow import MlflowClient
+
+    from raredx.evals import rag
+    from raredx.knowledge.text_index import INFO, TextIndex
+    from raredx.knowledge.texts import Passage
+
+    config = rag.Config(mode=mode, filtered=filtered, rerank=rerank)  # type: ignore[arg-type]
+    asked = [q for q in _rag_questions(evals_dir, data_dir) if not kind or q.kind in kind]
+    reranker = None
+    if rerank:
+        from fastembed.rerank.cross_encoder import TextCrossEncoder
+
+        encoder = TextCrossEncoder(rerank, cache_dir=str(data_dir / "models"), threads=threads)
+
+        def reranker(query: str, texts: list[str]) -> list[float]:
+            return list(encoder.rerank(query, texts))
+
+    mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+    client = MlflowClient()
+    if client.get_experiment_by_name(RAG_EXPERIMENT) is None:
+        location = (settings.mlflow_artifact_root / RAG_EXPERIMENT).resolve().as_uri()
+        client.create_experiment(RAG_EXPERIMENT, artifact_location=location)
+    mlflow.set_experiment(RAG_EXPERIMENT)
+    for name in index:
+        if name == CHAPTER18:  # the index chapter 18 built, read as it was
+            registry = sources.load_sources(evals_dir / "datasets.toml")
+            release = _knowledge(evals_dir, data_dir).release
+            folder = _text_index_dir(registry, data_dir, release)
+        else:
+            folder = _rag_index_dir(data_dir, name)
+        if not (folder / INFO).exists():
+            _fail(f"{folder} has no index — run `raredx data rag-index {name}` first")
+        text_index = TextIndex.open(
+            folder, data_dir / "models", Passage, threads, location=settings.qdrant_url
+        )
+        text_index.info.setdefault("strategy", "chapter 18: one definition or paragraph each")
+        has_text = {d for p in text_index.passages for d in p.disease_ids}
+        mine = [q for q in asked if q.disease in has_text or not covered]
+        rows = []
+        for q in mine:
+            rows.append(
+                {
+                    "kind": q.kind,
+                    "source": q.source,
+                    "question": q.text,
+                    "scores": rag.score(q, rag.ask(text_index, q, config, reranker)),
+                }
+            )
+        results = rag.summary(rows)
+        typer.echo(
+            f"{name} ({text_index.info['strategy']}, {text_index.info['dense']}; "
+            f"{len(text_index.passages)} chunks) — {config.label()}; "
+            f"{len(mine)} of {len(asked)} questions asked; "
+            f"{sum(q.disease in has_text for q in asked)} on a disease it has text on"
+        )
+        for group in sorted(results):
+            measures = "  ".join(f"{m} {v:.1%}" for m, v in results[group].items() if m != "n")
+            typer.echo(f"   {group:<32} n {results[group]['n']:>5}  {measures}")
+        with mlflow.start_run(run_name=f"{name} | {config.label()}"):
+            mlflow.log_params(
+                {
+                    **{k: str(v) for k, v in text_index.info.items()},
+                    "index": name,
+                    "mode": mode,
+                    "filtered": filtered,
+                    "rerank": rerank or "none",
+                    "questions": len(mine),
+                    "asked": len(asked),
+                }
+            )
+            mlflow.log_metrics(
+                {
+                    f"{group}.{m}".replace("@", "_at_").replace("/", ".").replace("+", "_"): v
+                    for group, measures in results.items()
+                    for m, v in measures.items()
+                }
+            )
+            mlflow.log_table(
+                {
+                    k: [r[k] if k != "scores" else json.dumps(r[k]) for r in rows]
+                    for k in ("kind", "source", "question", "scores")
+                },
+                artifact_file="questions.json",
+            )
+
+
+@eval_app.command("rag-runs")
+def rag_runs(
+    prefix: Annotated[
+        list[str] | None, typer.Option(help="Only runs whose name starts so.")
+    ] = None,
+    measure: Annotated[
+        list[str] | None, typer.Option(help="kind.measure columns, e.g. feature.answer@5.")
+    ] = None,
+) -> None:
+    """The recorded `eval rag` runs, the latest of each name, as one table: what each
+    configuration scored, read from MLflow rather than run again."""
+    import mlflow
+
+    mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+    runs = mlflow.search_runs(experiment_names=[RAG_EXPERIMENT], order_by=["start_time DESC"])
+    columns = measure or [
+        "find.disease@10",
+        "feature.answer@5",
+        "inheritance.answer@5",
+        "inheritance.rr",
+    ]
+    typer.echo(f"{'run':<64}{'n':>6}" + "".join(f"{c:>22}" for c in columns))
+    seen: set[str] = set()
+    for _, run in runs.iterrows():
+        name = str(run["tags.mlflow.runName"])
+        if name in seen or (prefix and not name.startswith(tuple(prefix))):
+            continue
+        seen.add(name)
+        cells = []
+        for c in columns:
+            value = run.get("metrics." + c.replace("@", "_at_"))
+            cells.append("-" if value is None or value != value else f"{value:.1%}")
+        typer.echo(f"{name:<64}{run['params.questions']:>6}" + "".join(f"{c:>22}" for c in cells))
+
+
+RAG_ANSWERS_EXPERIMENT = "rag-answers"
+
+
+@eval_app.command("rag-answers")
+def rag_answers_command(
+    index: Annotated[str, typer.Option(help="The index the open book reads.")],
+    n: Annotated[int, typer.Option(help="Inheritance questions to ask (seeded draw).")] = 100,
+    budget_usd: Annotated[float, typer.Option(help="Stop once this is spent.")] = 0.20,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """The model asked how diseases are inherited, closed book and open book (the
+    index's five passages on the disease, masked), scored against Orphanet by code. Two
+    model calls a question; every call traced in the rag-answers experiment."""
+    import mlflow
+    from mlflow import MlflowClient
+
+    from raredx import llm
+    from raredx.evals import rag_answers
+    from raredx.knowledge.text_index import TextIndex
+    from raredx.knowledge.texts import Passage
+
+    folder = _rag_index_dir(data_dir, index)
+    text_index = TextIndex.open(
+        folder, data_dir / "models", Passage, 2, location=settings.qdrant_url
+    )
+    has_text = {d for p in text_index.passages for d in p.disease_ids}
+    asked = rag_answers.sample(
+        [q for q in _rag_questions(evals_dir, data_dir) if q.disease in has_text], n
+    )
+    mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+    client = MlflowClient()
+    if client.get_experiment_by_name(RAG_ANSWERS_EXPERIMENT) is None:
+        location = (settings.mlflow_artifact_root / RAG_ANSWERS_EXPERIMENT).resolve().as_uri()
+        client.create_experiment(RAG_ANSWERS_EXPERIMENT, artifact_location=location)
+    mlflow.set_experiment(RAG_ANSWERS_EXPERIMENT)
+    api = llm.client(settings)
+    budget, tally = llm.Budget(budget_usd, _prices()), llm.Tally()
+    with mlflow.start_run(run_name=f"{index} | {len(asked)} questions"):
+        results = rag_answers.run(text_index, asked, api, settings.llm_model, budget, tally)
+        s = rag_answers.summary(results)
+        mlflow.log_params(
+            {
+                "index": index,
+                "model": settings.llm_model,
+                "questions": len(asked),
+                "prompt_version": rag_answers.PROMPT_VERSION,
+            }
+        )
+        mlflow.log_metrics(
+            {f"{book}.{m}": v for book in ("closed", "open") for m, v in s[book].items()}
+            | {"passages_say_it": s["passages_say_it"], "cost_usd": tally.cost(settings)}
+        )
+        mlflow.log_table(
+            {k: [str(getattr(r, k)) for r in results] for k in rag_answers.Result.model_fields},
+            artifact_file="answers.json",
+        )
+    typer.echo(
+        f"{len(asked)} questions on {index}; {tally.model_calls} model calls, "
+        f"${tally.cost(settings):.4f} at the peak price"
+    )
+    for book in ("closed", "open"):
+        line = "  ".join(f"{m} {v:.1%}" for m, v in s[book].items())
+        typer.echo(f"   {book + ' book':<11} {line}")
+    typer.echo(
+        f"   passages say the truth {s['passages_say_it']:.1%}; open book right when they "
+        f"do {s['open_right_when_passages_say_it']:.1%}"
+    )
+
+
+@eval_app.command("rag-compare")
+def rag_compare(
+    run: Annotated[
+        list[str], typer.Option(help="Two run names of `eval rag`, e.g. 'gr300-fixed | hybrid'.")
+    ],
+    measure: Annotated[
+        list[str] | None, typer.Option(help="kind:measure, e.g. feature:answer@5; repeatable.")
+    ] = None,
+) -> None:
+    """Two `eval rag` runs, question by question (the latest run of each name): for each
+    measure, how many questions only the first gets, only the second, and the sign
+    test's p. No model is called."""
+    import mlflow
+
+    from raredx.evals import rag
+
+    if len(run) != 2:
+        _fail("give two --run names")
+    mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+    rows = []
+    for name in run:
+        found = mlflow.search_runs(
+            experiment_names=[RAG_EXPERIMENT],
+            filter_string=f"tags.mlflow.runName = '{name}'",
+            order_by=["start_time DESC"],
+            max_results=1,
+        )
+        if found.empty:
+            _fail(f"no run named {name!r} in {RAG_EXPERIMENT}")
+        first = found.iloc[0]
+        table = mlflow.MlflowClient().load_table(
+            first.experiment_id, "questions.json", run_ids=[first.run_id]
+        )
+        rows.append([{**r, "scores": json.loads(r["scores"])} for r in table.to_dict("records")])
+    wanted = measure or [
+        "find:disease@10",
+        "feature:answer@5",
+        "inheritance:answer@5",
+        "inheritance:rr",
+    ]
+    typer.echo(f"only {run[0]!r} : only {run[1]!r}")
+    for item in wanted:
+        kind, _, m = item.partition(":")
+        a, b, p = rag.paired(rows[0], rows[1], kind, m)  # type: ignore[arg-type]
+        typer.echo(f"   {item:<24} {a:>4} : {b:<4} p = {p:.3f}{'  *' if p < 0.05 else ''}")
 
 
 @eval_app.command("routes")

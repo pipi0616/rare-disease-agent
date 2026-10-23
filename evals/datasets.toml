@@ -177,3 +177,72 @@ role = "evaluation: 22 abstracts for development, 206 for the test, with HPO ann
 
 [gsc-2024.files]
 "gsc_2024.tar.gz" = "5548f7fcab357fa825000cb19cd29f5bf0dc34f795166fa211e79e1b42d76484"
+
+# Wikipedia's articles on the knowledge's diseases (their Wikidata item carries an
+# Orphanet or OMIM id), for text retrieval. Not one download: listed from Wikidata and
+# pinned by revision in evals/wikipedia_revisions.tsv, then fetched as each revision's
+# HTML by `raredx data wikipedia`; the checksum pins the file it wrote.
+[wikipedia]
+version = "2026-10-23"
+url = "https://en.wikipedia.org/w/"
+homepage = "https://en.wikipedia.org"
+license = "CC BY-SA 4.0; attribute Wikipedia and link the article; kept on this machine"
+role = "knowledge: disease articles, for text retrieval"
+fetched_by = "raredx data wikipedia"
+
+[wikipedia.files]
+"pages.jsonl.gz" = "f6fcddbd1a90c52a2ec66f74584a72e957e766fdd0da2e18bcff464d85da4225"
+
+# GeneReviews: NCBI Bookshelf's expert-authored chapters on genetic conditions — the
+# most detailed clinical text there is for most of them (diagnosis, clinical
+# description, differential diagnosis, genetic counselling), each paragraph citing its
+# papers by PMID. The whole book from the Bookshelf open-access subset, and NCBI's
+# chapter-to-OMIM table. Non-commercial research only, unmodified copies: the files
+# stay on this machine; what is shown is an excerpt with credit.
+[genereviews]
+version = "2026-10-22"
+url = "https://ftp.ncbi.nlm.nih.gov/pub/litarch/ca/84/"
+homepage = "https://www.ncbi.nlm.nih.gov/books/NBK1116/"
+license = "GeneReviews copyright University of Washington, Seattle: noncommercial research use, credit and link required, no modifications; kept on this machine"
+role = "knowledge: clinical chapters, for text retrieval"
+latest_only = true
+
+[genereviews.files]
+"gene_NBK1116.tar.gz" = "8e7538e924c8cbf0637d387ec9626adfd0248744f98a2ada51fdaecf1fb4ef10"
+
+[genereviews-omim]
+version = "2026-10-22"
+url = "https://ftp.ncbi.nlm.nih.gov/pub/GeneReviews/"
+homepage = "https://www.ncbi.nlm.nih.gov/books/NBK1116/"
+license = "NCBI (public domain), linking GeneReviews chapters to OMIM"
+role = "knowledge: which OMIM diseases each GeneReviews chapter is about"
+latest_only = true
+
+[genereviews-omim.files]
+"NBKid_shortname_OMIM.txt" = "4ef19a4bf7fe7a81fd8e286390bf3f03285414bd5639cf7ca73ca7ea119de91b"
+
+# Mondo's ontology at the release its mappings above come from: each disease class's
+# textual definition, read as one more short text per disease.
+[mondo-ontology]
+version = "v2026-09-01"
+url = "https://github.com/monarch-initiative/mondo/releases/download/v2026-09-01/"
+homepage = "https://mondo.monarchinitiative.org"
+license = "CC BY 4.0; cite Mondo (Vasilevsky et al. 2025) and the version used"
+role = "knowledge: disease definitions, for text retrieval"
+
+[mondo-ontology.files]
+"mondo.obo" = "50c8367f9bd9978321eedf84d4e2e79cb757efbed514c81effb00b9ad2e49994"
+
+# Orphanet's natural history: each disorder's age of onset and type of inheritance,
+# from the release of its definitions. The answer key for chapter 33's questions about
+# a disease (is a text that says how it is inherited found?); not itself indexed.
+[orphanet-ages]
+version = "2026-06-23"
+url = "https://www.orphadata.com/data/xml/"
+homepage = "https://www.orphadata.com"
+license = "CC BY 4.0; cite Orphanet (www.orpha.net)"
+role = "evaluation: the answer key for questions on a disease's inheritance"
+latest_only = true
+
+[orphanet-ages.files]
+"en_product9_ages.xml" = "38fef7e9e398addb147e57df7bb523e5ef072e03c0208ae81b37a2fd200af1ab"
