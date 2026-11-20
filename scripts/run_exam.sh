@@ -3,16 +3,16 @@
 # MLflow's store is one SQLite file). Each run's output goes to its own log, and its
 # MLflow run id to a table, so the report can be made without looking anything up.
 #
-#   scripts/run_exam.sh LOG_DIR SPLIT...        the systems billed by DeepSeek, and the free ones
-#   scripts/run_exam.sh LOG_DIR --others SPLIT...   other providers' models, asked directly
+#   scripts/run_exam.sh LOG_DIR patients       MyGene2 and CADA's test set: baselines, the model
+#                                            asked directly, agent v1.1
+#   scripts/run_exam.sh LOG_DIR casereports    the case-report test: baselines, direct, agent v2
+#   scripts/run_exam.sh LOG_DIR gpt            GPT-6.1 asked directly, on MyGene2 only
 #
 # A run that already has a line in the table is skipped: the script can be started again
 # after an interruption without asking any system twice.
 set -uo pipefail
 
-logs="$1"; shift
-others=0
-if [ "${1:-}" = "--others" ]; then others=1; shift; fi
+logs="$1"; mode="$2"
 mkdir -p "$logs"
 table="$logs/runs.tsv"
 [ -f "$table" ] || printf 'split\tname\trun_id\n' > "$table"
@@ -33,17 +33,21 @@ run() {  # run NAME SPLIT ARGS...
   echo "done  $split  $name  exit $status"
 }
 
-for split in "$@"; do
-  if [ "$others" = 1 ]; then
-    run gpt-6.1 "$split" --system llm-direct --model openrouter:openai/gpt-6.1-sol --budget-usd 3
-    run claude-sonnet-5.5 "$split" --system llm-direct --model openrouter:anthropic/claude-sonnet-5.5 --budget-usd 3
-    run gemini-4 "$split" --system llm-direct --model openrouter:google/gemini-4-argon --budget-usd 3
-  else
-    run rank-then-check "$split" --system rank-then-check
-    run one-way-merged "$split" --system phenotype-rank --orphanet --similarity resnik/oneway
-    run lirical "$split" --system lirical
-    run llm-direct "$split" --system llm-direct
-    run agent-v2 "$split" --system agent-v2
-    run agent-v1.1 "$split" --system hypothesis-agent
-  fi
-done
+case "$mode" in
+  patients)
+    for split in mygene2 cada-test; do
+      run rank-then-check "$split" --system rank-then-check
+      run lirical "$split" --system lirical
+      run llm-direct "$split" --system llm-direct
+      run agent-v1.1 "$split" --system hypothesis-agent
+    done ;;
+  casereports)
+    run rank-then-check casereports-exam --system rank-then-check
+    run one-way-merged casereports-exam --system phenotype-rank --orphanet --similarity resnik/oneway
+    run lirical casereports-exam --system lirical
+    run llm-direct casereports-exam --system llm-direct
+    run agent-v2 casereports-exam --system agent-v2 ;;
+  gpt)
+    run gpt-6.1 mygene2 --system llm-direct --model openrouter:openai/gpt-6.1-sol --budget-usd 1.5 ;;
+  *) echo "unknown mode: $mode" >&2; exit 2 ;;
+esac
