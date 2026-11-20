@@ -162,3 +162,40 @@ def test_committed_external_manifests_keep_every_rule() -> None:
 
     assert all((COMMITTED / f"{name}.tsv").exists() for name in splits.EXTERNAL)
     assert splits.check_external(COMMITTED, pubmed.read(EVALS / "pubmed_dates.tsv")) == []
+
+
+def clinical_case(case_id: str, pmid: str | None = None) -> Case:
+    return case(case_id, "", "external").model_copy(update={"pmid": pmid})
+
+
+def test_clinical_manifests_keep_cadas_own_split(tmp_path: Path) -> None:
+    mygene2 = [clinical_case("MyGene2_a", "PMID:7"), clinical_case("MyGene2_b")]
+    cada = [clinical_case(f"CADA_train_{i}") for i in range(400)]
+    cada += [clinical_case(f"CADA_test_{i}") for i in range(50)]
+    status = splits.make_clinical(mygene2, cada, tmp_path)
+    assert set(status.values()) == {"written"}
+    assert splits.make_clinical(mygene2, cada, tmp_path)[splits.CADA_DEV] == "unchanged"
+    assert splits.read(tmp_path / "mygene2.tsv") == [("MyGene2_a", "PMID:7"), ("MyGene2_b", "")]
+    assert len(splits.read(tmp_path / "cada-test.tsv")) == 50
+    dev = splits.read(tmp_path / "cada-dev.tsv")
+    assert len(dev) == splits.CADA_DEV_SIZE
+    assert all(case_id.startswith("CADA_train_") for case_id, _ in dev)
+    assert splits.check_clinical(tmp_path) == []
+    assert splits.check_clinical_against(mygene2, cada, tmp_path) == []
+    # a test patient slipped into the development manifest is caught
+    with (tmp_path / "cada-dev.tsv").open("a") as f:
+        f.write("CADA_test_0\t\n")
+    assert "cada-dev: a case from another source or part" in splits.check_clinical(tmp_path)
+
+
+def test_a_clinical_test_is_run_once_and_a_practice_set_is_not() -> None:
+    assert splits.is_test("mygene2") and splits.is_test("cada-test")
+    assert splits.is_test(splits.TEMPORAL)
+    assert not splits.is_test("cada-dev") and not splits.is_test("rarebench-hms")
+    assert splits.dataset_of("cada-dev", "x") == "cada" == splits.dataset_of("cada-test", "x")
+
+
+def test_committed_clinical_manifests_keep_every_rule() -> None:
+    assert all((COMMITTED / f"{name}.tsv").exists() for name in splits.CLINICAL_MANIFESTS)
+    assert splits.check_clinical(COMMITTED) == []
+    assert splits.check_development(COMMITTED) == []

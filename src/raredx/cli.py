@@ -47,6 +47,8 @@ app.add_typer(llm_app, name="llm")
 DATASET = "phenopacket-store"
 SNAPSHOT = "phenopacket-store-snapshot"  # the store after the pinned release
 RAREBENCH = "rarebench"
+MYGENE2 = "mygene2"  # patients shared on mygene2.org
+CADA = "cada"  # diagnostic laboratories' and clinics' patients
 
 DataDir = Annotated[
     Path, typer.Option(help="Raw and processed data. Default: RAREDX_DATA_DIR or ./data.")
@@ -103,7 +105,7 @@ def fetch(
             typer.echo(f"ok  {path}  ({source.name} {source.version}, sha256 verified)")
 
 
-CASE_SOURCES = (DATASET, SNAPSHOT, RAREBENCH)
+CASE_SOURCES = (DATASET, SNAPSHOT, RAREBENCH, MYGENE2, CADA)
 
 
 @data_app.command()
@@ -128,16 +130,33 @@ def build(
         _, release = _processed(data_dir, evals_dir)
         cases, skipped = phenopackets.load(raw, {c.pmid for c in release if c.pmid})
         info["release"] = f"{DATASET} {registry[DATASET].version}"
+    elif name == CADA:
+        from raredx.data import clinical
+        from raredx.knowledge import hpo as hpo_release
+
+        folder = sources.raw_dir(source, data_dir)
+        absent = [f for f in source.files if not (folder / f).exists()]
+        if absent:
+            _fail(f"{folder} lacks {', '.join(absent)} — run `raredx data fetch {name}` first")
+        knowledge = _knowledge(evals_dir, data_dir)
+        symbols = hpo_release.gene_symbols(sources.raw_dir(registry["hpo"], data_dir))
+        cases, skipped = clinical.load_cada(folder, knowledge, symbols)
+        info["hpo_release"] = knowledge.release
     else:
-        from raredx.data import rarebench
+        from raredx.data import clinical, rarebench
 
         orphanet = sources.raw_dir(registry["orphanet"], data_dir) / "en_product1.xml"
         if not orphanet.exists():
             _fail("the Orphanet mappings are not downloaded — run `raredx data fetch orphanet`")
         knowledge = _knowledge(evals_dir, data_dir)
-        cases, skipped = rarebench.load(raw, knowledge, rarebench.Orphanet(orphanet))
+        read = clinical.load_mygene2 if name == MYGENE2 else rarebench.load
+        cases, skipped = read(raw, knowledge, rarebench.Orphanet(orphanet))
         info["hpo_release"] = knowledge.release
-    info |= {"raw_sha256": source.files[file], "cases": len(cases), "skipped": dict(skipped)}
+    # One file: its checksum. Several (CADA's): the checksum of theirs, in the registry's order.
+    raw_sha256 = source.files[file]
+    if len(source.files) > 1:
+        raw_sha256 = hashlib.sha256(" ".join(source.files.values()).encode()).hexdigest()
+    info |= {"raw_sha256": raw_sha256, "cases": len(cases), "skipped": dict(skipped)}
     path = case_store.write(cases, sources.processed_dir(source, data_dir), info)
     typer.echo(f"ok  {path}  ({len(cases)} cases, skipped {dict(skipped) or 'none'})")
 
@@ -511,12 +530,20 @@ def make_splits(
     external: Annotated[
         bool, typer.Option(help="The temporal and RareBench manifests, from their datasets.")
     ] = False,
+    clinical: Annotated[
+        bool, typer.Option(help="The MyGene2 and CADA manifests, from their datasets.")
+    ] = False,
     force: bool = False,
 ) -> None:
     """Create the manifests in evals/splits, or confirm they are unchanged. With
-    --external, the four that test v1.0 on cases from outside the pinned release."""
+    --external, the four that test v1.0 on cases from outside the pinned release; with
+    --clinical, the three of real patients (MyGene2, CADA's test and development parts)."""
     try:
-        if external:
+        if clinical:
+            _, mygene2 = _processed(data_dir, evals_dir, MYGENE2)
+            _, cada = _processed(data_dir, evals_dir, CADA)
+            status = splits.make_clinical(mygene2, cada, evals_dir / "splits", force=force)
+        elif external:
             from raredx.data import pubmed
 
             _, snapshot = _processed(data_dir, evals_dir, SNAPSHOT)
@@ -558,12 +585,24 @@ def check(
     if not problems and external and all((d / case_store.CASES_FILE).exists() for d in others):
         snapshot, rarebench = (case_store.read(d) for d in others)
         problems = splits.check_external_against(snapshot, rarebench, dates, folder)
+    problems += splits.check_clinical(folder)
+    clinical_dirs = [sources.processed_dir(registry[n], data_dir) for n in (MYGENE2, CADA)]
+    clinical = [n for n in splits.CLINICAL_MANIFESTS if (folder / f"{n}.tsv").exists()]
+    if (
+        not problems
+        and clinical
+        and all((d / case_store.CASES_FILE).exists() for d in clinical_dirs)
+    ):
+        mygene2, cada = (case_store.read(d) for d in clinical_dirs)
+        problems = splits.check_clinical_against(mygene2, cada, folder)
     for problem in problems:
         typer.echo(f"problem  {problem}")
     if problems:
         raise typer.Exit(1)
-    development = [n for n in splits.DEVELOPMENT if (folder / f"{n}.tsv").exists()]
-    names = [*splits.NAMES, *external, *development]
+    development = [
+        n for n in splits.DEVELOPMENT if n not in clinical and (folder / f"{n}.tsv").exists()
+    ]
+    names = [*splits.NAMES, *external, *development, *clinical]
     typer.echo(f"ok  {folder}: {', '.join(names)} pass every rule")
 
 
@@ -991,8 +1030,8 @@ def run_system(
     settings.orphanet = orphanet  # before any knowledge is loaded in this process
     if split.startswith("heldout") and not final:
         _fail("heldout is the final exam: run it once, with --final, when the design is frozen")
-    if split in splits.EXTERNAL and split not in splits.PRACTICE and not final:
-        _fail(f"{split} tests the frozen system again: run it once, with --final")
+    if splits.is_test(split) and not final:
+        _fail(f"{split} tests the frozen system: run it once, with --final")
     left_out = tuple(sorted(set(without or [])))
     unknown = [t for t in left_out if t not in EXTRA_TOOLS]
     if unknown:
@@ -1326,10 +1365,7 @@ def calibrate(
     path = config or evals_dir / CALIBRATION
     listed = tomllib.loads(path.read_text(encoding="utf-8"))["source"]
     tests = [
-        s["split"]
-        for s in listed
-        if s["split"].startswith("heldout")
-        or (s["split"] in splits.EXTERNAL and s["split"] not in splits.PRACTICE)
+        s["split"] for s in listed if s["split"].startswith("heldout") or splits.is_test(s["split"])
     ]
     if tests:
         _fail(f"{path}: {', '.join(tests)} test a frozen system — never calibrate on them")

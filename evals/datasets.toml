@@ -246,3 +246,36 @@ latest_only = true
 
 [orphanet-ages.files]
 "en_product9_ages.xml" = "38fef7e9e398addb147e57df7bb523e5ef072e03c0208ae81b37a2fd200af1ab"
+
+# Real patients from outside the published case reports (src/raredx/data/clinical.py).
+#
+# MyGene2: patients' features and genes as families and clinicians shared them on
+# mygene2.org, read as SHEPHERD preprocessed them (146 patients with an OMIM diagnosis,
+# May 2022). The file is Dataverse file 6689035 (patients/mygene2_patients/
+# mygene2_5.7.22.txt) of doi:10.7910/DVN/TZTPFL, version 3; the id is its only stable URL.
+# Tested on once, never developed on.
+[mygene2]
+version = "dvn-tztpfl-v3"
+url = "https://dataverse.harvard.edu/api/access/datafile/"
+homepage = "https://doi.org/10.7910/DVN/TZTPFL"
+license = "CC0 1.0"
+role = "evaluation: patients shared by families and clinicians, for the clinical test"
+
+[mygene2.files]
+"6689035" = "aed90dbd820f0619dd947f07197c97fb38e32bdd633ab07f094673176d1c90be"
+
+# CADA (Peng et al. 2021): 4,714 patients with a genetic diagnosis, from ClinVar
+# submissions that carry HPO terms and from the authors' collaborating clinics. The
+# authors' own split: the test file is tested on once, the training file is developed
+# on, the validation file is left unread. Pinned to the repository's commit.
+[cada]
+version = "56e42ec"
+url = "https://raw.githubusercontent.com/Chengyao-Peng/CADA/56e42ec7fd154a036bb189732c802e2b9eb93459/data/processed/cases/"
+homepage = "https://github.com/Chengyao-Peng/CADA"
+license = "GPL-3.0 (the repository)"
+role = "evaluation and development: diagnostic laboratories' and clinics' patients"
+
+[cada.files]
+"cases_train.tsv" = "228a395049da39359ccc3dd867ce622479df696bd7ab00faab46795ef33c27c3"
+"cases_validate.tsv" = "8647f19dd42d0d39d5b18ad57b00a1e2e82cc5218fbc073695ff751d966a5fe3"
+"cases_test.tsv" = "d4ef63304270b02ea95cedcbb23191c07856dec40d98f14690f03738e25cfc95"

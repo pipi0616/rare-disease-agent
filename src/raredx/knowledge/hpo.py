@@ -187,6 +187,16 @@ def _annotations(
     return lines, names
 
 
+def gene_symbols(folder: Path) -> dict[str, str]:
+    """NCBI gene id (the number, as text) -> symbol, as the release's gene table has them:
+    for a source that names genes by their NCBI id (CADA)."""
+    symbols: dict[str, str] = {}
+    for row in _rows(folder / GENES):
+        if row["gene_symbol"] not in ("", "-"):
+            symbols[row["ncbi_gene_id"].removeprefix("NCBIGene:")] = row["gene_symbol"]
+    return symbols
+
+
 def _genes(path: Path) -> dict[str, tuple[str, ...]]:
     genes: dict[str, set[str]] = defaultdict(set)
     for row in _rows(path):
