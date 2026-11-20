@@ -552,6 +552,12 @@ class Builder:
         """Annotator A names at least one disease of the knowledge: worth fetching."""
         return bool(self._known(paper.title_diseases + paper.abstract_diseases))
 
+    def one_in_title(self, paper: Abstract) -> bool:
+        """The title names exactly one rare disease of the knowledge, on a paper not used
+        elsewhere: the first rules of `process`, which need nothing fetched."""
+        unused = f"PMID:{paper.pmid}" not in self.used
+        return unused and len(self._known(paper.title_diseases)) == 1
+
     def _skip(self, pmid: str, reason: str, *details: str) -> Accepted | None:
         """Log why a paper is skipped; always None, so a rule can `return self._skip(...)`."""
         cells = list(details) + [""] * (4 - len(details))

@@ -478,6 +478,13 @@ def build_casereports(
     budget_usd: Annotated[
         float, typer.Option(help="Stop asking the model once this much is spent now.")
     ] = 2.0,
+    fetch_ahead: Annotated[
+        int | None,
+        typer.Option(
+            help="Only fetch, for the first N candidates in the order, what the build will "
+            "need from NCBI (annotations, dates, full texts) — no model call, no decision."
+        ),
+    ] = None,
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
@@ -573,28 +580,51 @@ def build_casereports(
         selection=cr.Selection(sizes),
     )
     annotations, dates = store.read("a"), store.read("dates")
+
+    def prepare(batch: list[str]) -> tuple[dict[str, "cr.Abstract"], list[str]]:
+        """Annotator A and the dates for a batch, from disk or fetched now: the papers A
+        annotated, and those among them it lets through."""
+        missing = [p for p in batch if p not in annotations]
+        if missing:
+            found = {a.pmid: a for a in cr.annotate(missing, http)}
+            for pmid in missing:  # a paper PubTator3 does not return is kept as none
+                annotations[pmid] = found[pmid].model_dump() if pmid in found else None
+                store.append("a", pmid, annotations[pmid])
+        papers = {p: cr.Abstract.model_validate(annotations[p]) for p in batch if annotations[p]}
+        passing = [p for p in batch if p in papers and builder.a_passes(papers[p])]
+        undated = [f"PMID:{p}" for p in passing if p not in dates]
+        if undated:
+            looked_up = pubmed.fetch(undated, http)
+            for paper in undated:
+                number, public = paper.removeprefix("PMID:"), looked_up.get(paper, (None,))[0]
+                dates[number] = public.isoformat() if public else ""
+                store.append("dates", number, dates[number])
+        return papers, passing
+
+    if fetch_ahead is not None:
+        # The free and slow part, ahead of the build: the full text of every paper that can
+        # still be accepted on what A and its date say. Quotas are not looked at (they
+        # depend on the model's answers), so a few texts are fetched that will not be used.
+        fetched = 0
+        try:
+            for batch in cr.batches(order[:fetch_ahead], cr.ANNOTATE_BATCH):
+                papers, passing = prepare(batch)
+                for pmid in passing:
+                    late = (dates.get(pmid) or "") >= str(builder.cutoff or "")
+                    if late and builder.one_in_title(papers[pmid]) and pmid not in texts:
+                        fetch(pmid)
+                        fetched += 1
+        except httpx.HTTPError as e:
+            typer.echo(f"stopped: a service failed ({type(e).__name__}: {str(e)[:200]})")
+        typer.echo(f"fetched {fetched} full texts now; {len(texts):,} papers looked up in all")
+        return
+
     let_through = not_named = 0
     stopped = "every candidate was processed"
     try:
         for batch in cr.batches(order, cr.ANNOTATE_BATCH):
-            missing = [p for p in batch if p not in annotations]
-            if missing:
-                found = {a.pmid: a for a in cr.annotate(missing, http)}
-                for pmid in missing:  # a paper PubTator3 does not return is kept as none
-                    annotations[pmid] = found[pmid].model_dump() if pmid in found else None
-                    store.append("a", pmid, annotations[pmid])
-            papers = {
-                p: cr.Abstract.model_validate(annotations[p]) for p in batch if annotations[p]
-            }
-            passing = [p for p in batch if p in papers and builder.a_passes(papers[p])]
+            papers, passing = prepare(batch)
             not_named += len(batch) - len(passing)
-            undated = [f"PMID:{p}" for p in passing if p not in dates]
-            if undated:
-                looked_up = pubmed.fetch(undated, http)
-                for paper in undated:
-                    number, public = paper.removeprefix("PMID:"), looked_up.get(paper, (None,))[0]
-                    dates[number] = public.isoformat() if public else ""
-                    store.append("dates", number, dates[number])
             for pmid in passing:
                 current[:] = [pmid]
                 written = dates.get(pmid) or ""
