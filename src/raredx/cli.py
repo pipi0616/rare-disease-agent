@@ -454,6 +454,311 @@ def read_rarearena(
         typer.echo(f"ok  {manifest}  ({len(rows)} cases)")
 
 
+CASEREPORTS = "casereports"
+
+
+def _casereports_dir(data_dir: Path, pilot: bool, layer: str = "raw") -> Path:
+    """Where the case-report build keeps its files: what it fetched and the texts it kept
+    in the raw layer, the cases read from them in the processed one. The pilot's are apart."""
+    from raredx.data import casereports as cr
+
+    return data_dir / layer / CASEREPORTS / ("pilot-2025-03" if pilot else cr.VERSION)
+
+
+@data_app.command("casereports")
+def build_casereports(
+    pilot: Annotated[
+        bool,
+        typer.Option(help="Debug on papers from before the cutoff; nothing of it is ever used."),
+    ] = False,
+    max_papers: Annotated[
+        int | None,
+        typer.Option(help="Stop after this many papers annotator A lets through."),
+    ] = None,
+    budget_usd: Annotated[
+        float, typer.Option(help="Stop asking the model once this much is spent now.")
+    ] = 2.0,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Build the case-report test and development sets (docs/casereports_plan.md): the
+    candidates in their fixed order, each through annotator A (PubTator3), the full text
+    (BioC), annotator B (the model) and the rules, until both sides are full. Resumes:
+    what was fetched or asked before is read from disk, not fetched or paid for again."""
+    import httpx
+    from openai import OpenAI
+
+    from raredx import llm
+    from raredx.data import casereports as cr
+    from raredx.data import pubmed, rarearena
+    from raredx.knowledge import prevalence
+    from raredx.knowledge.diseases import MAPPINGS
+    from raredx.tools.find_disease import NAME_MATCH
+
+    registry = sources.load_sources(evals_dir / "datasets.toml")
+    merged = _knowledge(evals_dir, data_dir, orphanet=True)
+    identity = _identity(evals_dir, data_dir)
+    mesh = cr.Mesh(sources.raw_dir(registry["mondo"], data_dir) / MAPPINGS, identity)
+    ontology = sources.raw_dir(registry["mondo-ontology"], data_dir) / "mondo.obo"
+    if not ontology.exists():
+        _fail(f"{ontology} missing — run `raredx data fetch mondo-ontology` first")
+    mondo_names = cr.mondo_names(ontology)
+    band = prevalence.disease_bands(*_orphanet_prevalence_files(evals_dir, data_dir), identity.same)
+    _, release = _processed(data_dir, evals_dir)
+    _, snapshot = _processed(data_dir, evals_dir, SNAPSHOT)
+    used = {c.pmid for c in release + snapshot if c.pmid}
+    used |= set(rarearena.read_pmids(evals_dir / PMC_PMIDS).values())
+
+    out_dir = _casereports_dir(data_dir, pilot)
+    store = cr.Store(out_dir / "work")
+    http = httpx.Client(timeout=90, headers={"User-Agent": "python-httpx (case-report builder)"})
+    first, last = cr.PILOT if pilot else (cr.START, cr.END)
+    listing = out_dir / "work" / "candidates.txt"
+    if not listing.exists():
+        listing.write_text("\n".join(cr.search(first, last, http)) + "\n", encoding="utf-8")
+    order = cr.ordered(listing.read_text(encoding="utf-8").split())
+    typer.echo(f"{len(order):,} candidates entered {first} to {last}")
+
+    budget = llm.Budget(budget_usd, _prices())
+    tally = llm.Tally()
+    # A client of its own, without MLflow's tracing: the build may run beside an evaluation,
+    # and its record is the store on disk (every reply of the model, per paper).
+    api = OpenAI(
+        base_url=settings.llm_base_url, api_key=llm.api_key(settings), timeout=180, max_retries=2
+    )
+    texts, keys = store.read("text"), store.read("b")
+
+    def fetch(pmid: str) -> "cr.FullText | None":
+        if pmid not in texts:
+            found = cr.full_text(pmid, http)
+            texts[pmid] = found.model_dump() if found else None
+            store.append("text", pmid, texts[pmid])
+        return cr.FullText.model_validate(texts[pmid]) if texts[pmid] else None
+
+    def ask(title: str, abstract: str, numbered: list[str], pmid: str) -> "cr.Key | None":
+        if pmid not in keys:
+            messages: list[Any] = [
+                {"role": "system", "content": cr.B_SYSTEM},
+                {"role": "user", "content": cr.b_prompt(title, abstract, numbered)},
+            ]
+            try:
+                key = llm.ask_json(
+                    api, settings.llm_model, messages, cr.parse_key, budget=budget, tally=tally
+                )
+                keys[pmid] = key.model_dump()
+            except ValueError:  # pydantic's ValidationError is one: unreadable twice
+                keys[pmid] = None
+            store.append("b", pmid, keys[pmid])
+        return cr.Key.model_validate(keys[pmid]) if keys[pmid] else None
+
+    names = cr.name_index(
+        merged.names, lambda disease: mondo_names.get(identity.mondo(disease) or "", [])
+    )
+    current: list[str] = []  # the paper being processed, for the callback annotator B gets
+    sizes = {"exam": 10, "dev": 10} if pilot else None
+    builder = cr.Builder(
+        mesh=mesh,
+        canonical=merged.canonical,
+        find=lambda name: cr.find_by_name(name, names, NAME_MATCH),
+        names_of=lambda mondo: [
+            *mondo_names.get(mondo, []),
+            *(merged.names[c] for d in mesh.diseases(mondo) if (c := merged.canonical(d))),
+        ],
+        genes_of=lambda disease: merged.genes.get(disease, ()),
+        band_of=lambda disease: band.get(disease, ""),
+        ask=lambda title, abstract, numbered: ask(title, abstract, numbered, current[0]),
+        fetch=fetch,
+        used=frozenset(used),
+        cutoff=None if pilot else splits.CUTOFF,
+        selection=cr.Selection(sizes),
+    )
+    annotations, dates = store.read("a"), store.read("dates")
+    let_through = not_named = 0
+    stopped = "every candidate was processed"
+    try:
+        for batch in cr.batches(order, cr.ANNOTATE_BATCH):
+            missing = [p for p in batch if p not in annotations]
+            if missing:
+                found = {a.pmid: a for a in cr.annotate(missing, http)}
+                for pmid in missing:  # a paper PubTator3 does not return is kept as none
+                    annotations[pmid] = found[pmid].model_dump() if pmid in found else None
+                    store.append("a", pmid, annotations[pmid])
+            papers = {
+                p: cr.Abstract.model_validate(annotations[p]) for p in batch if annotations[p]
+            }
+            passing = [p for p in batch if p in papers and builder.a_passes(papers[p])]
+            not_named += len(batch) - len(passing)
+            undated = [f"PMID:{p}" for p in passing if p not in dates]
+            if undated:
+                looked_up = pubmed.fetch(undated, http)
+                for paper in undated:
+                    number, public = paper.removeprefix("PMID:"), looked_up.get(paper, (None,))[0]
+                    dates[number] = public.isoformat() if public else ""
+                    store.append("dates", number, dates[number])
+            for pmid in passing:
+                current[:] = [pmid]
+                written = dates.get(pmid) or ""
+                first_day = datetime.fromisoformat(written).date() if written else None
+                builder.process(papers[pmid], first_day)
+                let_through += 1
+                if builder.selection.full() or (max_papers and let_through >= max_papers):
+                    break
+            if builder.selection.full():
+                stopped = "both sides are full"
+                break
+            if max_papers and let_through >= max_papers:
+                stopped = f"--max-papers {max_papers} reached"
+                break
+    except llm.BudgetExceeded as e:
+        stopped = f"the spending cap was reached ({e})"
+
+    table_dir = out_dir if pilot else evals_dir
+    (table_dir / f"{cr.NAME}.tsv").write_text(cr.render_table(builder.accepted), encoding="utf-8")
+    (table_dir / f"{cr.NAME}-log.tsv").write_text(
+        "\n".join([cr.LOG_HEADER, *builder.log]) + "\n", encoding="utf-8"
+    )
+    with (out_dir / cr.TEXTS).open("w", encoding="utf-8") as f:
+        for row in sorted(builder.accepted, key=lambda r: r.id):
+            record = {"id": row.id, "text": builder.texts[row.id]}
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    (out_dir / "state.json").write_text(
+        json.dumps(
+            {
+                "complete": builder.selection.full() or stopped.startswith("every"),
+                "stopped": stopped,
+                "accepted": dict(builder.selection.total),
+                "let_through_by_a": let_through,
+                "no_disease_of_the_knowledge_named": not_named,
+                "model": settings.llm_model,
+                "prompt_version": cr.PROMPT_VERSION,
+                "seed": cr.SEED,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    reasons: dict[str, int] = {}
+    for line in builder.log:
+        cells = line.split("\t")
+        reasons[cells[2] or cells[1]] = reasons.get(cells[2] or cells[1], 0) + 1
+    typer.echo(f"stopped: {stopped}")
+    typer.echo(
+        f"A let {let_through:,} papers through ({not_named:,} name no disease of the knowledge); "
+        f"accepted: exam {builder.selection.total['exam']}, dev {builder.selection.total['dev']}"
+    )
+    for reason, n in sorted(reasons.items(), key=lambda kv: -kv[1]):
+        typer.echo(f"  {n:>6,}  {reason}")
+    typer.echo(
+        f"annotator B now: {tally.model_calls} calls, "
+        f"about ${tally.cost(settings):.4f} at peak price"
+    )
+
+
+@data_app.command("read-casereports")
+def read_casereports(
+    pilot: Annotated[bool, typer.Option(help="The pilot's reports, not the real ones.")] = False,
+    limit: Annotated[int | None, typer.Option(help="Read at most this many now.")] = None,
+    budget_usd: Annotated[
+        float, typer.Option(help="Stop calling the model once this much is spent now.")
+    ] = 1.5,
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """Read each accepted case report's kept text into HPO terms with the note reader, and
+    write the reports as cases; once all are read, the two manifests (casereports-exam,
+    casereports-dev). Resumes: a report already read is not read again. Do not run it
+    beside an evaluation: both write to the MLflow store."""
+    from raredx import llm
+    from raredx.data import casereports as cr
+    from raredx.phenotyping.reader import Finding, terms
+
+    raw = _casereports_dir(data_dir, pilot)
+    out_dir = _casereports_dir(data_dir, pilot, "processed")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    table_file = (raw if pilot else evals_dir) / f"{cr.NAME}.tsv"
+    state_file = raw / "state.json"
+    if not table_file.exists() or not state_file.exists():
+        _fail(f"{table_file} missing — run `raredx data casereports` first")
+    if not pilot and not json.loads(state_file.read_text(encoding="utf-8"))["complete"]:
+        _fail("the build is not complete: run `raredx data casereports` until it is")
+    rows = cr.read_table(table_file)
+    texts = {}
+    for line in (raw / cr.TEXTS).read_text(encoding="utf-8").splitlines():
+        record = json.loads(line)
+        texts[record["id"]] = record["text"]
+    changed = [r.id for r in rows if cr.checksum(texts.get(r.id, "")) != r.sha256]
+    if changed:
+        _fail(f"{len(changed)} kept texts do not match the table's checksums, e.g. {changed[0]}")
+    merged = _knowledge(evals_dir, data_dir, orphanet=True)
+
+    readings_file = out_dir / "readings.jsonl"
+    done: dict[str, list[dict[str, Any]]] = {}
+    if readings_file.exists():
+        for line in readings_file.read_text(encoding="utf-8").splitlines():
+            record = json.loads(line)
+            done[record["id"]] = record["findings"]
+    reader = _note_reader(evals_dir, data_dir, llm.Budget(budget_usd, _prices()))
+    tally = llm.Tally()
+    to_read = [r for r in rows if r.id not in done][:limit]
+    with readings_file.open("a", encoding="utf-8") as f:
+        for i, row in enumerate(to_read, 1):
+            findings = reader.read(texts[row.id], tally)
+            done[row.id] = [x.model_dump() for x in findings]
+            f.write(json.dumps({"id": row.id, "findings": done[row.id]}) + "\n")
+            f.flush()
+            if i % 50 == 0:
+                typer.echo(f"  read {i} of {len(to_read)}  (about ${tally.cost(settings):.3f})")
+
+    cases, unreadable = [], []
+    for row in rows:
+        if row.id not in done:
+            continue
+        present = terms([Finding.model_validate(x) for x in done[row.id]])
+        if not present:
+            unreadable.append(row.id)
+            continue
+        first, *others = row.accepted_ids
+        cases.append(
+            Case(
+                id=row.id,
+                cohort=f"casereports-{row.side}",
+                hpo_ids=present,
+                hpo_labels=[merged.term(t)[1] for t in present],
+                disease_id=first,
+                disease_label=merged.names.get(first, first),
+                gene=None,
+                variants=[],
+                pmid=row.pmid,
+                sex=None,
+                split="external",
+                also_accepted=others,
+            )
+        )
+    build = {
+        "source": CASEREPORTS,
+        "version": cr.VERSION,
+        "raw_sha256": sources.sha256_of(raw / cr.TEXTS),
+        "reader": reader.config(),
+        "read": len(done),
+        "unreadable": unreadable,
+    }
+    case_store.write(cases, out_dir, build)
+    cost = f"about ${tally.cost(settings):.4f} for {len(to_read)} reports read now"
+    typer.echo(f"ok  {out_dir}  ({len(cases)} cases; {len(unreadable)} with no finding; {cost})")
+    if pilot or any(r.id not in done for r in rows):
+        return
+    side_of = {r.id: r.side for r in rows}
+    for side, name in (("exam", splits.CASEREPORTS_EXAM), ("dev", splits.CASEREPORTS_DEV)):
+        manifest = evals_dir / "splits" / f"{name}.tsv"
+        listed = sorted((c.id, c.pmid or "") for c in cases if side_of[c.id] == side)
+        text = splits.render(listed)
+        if manifest.exists() and manifest.read_text(encoding="utf-8") != text:
+            _fail(f"{manifest} exists and differs: a manifest is frozen")
+        manifest.write_text(text, encoding="utf-8")
+        typer.echo(f"ok  {manifest}  ({len(listed)} cases)")
+
+
 def _prices() -> tuple[float, float, float]:
     return (settings.llm_price_input, settings.llm_price_cached_input, settings.llm_price_output)
 
@@ -585,7 +890,7 @@ def check(
     if not problems and external and all((d / case_store.CASES_FILE).exists() for d in others):
         snapshot, rarebench = (case_store.read(d) for d in others)
         problems = splits.check_external_against(snapshot, rarebench, dates, folder)
-    problems += splits.check_clinical(folder)
+    problems += splits.check_clinical(folder) + splits.check_casereports(folder)
     clinical_dirs = [sources.processed_dir(registry[n], data_dir) for n in (MYGENE2, CADA)]
     clinical = [n for n in splits.CLINICAL_MANIFESTS if (folder / f"{n}.tsv").exists()]
     if (

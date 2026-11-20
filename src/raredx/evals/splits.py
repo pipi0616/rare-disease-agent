@@ -11,7 +11,7 @@ forever. Six come from the pinned release:
     heldout-papers      one case per held-out paper     the final run, once
     heldout-papers-200  200 of heldout-papers           comparisons billed per case
 
-and eight come from outside it:
+and ten come from outside it:
 
     temporal-2026-10       one case per paper first public on or after CUTOFF   temporal test
     rarebench-hms          every HMS patient of RareBench                        practice
@@ -21,6 +21,9 @@ and eight come from outside it:
     mygene2                every MyGene2 patient (SHEPHERD's file)               clinical test
     cada-test              CADA's test patients that have an OMIM diagnosis      clinical test
     cada-dev               300 of CADA's training patients                       development
+    casereports-exam       case reports first public after CUTOFF, cut before    test
+                           the diagnosis; diseases on this side only
+    casereports-dev        the same, the other diseases                          development
 
 HMS and RAMEDIS tested v1.0 once, after it was frozen; it lost to the bare model
 there, and they have been practice sets since (PRACTICE). MME tested v1.0 and v1.1
@@ -268,8 +271,20 @@ CADA_SEED = SEED + 5
 CLINICAL_TESTS: dict[str, str] = {MYGENE2: "mygene2", CADA_TEST: "cada"}
 CLINICAL_MANIFESTS = (MYGENE2, CADA_TEST, CADA_DEV)
 
-DEVELOPMENT: dict[str, str] = {RAREARENA: "rarearena-rds", CADA_DEV: "cada"}
-ONE_PER_PAPER = frozenset({RAREARENA})  # development manifests that list a report per paper
+# Case reports first public after the model's training cutoff, each cut before the
+# sentence that gives its diagnosis away (data/casereports.py, docs/casereports_plan.md).
+# A disease is on one side only; the test side is read by no one before the test.
+CASEREPORTS_EXAM = "casereports-exam"
+CASEREPORTS_DEV = "casereports-dev"
+CASEREPORT_TESTS: dict[str, str] = {CASEREPORTS_EXAM: "casereports"}
+
+DEVELOPMENT: dict[str, str] = {
+    RAREARENA: "rarearena-rds",
+    CADA_DEV: "cada",
+    CASEREPORTS_DEV: "casereports",
+}
+# development manifests that list a report per paper
+ONE_PER_PAPER = frozenset({RAREARENA, CASEREPORTS_DEV})
 
 
 def dataset_of(manifest: str, default: str) -> str:
@@ -277,6 +292,7 @@ def dataset_of(manifest: str, default: str) -> str:
     return (
         EXTERNAL.get(manifest)
         or CLINICAL_TESTS.get(manifest)
+        or CASEREPORT_TESTS.get(manifest)
         or DEVELOPMENT.get(manifest)
         or default
     )
@@ -284,7 +300,33 @@ def dataset_of(manifest: str, default: str) -> str:
 
 def is_test(manifest: str) -> bool:
     """A manifest outside the pinned release that tests a frozen system: run once."""
-    return (manifest in EXTERNAL and manifest not in PRACTICE) or manifest in CLINICAL_TESTS
+    return (
+        (manifest in EXTERNAL and manifest not in PRACTICE)
+        or manifest in CLINICAL_TESTS
+        or manifest in CASEREPORT_TESTS
+    )
+
+
+def check_casereports(splits_dir: Path) -> list[str]:
+    """Rules the two case-report manifests keep, when they exist: each case once, one per
+    paper, and no paper on both sides."""
+    paths = {n: splits_dir / f"{n}.tsv" for n in (CASEREPORTS_EXAM, CASEREPORTS_DEV)}
+    present = {n: read(path) for n, path in paths.items() if path.exists()}
+    if not present:
+        return []
+    if len(present) < len(paths):
+        return [f"missing manifest: {n}.tsv" for n in paths if n not in present]
+    problems = []
+    for name, rows in present.items():
+        papers = [pmid for _, pmid in rows]
+        if len({r[0] for r in rows}) != len(rows):
+            problems.append(f"{name}: a case is listed twice")
+        if len(set(papers)) != len(papers) or "" in papers:
+            problems.append(f"{name}: not exactly one case per paper")
+    exam, dev = present[CASEREPORTS_EXAM], present[CASEREPORTS_DEV]
+    if {pmid for _, pmid in exam} & {pmid for _, pmid in dev}:
+        problems.append("a paper is in both case-report manifests")
+    return problems
 
 
 def check_development(splits_dir: Path) -> list[str]:

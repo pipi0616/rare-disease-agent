@@ -199,3 +199,20 @@ def test_committed_clinical_manifests_keep_every_rule() -> None:
     assert all((COMMITTED / f"{name}.tsv").exists() for name in splits.CLINICAL_MANIFESTS)
     assert splits.check_clinical(COMMITTED) == []
     assert splits.check_development(COMMITTED) == []
+
+
+def test_case_report_manifests_keep_a_paper_on_one_side(tmp_path: Path) -> None:
+    assert splits.check_casereports(tmp_path) == []  # not built yet: nothing to check
+    (tmp_path / "casereports-exam.tsv").write_text(
+        splits.render([("CaseReport_1", "PMID:1"), ("CaseReport_2", "PMID:2")]), encoding="utf-8"
+    )
+    assert splits.check_casereports(tmp_path) == ["missing manifest: casereports-dev.tsv"]
+    (tmp_path / "casereports-dev.tsv").write_text(
+        splits.render([("CaseReport_3", "PMID:3")]), encoding="utf-8"
+    )
+    assert splits.check_casereports(tmp_path) == []
+    assert splits.is_test("casereports-exam") and not splits.is_test("casereports-dev")
+    assert splits.dataset_of("casereports-exam", "x") == "casereports"
+    with (tmp_path / "casereports-dev.tsv").open("a") as f:
+        f.write("CaseReport_9\tPMID:2\n")
+    assert "a paper is in both case-report manifests" in splits.check_casereports(tmp_path)

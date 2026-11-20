@@ -252,10 +252,11 @@ latest_only = true
 # MyGene2: patients' features and genes as families and clinicians shared them on
 # mygene2.org, read as SHEPHERD preprocessed them (146 patients with an OMIM diagnosis,
 # May 2022). The file is Dataverse file 6689035 (patients/mygene2_patients/
-# mygene2_5.7.22.txt) of doi:10.7910/DVN/TZTPFL, version 3; the id is its only stable URL.
+# mygene2_5.7.22.txt) of doi:10.7910/DVN/TZTPFL, version 3; the id is its only stable URL,
+# and so the version here.
 # Tested on once, never developed on.
 [mygene2]
-version = "dvn-tztpfl-v3"
+version = "6689035"
 url = "https://dataverse.harvard.edu/api/access/datafile/"
 homepage = "https://doi.org/10.7910/DVN/TZTPFL"
 license = "CC0 1.0"
