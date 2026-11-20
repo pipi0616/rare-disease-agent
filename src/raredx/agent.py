@@ -33,6 +33,16 @@ lost to the bare model on RareBench: seeded with the tools' list alone, it kept
 their first candidate where the model knew better. A short list is filled from
 both lists, merged by reciprocal rank.
 
+Agent v2 (`oneway=True, guard=True`, on the knowledge with Orphanet merged in) is the
+hypothesis agent with three changes, each measured without a model beforehand
+(docs/v2_design.md): Orphanet's diseases can be named at all; the tools' list is the
+one-way similarity's top thirty in its own order (the patient's findings looked for in
+the disease, not the disease's in the patient: a long profile no longer costs a disease
+its place); and a guard on the final order — when the model's own first answer is a
+relatively common rare disease (Orphanet: one in 100,000 or more) that the tools also
+rank in their top thirty, it leads. Replayed on recorded runs, the guard kept 28 RAMEDIS
+answers the agent had talked itself out of, and cost 7.
+
 With candidate genes from sequencing, the agent's ranking is fused with the
 candidate-gene ranking by reciprocal rank (`fuse`): on dev-200 the two were
 right on different cases, and together beat either alone (chapter 20).
@@ -70,6 +80,7 @@ from raredx.baselines.rank_then_check import RankThenCheck
 from raredx.evals.scoring import normalize_disease
 from raredx.evals.systems import Candidate, Question
 from raredx.knowledge.hpo import HPO
+from raredx.knowledge.prevalence import COMMON_CLASSES
 from raredx.tools.check_match import CheckMatch, MatchReport
 from raredx.tools.find_disease import NAME_MATCH, FindDisease, resolve
 from raredx.tools.ids import UnknownDisease
@@ -200,6 +211,10 @@ H_TITLE = (
 )
 T_TITLE = "Candidates, in the order the phenotype tools rank them, checked the same way:"
 FUSED = "Not ranked by the agent: a candidate gene's disease, from the gene ranking."
+GUARDED = (
+    "Kept first by the guard: the model's own first answer, a relatively common rare "
+    "disease that the phenotype tools also rank among their top thirty."
+)
 RRF_K = 60  # the usual constant of reciprocal-rank fusion; not tuned
 
 
@@ -308,21 +323,31 @@ class Agent:
         prevalence: Mapping[str, str] | None = None,
         extra_tools: Sequence[Any] = (),
         name: str | None = None,
+        oneway: bool = False,
+        guard: bool = False,
     ) -> None:
         """The four core tools, plus any extra ones (each named in GUIDES). `name` is the
         system's name in the evaluation; by default "agent", "seeded-agent" or
         "hypothesis-agent". A hypothesis agent is seeded too, with both lists; given
-        `prevalence` (disease id -> Orphanet's class), each disease in them shows it."""
+        `prevalence` (disease id -> Orphanet's class), each disease in them shows it.
+        `oneway`: the ranking tool and the tools' list use the one-way similarity, in its
+        own order. `guard`: the final order keeps the model's first answer first when it
+        is relatively common and in the tools' top thirty (a hypothesis agent's, with
+        prevalence)."""
+        if guard and not (hypotheses and prevalence is not None):
+            raise ValueError("the guard needs the hypothesis agent and each disease's prevalence")
         self.model = model
         self.model_name = model_name
         self.hpo = hpo
         self.seeded = seeded or hypotheses
         self.hypotheses = hypotheses
         self.prevalence = prevalence
+        self.oneway, self.guard = oneway, guard
         default = "hypothesis-agent" if hypotheses else "seeded-agent" if seeded else "agent"
         self.name = name or default
-        rank, check, lookup = RankDiseases(hpo), CheckMatch(hpo), LookupDisease(hpo)
-        self.seed = RankThenCheck(rank, check)
+        rank = RankDiseases(hpo, "resnik", "oneway") if oneway else RankDiseases(hpo)
+        check, lookup = CheckMatch(hpo), LookupDisease(hpo)
+        self.seed = RankThenCheck(rank, check, reorder=not oneway)
         self.check, self.lookup, self.find = check, lookup, FindDisease(hpo)
         tools: list[Any] = [rank, check, lookup, self.find, *extra_tools]
         self.extra_tools = list(extra_tools)
@@ -368,6 +393,13 @@ class Agent:
             "tools": ", ".join(self.tool_names),
             "hpo_release": self.hpo.release,
         }
+        if self.oneway:
+            params["ranking"] = "resnik/oneway, the top thirty in its own order"
+        if self.guard:
+            params["guard"] = (
+                "the first answer's first disease leads when Orphanet classes it 1 in "
+                "100,000 or more and the tools rank it in their top thirty"
+            )
         if self.hypotheses:
             params |= {
                 "first_answer": f"{llm_direct.PROMPT_VERSION}, each disease found by its "
@@ -412,11 +444,15 @@ class Agent:
         """The HPO disease a guess means (find_disease.resolve)."""
         return resolve(guess.disease_id, guess.disease_name, self.find)
 
-    def _both_lists(self, question: Question, ordered: list[Any]) -> tuple[str, list[str]]:
+    def _both_lists(
+        self, question: Question, ordered: list[Any]
+    ) -> tuple[str, list[str], str | None]:
         """The hypothesis agent's evidence: its first answer, each disease found by name
         and checked, then the tools' leading candidates; a disease already shown is only
-        pointed to. Also the diseases the first answer named, in its order."""
+        pointed to. Also the diseases the first answer named, in its order, and the
+        disease its very first guess means (None when the knowledge has no such disease)."""
         guesses = self._first_answer(question)
+        leading = self._resolve(guesses[0]) if guesses else None
         lines, first = [H_TITLE], []
         shown: dict[str, str] = {}  # disease id -> the tag it was shown under
         for i, guess in enumerate(guesses, 1):
@@ -446,7 +482,7 @@ class Agent:
             shown[match.disease_id] = tag
             head, *rest = self._evidence(question, match.disease_id, report)
             lines += [f"[{tag}] {head}", *rest]
-        return "\n".join(lines), first
+        return "\n".join(lines), first, leading
 
     def _evidence(
         self, question: Question, disease_id: str, report: MatchReport | None = None
@@ -470,10 +506,11 @@ class Agent:
     def predict(self, question: Question) -> list[Candidate]:
         prompt = user_prompt(question)
         first: list[str] = []
+        leading: str | None = None
         if self.seeded:
             ordered = self.seed.ordered(question)
             if self.hypotheses:
-                block, first = self._both_lists(question, ordered)
+                block, first, leading = self._both_lists(question, ordered)
             else:
                 shown = [(r, self.lookup(m.disease_id, max_features=1)) for m, r in ordered[:SHOWN]]
                 block = candidates_block(shown)
@@ -517,6 +554,22 @@ class Agent:
                     break
                 if match.disease_id not in listed:
                     candidates.append(candidate(match).model_copy(update={"reason": FILLED}))
+        if self.guard and leading is not None:
+            candidates = self._guarded(candidates, leading, [m.disease_id for m, _ in ordered])
         if self.gene_rank is not None and question.candidate_genes:
             candidates = fuse(candidates, self.gene_rank.predict(question))
         return candidates
+
+    def _guarded(
+        self, candidates: list[Candidate], leading: str, pool: list[str]
+    ) -> list[Candidate]:
+        """The final order under the guard: the model's own first answer first, when it is
+        a relatively common rare disease and the tools rank it in their top thirty."""
+        assert self.prevalence is not None
+        if self.prevalence.get(leading) not in COMMON_CLASSES or leading not in pool:
+            return candidates
+        if candidates and candidates[0].disease_id == leading:
+            return candidates
+        kept = next((c for c in candidates if c.disease_id == leading), None)
+        head = (kept or self._candidate(leading, GUARDED)).model_copy(update={"reason": GUARDED})
+        return [head, *(c for c in candidates if c.disease_id != leading)][:10]

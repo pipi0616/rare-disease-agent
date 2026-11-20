@@ -925,6 +925,7 @@ SYSTEMS = (
     "agent",
     "seeded-agent",
     "hypothesis-agent",
+    "agent-v2",
     "llm-direct",
     "llm-direct-thinking",
     "judge-table",
@@ -1062,7 +1063,8 @@ def _deeprare_queries(data_dir: Path) -> Path:
 
 # Tools an agent can be given beyond the four core ones; --without leaves one out.
 EXTRA_TOOLS = ("find_similar_patients", "search_disease_texts", "rank_candidate_genes")
-AGENTS = ("agent", "seeded-agent", "hypothesis-agent")
+AGENT_V2 = "agent-v2"  # the hypothesis agent on merged knowledge, one-way list, guard
+AGENTS = ("agent", "seeded-agent", "hypothesis-agent", AGENT_V2)
 ORPHANET_SOURCES = ("orphanet-prevalence", "orphanet")
 
 
@@ -1181,7 +1183,8 @@ def _system(
         # to 2 at top-1, p = 0.69) and cost 18% more tokens. --with-texts adds it back. On
         # by default for the hypothesis agent: the diseases HPO annotates thinly, which the
         # model may name itself, are what the texts describe.
-        texts = with_texts or name == "hypothesis-agent"
+        hypotheses = name in ("hypothesis-agent", AGENT_V2)
+        texts = with_texts or hypotheses
         if texts and "search_disease_texts" not in without:
             extra.append(_text_search(evals_dir, data_dir))
         if with_genes and "rank_candidate_genes" not in without:
@@ -1189,7 +1192,7 @@ def _system(
 
             extra.append(RankCandidateGenes(knowledge))
         label = name
-        if with_texts and name != "hypothesis-agent":
+        if with_texts and not hypotheses:
             label += " (with search_disease_texts)"
         if without:
             label += f" (without {', '.join(without)})"
@@ -1198,10 +1201,12 @@ def _system(
             settings.llm_model,
             knowledge,
             seeded=name == "seeded-agent",
-            hypotheses=name == "hypothesis-agent",
-            prevalence=_prevalence(evals_dir, data_dir) if name == "hypothesis-agent" else None,
+            hypotheses=hypotheses,
+            prevalence=_prevalence(evals_dir, data_dir) if hypotheses else None,
             extra_tools=extra,
             name=label,
+            oneway=name == AGENT_V2,
+            guard=name == AGENT_V2,
         )
     if name.startswith("judge-"):
         from raredx.evals.evidence import gather
@@ -1332,7 +1337,8 @@ def run_system(
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
     """Evaluate a system on a manifest with MLflow; the run and every answer are recorded."""
-    settings.orphanet = orphanet  # before any knowledge is loaded in this process
+    # Agent v2 is defined on the merged knowledge: it reads Orphanet whatever the switch says.
+    settings.orphanet = orphanet or system == AGENT_V2  # before any knowledge is loaded
     if split.startswith("heldout") and not final:
         _fail("heldout is the final exam: run it once, with --final, when the design is frozen")
     if splits.is_test(split) and not final:
@@ -1838,7 +1844,14 @@ def lenient_judge(
 
 
 # The development sources (docs/roadmap.md, section 5.1): never a test set.
-DEVELOPMENT = ("dev-200", "rarebench-hms", "rarebench-ramedis", "rarebench-mme", splits.RAREARENA)
+DEVELOPMENT = (
+    "dev-200",
+    "rarebench-hms",
+    "rarebench-ramedis",
+    "rarebench-mme",
+    splits.RAREARENA,
+    splits.CADA_DEV,  # a diagnostic laboratory's patients (added with the clinical tests)
+)
 
 
 def _development_cases(evals_dir: Path, data_dir: Path) -> dict[str, list[Case]]:
