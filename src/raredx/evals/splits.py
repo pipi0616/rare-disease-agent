@@ -11,7 +11,7 @@ forever. Six come from the pinned release:
     heldout-papers      one case per held-out paper     the final run, once
     heldout-papers-200  200 of heldout-papers           comparisons billed per case
 
-and ten come from outside it:
+and eleven come from outside it:
 
     temporal-2026-10       one case per paper first public on or after CUTOFF   temporal test
     rarebench-hms          every HMS patient of RareBench                        practice
@@ -20,6 +20,7 @@ and ten come from outside it:
     rarebench-mme          every MME patient of RareBench                        practice
     mygene2                every MyGene2 patient (SHEPHERD's file)               clinical test
     cada-test              CADA's test patients that have an OMIM diagnosis      clinical test
+    cada-test-200          200 of cada-test, for systems billed per case         clinical test
     cada-dev               300 of CADA's training patients                       development
     casereports-exam       case reports first public after CUTOFF, cut before    test
                            the diagnosis; diseases on this side only
@@ -265,11 +266,13 @@ RAREARENA = "rarearena-dev"  # RareArena's case reports, read into HPO terms
 # agent meets a diagnostic laboratory's patients before it is tested on others.
 MYGENE2 = "mygene2"
 CADA_TEST = "cada-test"
+CADA_TEST_SAMPLE = "cada-test-200"  # a fixed random part, for other providers' models
 CADA_DEV = "cada-dev"
 CADA_DEV_SIZE = 300
+CADA_SAMPLE_SIZE = 200
 CADA_SEED = SEED + 5
-CLINICAL_TESTS: dict[str, str] = {MYGENE2: "mygene2", CADA_TEST: "cada"}
-CLINICAL_MANIFESTS = (MYGENE2, CADA_TEST, CADA_DEV)
+CLINICAL_TESTS: dict[str, str] = {MYGENE2: "mygene2", CADA_TEST: "cada", CADA_TEST_SAMPLE: "cada"}
+CLINICAL_MANIFESTS = (MYGENE2, CADA_TEST, CADA_TEST_SAMPLE, CADA_DEV)
 
 # Case reports first public after the model's training cutoff, each cut before the
 # sentence that gives its diagnosis away (data/casereports.py, docs/casereports_plan.md).
@@ -350,9 +353,12 @@ def build_clinical(mygene2: list[Case], cada: list[Case]) -> dict[str, list[Row]
     """The three manifests of real patients, from their processed cases."""
     train = sorted(c.id for c in cada if c.id.startswith("CADA_train_"))
     dev = random.Random(CADA_SEED).sample(train, min(CADA_DEV_SIZE, len(train)))
+    test = sorted(c.id for c in cada if c.id.startswith("CADA_test_"))
+    sample = random.Random(CADA_SEED + 1).sample(test, min(CADA_SAMPLE_SIZE, len(test)))
     return {
         MYGENE2: sorted((c.id, c.pmid or "") for c in mygene2),
-        CADA_TEST: sorted((c.id, "") for c in cada if c.id.startswith("CADA_test_")),
+        CADA_TEST: [(case_id, "") for case_id in test],
+        CADA_TEST_SAMPLE: sorted((case_id, "") for case_id in sample),
         CADA_DEV: sorted((case_id, "") for case_id in dev),
     }
 
@@ -381,12 +387,21 @@ def check_clinical(splits_dir: Path) -> list[str]:
         for n, rows in m.items()
         if len({r[0] for r in rows}) != len(rows)
     ]
-    prefixes = {MYGENE2: "MyGene2_", CADA_TEST: "CADA_test_", CADA_DEV: "CADA_train_"}
+    prefixes = {
+        MYGENE2: "MyGene2_",
+        CADA_TEST: "CADA_test_",
+        CADA_TEST_SAMPLE: "CADA_test_",
+        CADA_DEV: "CADA_train_",
+    }
     for name, prefix in prefixes.items():
         if any(not case_id.startswith(prefix) for case_id, _ in m[name]):
             problems.append(f"{name}: a case from another source or part")
     if len(m[CADA_DEV]) > CADA_DEV_SIZE:
         problems.append(f"{CADA_DEV} has {len(m[CADA_DEV])} cases, at most {CADA_DEV_SIZE}")
+    if not set(m[CADA_TEST_SAMPLE]) <= set(m[CADA_TEST]):
+        problems.append(f"{CADA_TEST_SAMPLE} contains cases that are not in {CADA_TEST}")
+    if len(m[CADA_TEST_SAMPLE]) != min(CADA_SAMPLE_SIZE, len(m[CADA_TEST])):
+        problems.append(f"{CADA_TEST_SAMPLE} has {len(m[CADA_TEST_SAMPLE])} cases")
     return problems
 
 

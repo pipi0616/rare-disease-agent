@@ -177,6 +177,7 @@ def test_clinical_manifests_keep_cadas_own_split(tmp_path: Path) -> None:
     assert splits.make_clinical(mygene2, cada, tmp_path)[splits.CADA_DEV] == "unchanged"
     assert splits.read(tmp_path / "mygene2.tsv") == [("MyGene2_a", "PMID:7"), ("MyGene2_b", "")]
     assert len(splits.read(tmp_path / "cada-test.tsv")) == 50
+    assert splits.read(tmp_path / "cada-test-200.tsv") == splits.read(tmp_path / "cada-test.tsv")
     dev = splits.read(tmp_path / "cada-dev.tsv")
     assert len(dev) == splits.CADA_DEV_SIZE
     assert all(case_id.startswith("CADA_train_") for case_id, _ in dev)
