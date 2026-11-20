@@ -3,8 +3,9 @@
 # MLflow's store is one SQLite file). Each run's output goes to its own log, and its
 # MLflow run id to a table, so the report can be made without looking anything up.
 #
-#   scripts/run_exam.sh LOG_DIR patients       MyGene2 and CADA's test set: baselines, the model
-#                                            asked directly, agent v1.1
+#   scripts/run_exam.sh LOG_DIR patients       MyGene2 and CADA's test set: the no-model baseline,
+#                                            the model asked directly, agent v1.1
+#   scripts/run_exam.sh LOG_DIR patients-lirical   LIRICAL on the same two sets
 #   scripts/run_exam.sh LOG_DIR casereports    the case-report test: baselines, direct, agent v2
 #   scripts/run_exam.sh LOG_DIR gpt            GPT-6.1 asked directly, on MyGene2 only
 #
@@ -13,6 +14,14 @@
 set -uo pipefail
 
 logs="$1"; mode="$2"
+# The tests are recorded in a store of their own. The project's store has grown to 14 GB,
+# and a run on it lost 11 of 146 records to "database is locked" (2026-11-20; the run was
+# void and unscored). A small store writes fast; fewer parallel workers write less at once.
+export RAREDX_MLFLOW_TRACKING_URI="sqlite:///data/mlflow-exam-2026-11.db"
+# MLflow's evaluation sizes its thread pool from a request rate when this is unset: about
+# fifty threads. With LIRICAL each thread is a Java process, and fifty of them filled a
+# 16 GB machine (2026-11-20). Always set; LIRICAL gets three (below).
+export MLFLOW_GENAI_EVAL_MAX_WORKERS=6
 mkdir -p "$logs"
 table="$logs/runs.tsv"
 [ -f "$table" ] || printf 'split\tname\trun_id\n' > "$table"
@@ -37,16 +46,20 @@ case "$mode" in
   patients)
     for split in mygene2 cada-test; do
       run rank-then-check "$split" --system rank-then-check
-      run lirical "$split" --system lirical
       run llm-direct "$split" --system llm-direct
       run agent-v1.1 "$split" --system hypothesis-agent
     done ;;
+  patients-lirical)  # last: slow, free, and one Java process per worker
+    export MLFLOW_GENAI_EVAL_MAX_WORKERS=3
+    run lirical mygene2 --system lirical
+    run lirical cada-test --system lirical ;;
   casereports)
     run rank-then-check casereports-exam --system rank-then-check
     run one-way-merged casereports-exam --system phenotype-rank --orphanet --similarity resnik/oneway
-    run lirical casereports-exam --system lirical
     run llm-direct casereports-exam --system llm-direct
-    run agent-v2 casereports-exam --system agent-v2 ;;
+    run agent-v2 casereports-exam --system agent-v2
+    export MLFLOW_GENAI_EVAL_MAX_WORKERS=3
+    run lirical casereports-exam --system lirical ;;
   gpt)
     run gpt-6.1 mygene2 --system llm-direct --model openrouter:openai/gpt-6.1-sol --budget-usd 1.5 ;;
   *) echo "unknown mode: $mode" >&2; exit 2 ;;
