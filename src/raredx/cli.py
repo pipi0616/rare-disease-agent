@@ -1804,11 +1804,19 @@ def lenient_judge(
     budget_usd: Annotated[
         float, typer.Option(help="Stop calling the judge once this much is spent.")
     ] = 0.5,
+    judge_model: Annotated[
+        str | None,
+        typer.Option(
+            "--judge",
+            help="Another provider's model as the judge, through OpenRouter "
+            "(openrouter:provider/model), so that no system is judged by its own model.",
+        ),
+    ] = None,
     data_dir: DataDir = settings.data_dir,
     evals_dir: EvalsDir = settings.evals_dir,
 ) -> None:
-    """Judge recorded answers DeepRare's way: deepseek-flash reads each system's five
-    names and the confirmed diagnosis, and gives the rank it is named at, or none."""
+    """Judge recorded answers DeepRare's way: a model (deepseek-flash, or --judge) reads each
+    system's five names and the confirmed diagnosis, and gives the rank it is named at, or none."""
     from raredx import llm
     from raredx.evals import lenient
     from raredx.evals.harness import candidates_of
@@ -1829,9 +1837,18 @@ def lenient_judge(
         missing = [c.id for c in cases if system not in names[c.id]]
         if missing:
             _fail(f"{system}: no recorded answer to {len(missing)} of the cases")
-    prices = (settings.llm_price_input, settings.llm_price_cached_input, settings.llm_price_output)
-    budget = llm.Budget(budget_usd, prices)
-    judge = lenient.Judge(_model_client(), settings.llm_model, budget)
+    if judge_model is None:
+        budget = llm.Budget(budget_usd, _prices())
+        judge = lenient.Judge(_model_client(), settings.llm_model, budget)
+    elif not judge_model.startswith(OPENROUTER):
+        _fail(f"--judge takes an OpenRouter model id, written {OPENROUTER}provider/model")
+    else:
+        budget = llm.Budget(budget_usd)  # OpenRouter says what each call cost
+        try:
+            other = llm.openrouter_client(settings)
+        except llm.MissingAPIKey as e:
+            _fail(str(e))
+        judge = lenient.Judge(other, judge_model.removeprefix(OPENROUTER), budget, "openrouter")
     rows = lenient.judge_all(judge, names, {c.id: c.disease_label for c in cases}, out)
     for item in run:
         system = item.partition("=")[0]
@@ -1840,7 +1857,7 @@ def lenient_judge(
         typer.echo(
             f"{system:<12} top-1 {top[1] / len(rows):6.1%}   top-5 {top[5] / len(rows):6.1%}"
         )
-    typer.echo(f"ok  {out}  ({len(rows)} cases; about ${budget.spent:.4f} at peak price)")
+    typer.echo(f"ok  {out}  ({len(rows)} cases; about ${budget.spent:.4f} spent on the judge)")
 
 
 # The development sources (docs/roadmap.md, section 5.1): never a test set.

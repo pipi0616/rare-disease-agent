@@ -17,7 +17,7 @@ from pathlib import Path
 
 from openai import OpenAI
 
-from raredx.llm import Budget
+from raredx.llm import Budget, Provider
 
 SYSTEM = "You are a specialist in the field of rare diseases."
 # third_party/DeepRare/eval.py, diagnosis_evaluate
@@ -47,10 +47,19 @@ def parse(reply: str) -> int | None:
 
 
 class Judge:
-    def __init__(self, client: OpenAI, model: str, budget: Budget | None = None) -> None:
+    def __init__(
+        self,
+        client: OpenAI,
+        model: str,
+        budget: Budget | None = None,
+        provider: Provider = "deepseek",
+    ) -> None:
+        """`provider="openrouter"`: a judge from another family than the model inside the
+        systems judged, so that no system is judged by itself."""
         self.client = client
         self.model = model
         self.budget = budget
+        self.provider = provider
 
     def rank(self, names: list[str], confirmed: str) -> int | None:
         if not names:
@@ -64,7 +73,12 @@ class Judge:
                 {"role": "user", "content": question(names, confirmed)},
             ],
             temperature=0.0,
-            extra_body={"thinking": {"type": "disabled"}},
+            extra_body=(
+                # as llm._complete: reasoning at its lowest, and the call's cost in the answer
+                {"reasoning": {"effort": "minimal"}, "usage": {"include": True}}
+                if self.provider == "openrouter"
+                else {"thinking": {"type": "disabled"}}
+            ),
         )
         if self.budget is not None:
             self.budget.charge(response)
