@@ -217,8 +217,11 @@ def read_bioc(pmid: str, payload: Any) -> FullText | None:
 def full_text(
     pmid: str, http: httpx.Client, pause: float = 1.1, waits: tuple[float, ...] = (5, 20, 60)
 ) -> FullText | None:
-    """A paper's case description from the BioC service; None when it has no full text
-    there. The service allows about one request a second: asked again after a refusal."""
+    """A paper's case description from the BioC service; None when the service says it
+    has no such paper (it answers those with a page, not JSON, or with 404). The service
+    allows about one request a second and refuses more (429): asked again after a wait,
+    and a refusal that outlasts the waits is raised, not taken for a missing paper — a
+    paper must not drop out of the build because the service was busy."""
     for wait in (*waits, None):
         response = http.get(BIOC.format(pmid=pmid))
         time.sleep(pause)
@@ -226,9 +229,12 @@ def full_text(
             try:
                 return read_bioc(pmid, response.json())
             except (json.JSONDecodeError, KeyError, IndexError, AttributeError):
-                return None  # the service answers a paper it lacks with a page, not JSON
-        if response.status_code != 429 or wait is None:
+                return None
+        if response.status_code == 404:
             return None
+        if wait is None:
+            response.raise_for_status()
+            return None  # not reached for a refusal: raise_for_status raised
         time.sleep(wait)
     return None
 

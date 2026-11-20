@@ -291,3 +291,30 @@ def test_a_name_is_found_by_any_of_its_forms_and_only_when_close() -> None:
     )
     assert cr.find_by_name("CHARGE syndrome", shared, 90) == ("OMIM:5", "ORPHA:138")
     assert cr.ordered(["3", "1", "2"]) == cr.ordered(["2", "3", "1", "1"])
+
+
+class FakeHttp:
+    """Answers each request with the next of the given (status, body) pairs."""
+
+    def __init__(self, *answers: tuple[int, str]) -> None:
+        self.answers = list(answers)
+
+    def get(self, url: str) -> object:
+        import httpx
+
+        status, body = self.answers.pop(0)
+        return httpx.Response(status, text=body, request=httpx.Request("GET", url))
+
+
+def test_a_busy_service_is_asked_again_and_never_taken_for_a_missing_paper() -> None:
+    import httpx
+
+    found = '[{"documents": [{"passages": [{"infons": {"article-id_pmc": "9"}, "text": "t"}]}]}]'
+    again = FakeHttp((429, "busy"), (200, found))
+    text = cr.full_text("7", again, pause=0, waits=(0,))  # type: ignore[arg-type]
+    assert text is not None and text.pmcid == "PMC9"
+    missing = FakeHttp((200, "[Error] : No result can be found."))
+    assert cr.full_text("7", missing, pause=0, waits=(0,)) is None  # type: ignore[arg-type]
+    busy = FakeHttp((429, "busy"), (429, "busy"))
+    with pytest.raises(httpx.HTTPStatusError):
+        cr.full_text("7", busy, pause=0, waits=(0,))  # type: ignore[arg-type]
