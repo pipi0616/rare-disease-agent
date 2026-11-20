@@ -1603,6 +1603,50 @@ def hits_table(
     typer.echo(f"ok  {out}  ({len(rows)} cases, {answerable} answerable; {', '.join(columns)})")
 
 
+@eval_app.command("report")
+def report_table(
+    split: Annotated[str, typer.Option(help="The manifest the table was made on.")],
+    hits_file: Annotated[
+        Path, typer.Option("--hits", help="The table `raredx eval hits` wrote for it.")
+    ],
+    main: Annotated[str, typer.Option(help="The system the others are paired against.")],
+    baseline: Annotated[
+        str, typer.Option(help="The system shown beside it in the breakdowns.")
+    ] = "llm-direct",
+    data_dir: DataDir = settings.data_dir,
+    evals_dir: EvalsDir = settings.evals_dir,
+) -> None:
+    """A test's results as Markdown tables, from its per-case verdicts: every system with
+    its intervals and its paired comparison against the main one; the main system and a
+    baseline by how many findings the patient has, and by who submitted the patient."""
+    from raredx.evals import hits, report
+
+    rows = hits.read(hits_file)
+    _, pool = _processed(data_dir, evals_dir, splits.dataset_of(split, DATASET))
+    by_id = {c.id: c for c in pool}
+    listed = {case_id for case_id, _ in splits.read(_manifest(evals_dir, split))}
+    if {r["case_id"] for r in rows} != listed:
+        _fail(f"{hits_file} does not list exactly the cases of {split}")
+    for line in report.systems_table(rows, main):
+        typer.echo(line)
+    names = [main, baseline]
+    typer.echo("")
+    for line in report.strata_table(
+        rows,
+        lambda case_id: report.findings_band(len(by_id[case_id].hpo_ids)),
+        names,
+        report.FINDINGS_ORDER,
+    ):
+        typer.echo(line)
+    cohorts = sorted({by_id[r["case_id"]].cohort for r in rows})
+    if len(cohorts) > 1:
+        typer.echo("")
+        for line in report.strata_table(
+            rows, lambda case_id: by_id[case_id].cohort, names, cohorts
+        ):
+            typer.echo(line)
+
+
 CALIBRATION = "calibration.toml"
 CALIBRATED = ("model", "v1.0", "v1.1")  # the recorded runs read per source
 
