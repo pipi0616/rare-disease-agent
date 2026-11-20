@@ -486,7 +486,7 @@ def build_casereports(
     (BioC), annotator B (the model) and the rules, until both sides are full. Resumes:
     what was fetched or asked before is read from disk, not fetched or paid for again."""
     import httpx
-    from openai import OpenAI
+    from openai import APIError, OpenAI
 
     from raredx import llm
     from raredx.data import casereports as cr
@@ -611,6 +611,11 @@ def build_casereports(
                 break
     except llm.BudgetExceeded as e:
         stopped = f"the spending cap was reached ({e})"
+    except (APIError, httpx.HTTPError) as e:
+        # The model API or an NCBI service refused or dropped a request (no credit left, a
+        # rate limit, the network). What was fetched and asked so far is on disk: the next
+        # run goes on from there. What follows is written as it stands, marked incomplete.
+        stopped = f"a service failed ({type(e).__name__}: {str(e)[:200]})"
 
     table_dir = out_dir if pilot else evals_dir
     (table_dir / f"{cr.NAME}.tsv").write_text(cr.render_table(builder.accepted), encoding="utf-8")
