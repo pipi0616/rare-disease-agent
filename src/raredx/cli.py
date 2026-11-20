@@ -617,7 +617,10 @@ def build_casereports(
         # run goes on from there. What follows is written as it stands, marked incomplete.
         stopped = f"a service failed ({type(e).__name__}: {str(e)[:200]})"
 
-    table_dir = out_dir if pilot else evals_dir
+    # The table and the log go to git's folder only once the build is complete: a build
+    # stopped half-way leaves them beside its other files, and the manifests' folder clean.
+    complete = builder.selection.full() or stopped.startswith("every")
+    table_dir = evals_dir if complete and not pilot else out_dir
     (table_dir / f"{cr.NAME}.tsv").write_text(cr.render_table(builder.accepted), encoding="utf-8")
     (table_dir / f"{cr.NAME}-log.tsv").write_text(
         "\n".join([cr.LOG_HEADER, *builder.log]) + "\n", encoding="utf-8"
@@ -629,7 +632,7 @@ def build_casereports(
     (out_dir / "state.json").write_text(
         json.dumps(
             {
-                "complete": builder.selection.full() or stopped.startswith("every"),
+                "complete": complete,
                 "stopped": stopped,
                 "accepted": dict(builder.selection.total),
                 "let_through_by_a": let_through,
