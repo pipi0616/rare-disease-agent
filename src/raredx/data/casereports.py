@@ -62,7 +62,10 @@ COMMON_SHARE = 1 / 3
 MIN_WORDS = 60
 SEARCH_LIMIT = 9_999  # PubMed returns no more ids than this for one query
 ANNOTATE_BATCH = 100
-PROMPT_VERSION = "casereport-key-v2"  # v2: the disease name alone (after the pilot)
+# v2: the disease name alone (after the pilot). v3: what gives the diagnosis away is spelled
+# out — a confirming test's result, the organism, a test for the disease being ordered —
+# after an audit of the development side found such sentences kept (plan, section 13).
+PROMPT_VERSION = "casereport-key-v3"
 
 
 # ── candidates ──────────────────────────────────────────────────────
@@ -248,13 +251,18 @@ _NOT_AN_END = re.compile(
 )
 
 
+_NO_SPACE = re.compile(r"(?<=[a-z]{3})\.(?=[A-Z][a-z])")  # "Criteria.Furthermore"; not "p.Val50Met"
+
+
 def sentences(paragraphs: list[str]) -> list[str]:
     """The case description as sentences, by fixed rules: a paragraph ends a sentence;
     within one, a full stop, question or exclamation mark followed by space and a capital
     or a digit does — unless it ends a common abbreviation or a single capital letter."""
     out: list[str] = []
     for paragraph in paragraphs:
-        pieces = _BREAK.split(re.sub(r"\s+", " ", paragraph).strip())
+        # a full stop set against the next sentence gets its space: the only character added
+        spaced = _NO_SPACE.sub(". ", re.sub(r"\s+", " ", paragraph).strip())
+        pieces = _BREAK.split(spaced)
         held = ""
         for piece in pieces:
             held = f"{held} {piece}".strip() if held else piece
@@ -284,11 +292,16 @@ give the specific one. If what looked like one disease turned out to be another 
 - "diagnostic": true if the case description begins before the diagnosis was known and \
 tells how it was reached; false if the diagnosis is already known where the description \
 begins (a report about treating or following a known disease).
-- "reveal": the number of the first sentence of the case description that gives the \
-diagnosis away, or null if none does. A sentence gives it away if it names the disease \
-or a synonym, or says it is suspected or considered; names its causal gene or a variant; \
-reports the result of a test that establishes it (genetic testing, histopathology, a \
-specific enzyme or antibody assay); or names a treatment used only for this disease."""
+- "reveal": the number of the first sentence of the case description from which a \
+reader would know the diagnosis, or null if there is none. It is the first sentence that \
+does any of these: (a) names the disease, a synonym or its abbreviation, or says it is \
+suspected, considered or to be ruled out; (b) names its causal gene, a variant, or the \
+organism that causes it; (c) reports the result of a test done to establish it — genetic \
+or molecular testing; a biopsy, histopathology, cytology or bone-marrow examination; a \
+culture, PCR, antigen test or serology for the organism; an antibody or enzyme assay \
+specific to the disease — or says that such a test for this disease was ordered; (d) names \
+a treatment used only for this disease. Symptoms, signs, routine blood tests and imaging \
+findings do not give it away, unless the sentence also names the disease."""
 
 
 class Key(BaseModel):
@@ -315,6 +328,9 @@ def parse_key(content: str | None) -> Key:
 # ── the cut ─────────────────────────────────────────────────────────
 
 _PLAIN = re.compile(r"[^a-z0-9]+")
+_TYPE = re.compile(
+    r",?\s+(?:type\s+)?(?:\d+[a-z]?|[ivx]+)$", re.IGNORECASE
+)  # ", type 1", " 3A", " II"
 
 
 def name_forms(names: Iterable[str]) -> tuple[set[str], set[str]]:
@@ -322,7 +338,9 @@ def name_forms(names: Iterable[str]) -> tuple[set[str], set[str]]:
     matched as whole words whatever the case and punctuation; short forms — an
     abbreviation such as MFS — matched as written). An OMIM title holds several forms
     between semicolons; a name's part before its first comma ("Ehlers-Danlos syndrome,
-    classic type") is a form too when it is long enough to be specific."""
+    classic type") is a form too when it is long enough to be specific, and so is a name
+    without the type it ends in ("Neurofibromatosis type 1": a sentence that says
+    neurofibromatosis has given it away)."""
     long, short = set(), set()
     for name in names:
         for part in name.split(";"):
@@ -337,6 +355,9 @@ def name_forms(names: Iterable[str]) -> tuple[set[str], set[str]]:
             head = part.split(",")[0].strip()
             if len(head) >= 12 and " " in head:
                 long.add(_PLAIN.sub(" ", head.lower()).strip())
+            untyped = _TYPE.sub("", part).strip()
+            if untyped != part and len(untyped) >= 10:
+                long.add(_PLAIN.sub(" ", untyped.lower()).strip())
     return {f for f in long if len(f) >= 5}, short
 
 

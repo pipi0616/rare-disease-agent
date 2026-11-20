@@ -533,7 +533,9 @@ def build_casereports(
     api = OpenAI(
         base_url=settings.llm_base_url, api_key=llm.api_key(settings), timeout=180, max_retries=2
     )
-    texts, keys = store.read("text"), store.read("b")
+    # Annotator B's answers are kept per prompt version: a changed prompt asks every report again.
+    asked = f"b.{cr.PROMPT_VERSION}"
+    texts, keys = store.read("text"), store.read(asked)
 
     def fetch(pmid: str) -> "cr.FullText | None":
         if pmid not in texts:
@@ -555,7 +557,7 @@ def build_casereports(
                 keys[pmid] = key.model_dump()
             except ValueError:  # pydantic's ValidationError is one: unreadable twice
                 keys[pmid] = None
-            store.append("b", pmid, keys[pmid])
+            store.append(asked, pmid, keys[pmid])
         return cr.Key.model_validate(keys[pmid]) if keys[pmid] else None
 
     names = cr.name_index(

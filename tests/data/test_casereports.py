@@ -113,6 +113,14 @@ def test_sentences_split_at_full_stops_but_not_at_abbreviations() -> None:
     ]
 
 
+def test_a_full_stop_set_against_the_next_sentence_still_ends_one() -> None:
+    text = ["It met the Criteria.Furthermore, a mass was noted; the variant was p.Val50Met."]
+    assert cr.sentences(text) == [
+        "It met the Criteria.",
+        "Furthermore, a mass was noted; the variant was p.Val50Met.",
+    ]
+
+
 def test_the_cut_is_before_the_first_sentence_that_names_the_disease_or_its_gene() -> None:
     long, short = cr.name_forms(["MARFAN SYNDROME; MFS", "Ehlers-Danlos syndrome, classic type"])
     assert "marfan syndrome" in long and "ehlers danlos syndrome" in long and short == {"MFS"}
@@ -127,6 +135,9 @@ def test_the_cut_is_before_the_first_sentence_that_names_the_disease_or_its_gene
     assert cr.cut(text, 2, long, short, ["FBN1"]) == 1  # annotator B's sentence is earlier
     assert cr.cut(text, 9, set(), set(), []) == 4  # a number past the end keeps everything
     assert cr.reveals("Features of Marfan-syndrome were noted", long, short, [])
+    typed, _ = cr.name_forms(["Neurofibromatosis type 1", "Spinocerebellar ataxia 3", "Gout 2"])
+    assert {"neurofibromatosis", "spinocerebellar ataxia"} <= typed and "gout" not in typed
+    assert cr.reveals("the Neurofibromatosis Diagnostic Criteria", typed, set(), [])
     assert cr.reveals("MFS was suspected", long, short, [])
     assert not cr.reveals("the mfs score was low", long, short, [])  # an abbreviation, as written
     assert (
