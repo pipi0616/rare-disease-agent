@@ -361,6 +361,34 @@ def name_forms(names: Iterable[str]) -> tuple[set[str], set[str]]:
     return {f for f in long if len(f) >= 5}, short
 
 
+# A sentence that reports a test done to establish a diagnosis — tissue, cells, genes, an
+# organism, antibodies. Annotator B is asked to stop at such a sentence and does not always
+# (the pilot: "tissue staining was positive for S100, CD68 ..." kept), so a program looks
+# for it too. Blunt on purpose: it also stops at "blood cultures were negative", and what
+# is left is then the presentation, the routine laboratory values and the imaging.
+_TEST = re.compile(
+    r"\b(?:biops|histolog|histopatholog|immunohistochem|immunostain|immunofluorescen|cytolog"
+    r"|flow cytometr|bone[- ]marrow|cultures?\b|cultured\b|pcr\b|polymerase chain reaction"
+    r"|sequenc|exome\b|karyotyp|fish\b|in situ hybridi[sz]ation|microarray|gene panel"
+    r"|genetic (?:test|analys|stud|panel|evaluation|workup)|mutations?\b|pathogenic\b"
+    r"|heterozygous\b|homozygous\b|hemizygous\b|serolog|antibod|autoantibod|antigens?\b"
+    r"|ngs\b|wes\b|wgs\b)",
+    re.IGNORECASE,
+)
+_ACRONYM = re.compile(r"\b(?:PCR|FISH|NGS|WES|WGS)\b")
+
+
+def reports_a_test(sentence: str) -> bool:
+    """Whether a sentence mentions a confirming test (the list above). The short names of
+    tests count only as written in capitals: "fish" is also a food."""
+    for found in _TEST.finditer(sentence):
+        word = found.group(0)
+        if word.lower() in ("pcr", "fish", "ngs", "wes", "wgs") and not _ACRONYM.fullmatch(word):
+            continue
+        return True
+    return False
+
+
 def reveals(sentence: str, long: set[str], short: set[str], genes: Iterable[str]) -> bool:
     """Whether a sentence names the disease (a long form, or an abbreviation as written)
     or one of its genes (as written, a whole word)."""
@@ -375,11 +403,12 @@ def cut(
     numbered: list[str], reveal: int | None, long: set[str], short: set[str], genes: Iterable[str]
 ) -> int:
     """How many sentences are kept: those before the first revealing one — B's, or the
-    first the program finds a name or gene in, whichever is earlier."""
+    first in which the program finds a name, a gene or a confirming test, whichever is
+    earlier."""
     genes = list(genes)
     kept = len(numbered) if reveal is None else max(0, min(reveal - 1, len(numbered)))
     for i, sentence in enumerate(numbered[:kept]):
-        if reveals(sentence, long, short, genes):
+        if reveals(sentence, long, short, genes) or reports_a_test(sentence):
             return i
     return kept
 

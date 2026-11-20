@@ -131,9 +131,11 @@ def test_the_cut_is_before_the_first_sentence_that_names_the_disease_or_its_gene
         "Marfan syndrome was diagnosed.",
     ]
     assert cr.cut(text, None, long, short, ["FBN1"]) == 2  # the gene, before the name
-    assert cr.cut(text, None, long, short, []) == 3  # the name
+    assert cr.cut(text, None, long, short, []) == 2  # "Sequencing found": a confirming test
+    assert cr.cut(["He was tall.", "Marfan syndrome was diagnosed."], None, long, short, []) == 1
     assert cr.cut(text, 2, long, short, ["FBN1"]) == 1  # annotator B's sentence is earlier
-    assert cr.cut(text, 9, set(), set(), []) == 4  # a number past the end keeps everything
+    plain = ["He was tall.", "His lens was dislocated."]
+    assert cr.cut(plain, 9, set(), set(), []) == 2  # a number past the end keeps everything
     assert cr.reveals("Features of Marfan-syndrome were noted", long, short, [])
     typed, _ = cr.name_forms(["Neurofibromatosis type 1", "Spinocerebellar ataxia 3", "Gout 2"])
     assert {"neurofibromatosis", "spinocerebellar ataxia"} <= typed and "gout" not in typed
@@ -144,6 +146,33 @@ def test_the_cut_is_before_the_first_sentence_that_names_the_disease_or_its_gene
         cr.kept_text(text, 2)
         == "A tall boy presented with chest pain. His mother had lens dislocation."
     )
+
+
+def test_the_cut_also_stops_at_a_sentence_that_reports_a_confirming_test() -> None:
+    text = [
+        "A man presented with fever and a rash.",
+        "Routine blood tests showed anaemia; a chest radiograph was normal.",
+        "A skin biopsy was taken.",
+        "It showed vasculitis.",
+    ]
+    assert cr.cut(text, None, set(), set(), []) == 2
+    for sentence in (
+        "Blood cultures were negative.",
+        "Tissue staining was positive for S100; immunohistochemistry followed.",
+        "Bone marrow morphology revealed blasts: 39%.",
+        "Trio whole exome sequencing revealed a de novo variant.",
+        "FISH was requested.",
+        "Antinuclear antibodies were positive at 1:1280.",
+        "A heterozygous change was found.",
+    ):
+        assert cr.reports_a_test(sentence), sentence
+    for sentence in (
+        "He ate raw fish on a trip.",
+        "Her cultural background was noted.",
+        "An anatomical variant of the cystic duct was seen on imaging.",
+        "He was given antibiotics.",
+    ):
+        assert not cr.reports_a_test(sentence), sentence
 
 
 def test_a_disease_is_on_one_side_by_a_draw_fixed_beforehand() -> None:
