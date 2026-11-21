@@ -455,7 +455,7 @@ def fig4() -> None:
             "agent-v1.1",
         ),
         (
-            "CADA test, diagnostic\nlaboratories' patients (n = {n})",
+            "CADA test: laboratories, clinics,\npublished cases (n = {n})",
             "exam_cada-test_hits.tsv",
             "agent-v1.1",
         ),
@@ -469,11 +469,11 @@ def fig4() -> None:
             rows = hits_table(name)
             new.append(row(label.format(n=len(rows)), rows, agent))
     groups = [
-        ("a   First version (v1.0)", first),
-        ("b   Revised (v1.1): sets it was not developed on", second),
+        ("a   v1.0, prespecified tests", first),
+        ("b   v1.1a, not prespecified (MME not masked)", second),
     ]
     if new:
-        groups.append(("c   Pre-registered tests of the revised agent", new))
+        groups.append(("c   Prespecified tests: v1.1 (patients), v2 (case reports)", new))
     heights = [len(g[1]) for g in groups]
     fig, axes = plt.subplots(
         len(groups),
@@ -570,7 +570,7 @@ def fig5() -> None:
 
 
 def fig6() -> None:
-    from collections import defaultdict
+    import json
 
     bands = ["1–2", "3–5", "6–10", "11 or more"]
 
@@ -578,57 +578,52 @@ def fig6() -> None:
         return bands[0] if n <= 2 else bands[1] if n <= 5 else bands[2] if n <= 10 else bands[3]
 
     findings: dict[str, int] = {}
-    for folder in ("cada/56e42ec", "mygene2/6689035"):
+    for folder in ("cada/56e42ec", "mygene2/6689035", "casereports/2026-10"):
         path = ROOT / "data" / "processed" / folder / "cases.jsonl"
         if path.exists():
-            import json
-
             for line in path.read_text(encoding="utf-8").splitlines():
                 case = json.loads(line)
                 findings[case["id"]] = len(case["hpo_ids"])
-    tables = [t for t in NEW_TESTS[:2] if (DOCS / t[0]).exists()]
+    tables = [t for t in NEW_TESTS if (DOCS / t[0]).exists()]
     if not tables or not findings:
         print("fig6: no test tables yet")
         return
-    grouped: dict[str, list[dict[str, str]]] = defaultdict(list)
-    for name, _, _, _ in tables:
-        for r in hits_table(name):
-            grouped[band(findings[r["case_id"]])].append(r)
-    fig, ax = plt.subplots(figsize=(4.6, 2.5))
-    rows = []
-    for b in bands:
-        inside = grouped[b]
-        rows.append(
-            (
-                f"{b} findings\n(n = {len(inside)})",
-                count(inside, "agent-v1.1"),
-                count(inside, "llm-direct"),
-                pair_note(inside, "agent-v1.1", "llm-direct"),
-            )
-        )
-    paired_rows(ax, rows, xmax=60)
-    ax.set_xlabel("confirmed disease ranked first (%), with 95% interval")
-    ax.text(
-        60 * 1.02,
-        len(rows) - 0.42,
-        "agent : model",
-        fontsize=6.6,
-        color=INK2,
-        va="bottom",
-        ha="left",
+    fig, axes = plt.subplots(
+        len(tables),
+        1,
+        figsize=(5.2, 2.3 * len(tables) + 0.6),
+        gridspec_kw={"hspace": 0.75},
+        squeeze=False,
     )
+    for ax, (name, title, agent, agent_label) in zip(axes[:, 0], tables, strict=True):
+        rows_all = hits_table(name)
+        rows = []
+        for b in bands:
+            inside = [r for r in rows_all if band(findings[r["case_id"]]) == b]
+            if not inside:
+                continue
+            rows.append(
+                (
+                    f"{b} findings (n = {len(inside)})",
+                    count(inside, agent),
+                    count(inside, "llm-direct"),
+                    pair_note(inside, agent, "llm-direct"),
+                )
+            )
+        paired_rows(ax, rows, xmax=100)
+        ax.set_title(f"{title} — {agent_label}", loc="left", fontsize=8.5, color=INK, pad=5)
+        ax.text(
+            100 * 1.02,
+            len(rows) - 0.42,
+            "agent : model",
+            fontsize=6.6,
+            color=INK2,
+            va="bottom",
+            ha="left",
+        )
+    axes[-1, 0].set_xlabel("confirmed disease ranked first (%), with 95% interval")
     handles = [
-        Line2D(
-            [0],
-            [0],
-            marker="o",
-            ms=6,
-            color=AGENT,
-            lw=2,
-            mec=SURFACE,
-            mew=1.2,
-            label="agent (v1.1)",
-        ),
+        Line2D([0], [0], marker="o", ms=6, color=AGENT, lw=2, mec=SURFACE, mew=1.2, label="agent"),
         Line2D(
             [0],
             [0],
@@ -641,13 +636,13 @@ def fig6() -> None:
             label="the same model asked directly",
         ),
     ]
-    ax.legend(
+    fig.legend(
         handles=handles,
         frameon=False,
         fontsize=7.5,
         loc="lower center",
         ncol=2,
-        bbox_to_anchor=(0.45, 1.0),
+        bbox_to_anchor=(0.45, -0.04),
     )
     save(fig, "fig6_by_findings")
 

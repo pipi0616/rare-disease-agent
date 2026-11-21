@@ -38,7 +38,10 @@ def manuscript() -> str:
     figures = ["## Figures", ""]
     for name, label in FIGURES:
         if (PAPER / "figures" / f"{name}.png").exists():
-            figures += [f"![{label}](figures/{name}.png){{width=100%}}", "", f"*{label}*", ""]
+            figures += [
+                f"![{label}](figures/{name}.png){{width=100%}}",
+                "",
+            ]  # the alt text is the caption
     return text.rstrip() + "\n\n" + "\n".join(figures) + "\n"
 
 
