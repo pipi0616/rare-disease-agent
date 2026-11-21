@@ -35,8 +35,7 @@ table="$logs/runs.tsv"
 
 # This machine has 16 GB and is shared: on 2026-11-21 another job of the user's (PyTorch on
 # Metal, 9-13 GB) and a run of this script together ended in a kernel panic. So a run starts
-# only when memory is free, and is stopped if memory runs out while it works. A run stopped
-# that way is void (it has no line in the table) and is asked again later.
+# only when memory is free, and is paused while memory is short (see watch_memory).
 free_percent() { memory_pressure 2>/dev/null | sed -n 's/.*free percentage: \([0-9]*\)%.*/\1/p' | tail -1; }
 swap_used_mb() { sysctl -n vm.swapusage 2>/dev/null | sed -n 's/.*used = \([0-9]*\)\..*/\1/p'; }
 # The largest process's memory footprint in MB, as `top` counts it (compressed and swapped
@@ -66,9 +65,27 @@ wait_for_memory() {
   echo "memory is free: $state"
 }
 
-watch_memory() {  # stop the run (pid $1) if memory runs short for a minute and a half
-  local low=0
+descendants() {  # every process below pid $1
+  ps -axo pid=,ppid= | awk -v root="$1" '{parent[$1] = $2}
+    END {for (p in parent) {q = p; while ((q in parent) && q != root && q != 1) q = parent[q]
+         if (q == root && p != root) print p}}'
+}
+signal_tree() { kill "-$1" "$2" $(descendants "$2") 2>/dev/null; }
+
+# While a run works: if memory runs short for a minute, the run is paused (SIGSTOP: it uses
+# no processor and its memory can be swapped out), and resumed when memory is free again.
+# Stopping it for good would throw away what it had paid for; a paused run loses at most the
+# model calls that were in flight, which the client retries or `--fill-in` asks again.
+watch_memory() {
+  local low=0 paused=0
   while kill -0 "$1" 2>/dev/null; do
+    if [ "$paused" = 1 ]; then
+      if memory_is_free; then
+        echo "memory is free again ($state): resuming the run  $(date '+%H:%M:%S')"
+        signal_tree CONT "$1"; paused=0; low=0
+      fi
+      sleep 30; continue
+    fi
     local free swap big
     free=$(free_percent); swap=$(swap_used_mb); big=$(biggest_mb)
     if [ "${free:-100}" -lt 7 ] || [ "${swap:-0}" -gt 10000 ] || [ "${big:-0}" -gt 9000 ]; then
@@ -76,11 +93,9 @@ watch_memory() {  # stop the run (pid $1) if memory runs short for a minute and 
     else
       low=0
     fi
-    if [ "$low" -ge 3 ]; then
-      echo "memory short (free ${free}%, swap ${swap} MB, largest ${big} MB): stopping the run  $(date '+%H:%M:%S')"
-      pkill -TERM -P "$1" 2>/dev/null; kill -TERM "$1" 2>/dev/null; sleep 5
-      pkill -KILL -P "$1" 2>/dev/null; kill -KILL "$1" 2>/dev/null
-      return 0
+    if [ "$low" -ge 2 ]; then
+      echo "memory short (free ${free}%, swap ${swap} MB, largest ${big} MB): pausing the run  $(date '+%H:%M:%S')"
+      signal_tree STOP "$1"; paused=1
     fi
     sleep 30
   done
