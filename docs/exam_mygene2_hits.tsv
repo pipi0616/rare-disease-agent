@@ -1,0 +1,147 @@
+case_id	pmid	answerable	agent-v1.1@1	agent-v1.1@3	agent-v1.1@5	agent-v1.1@10	llm-direct@1	llm-direct@3	llm-direct@5	llm-direct@10	rank-then-check@1	rank-then-check@3	rank-then-check@5	rank-then-check@10
+MyGene2_mygene2_1261	PMID:23401156	1	0	0	0	1	0	1	1	1	0	0	0	0
+MyGene2_mygene2_1262	PMID:23401156	1	0	0	0	0	0	0	0	0	0	0	0	1
+MyGene2_mygene2_1263	PMID:23401156	1	0	0	1	1	0	1	1	1	0	0	0	0
+MyGene2_mygene2_1264	PMID:23401156	1	0	1	1	1	0	0	0	1	0	0	0	0
+MyGene2_mygene2_1276		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_1280		1	0	1	1	1	0	0	0	0	0	0	0	0
+MyGene2_mygene2_1291	PMID:23401156	1	0	0	1	1	0	0	0	1	0	0	0	0
+MyGene2_mygene2_1292		1	0	0	0	1	0	0	1	1	0	0	0	0
+MyGene2_mygene2_1293	PMID:23401156	1	1	1	1	1	0	0	1	1	0	0	0	0
+MyGene2_mygene2_1294	PMID:23401156	1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_1359		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_1388		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_1391		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_1408		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_1476		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_1484		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_1510		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_1541		1	1	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_1553		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_1559		1	1	1	1	1	1	1	1	1	0	1	1	1
+MyGene2_mygene2_1562		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_1569		1	0	1	1	1	0	1	1	1	0	0	0	0
+MyGene2_mygene2_16		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_1639		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_17		1	1	1	1	1	0	0	1	1	1	1	1	1
+MyGene2_mygene2_172		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_20		1	0	1	1	1	0	1	1	1	0	0	0	1
+MyGene2_mygene2_225		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_2373		1	0	0	1	1	0	0	0	0	0	0	1	1
+MyGene2_mygene2_2378		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_2379		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_2383		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_2408		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_2409	PMID:28884921	1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_2519		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_2541		1	0	0	1	1	0	0	0	0	0	0	0	1
+MyGene2_mygene2_28		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_312		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_380		1	1	1	1	1	1	1	1	1	1	1	1	1
+MyGene2_mygene2_382		1	1	1	1	1	0	1	1	1	0	1	1	1
+MyGene2_mygene2_383		1	0	0	1	1	0	0	0	1	0	0	0	1
+MyGene2_mygene2_384		1	0	0	0	1	1	1	1	1	0	0	0	0
+MyGene2_mygene2_385		1	0	1	1	1	1	1	1	1	0	1	1	1
+MyGene2_mygene2_386		1	1	1	1	1	1	1	1	1	0	1	1	1
+MyGene2_mygene2_387		1	0	1	1	1	1	1	1	1	0	0	0	1
+MyGene2_mygene2_390		1	1	1	1	1	0	0	0	1	0	0	1	1
+MyGene2_mygene2_4099		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_459		1	0	0	1	1	0	0	0	1	0	1	1	1
+MyGene2_mygene2_46		1	0	1	1	1	0	0	0	0	0	0	1	1
+MyGene2_mygene2_460		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_464		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_470		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_471		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_472		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_473		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_474		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_480		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_481		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_499		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_506		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_507		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_508		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_509		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_510		1	0	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_52		1	1	1	1	1	0	0	0	0	0	0	0	1
+MyGene2_mygene2_571		1	1	1	1	1	1	1	1	1	1	1	1	1
+MyGene2_mygene2_572		1	1	1	1	1	0	0	0	1	1	1	1	1
+MyGene2_mygene2_573		1	1	1	1	1	0	0	0	1	1	1	1	1
+MyGene2_mygene2_574		1	1	1	1	1	1	1	1	1	1	1	1	1
+MyGene2_mygene2_575		1	1	1	1	1	1	1	1	1	1	1	1	1
+MyGene2_mygene2_576		1	1	1	1	1	0	1	1	1	1	1	1	1
+MyGene2_mygene2_577		1	1	1	1	1	0	0	1	1	1	1	1	1
+MyGene2_mygene2_578		1	1	1	1	1	0	0	1	1	1	1	1	1
+MyGene2_mygene2_579		1	1	1	1	1	0	0	1	1	1	1	1	1
+MyGene2_mygene2_580		1	1	1	1	1	1	1	1	1	1	1	1	1
+MyGene2_mygene2_581		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_582		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_583		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_584		1	1	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_585		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_59		1	0	0	0	0	0	1	1	1	0	0	0	0
+MyGene2_mygene2_591		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_592		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_593		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_594		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_595		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_596		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_597		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_598		1	0	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_599		1	0	1	1	1	0	0	0	0	0	0	1	1
+MyGene2_mygene2_6		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_67		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_7		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_770		1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_789		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_79		1	0	1	1	1	0	0	0	1	0	0	0	0
+MyGene2_mygene2_790	PMID:23273567	1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_791	PMID:23273567	1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_793	PMID:23273567	1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_794	PMID:23273567	1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_795	PMID:23273567	1	0	1	1	1	0	0	0	0	0	0	0	0
+MyGene2_mygene2_796	PMID:24726473	1	1	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_798	PMID:24726473	1	1	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_799	PMID:24726473	1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_8		1	0	0	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_800	PMID:24726473	1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_801	PMID:24726473	1	1	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_802	PMID:24726473	1	1	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_803	PMID:24726473	1	0	1	1	1	0	0	0	0	0	0	1	1
+MyGene2_mygene2_804	PMID:24726473	1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_805	PMID:24726473	1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_806	PMID:24726473	1	1	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_807	PMID:24726473	1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_808	PMID:24726473	1	1	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_809	PMID:24726473	1	1	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_810	PMID:24726473	1	1	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_811	PMID:24726473	1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_812	PMID:24726473	1	1	1	1	1	0	0	0	0	0	1	1	1
+MyGene2_mygene2_813	PMID:24726473	1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_814	PMID:24726473	1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_815	PMID:24726473	1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_816	PMID:24726473	1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_817	PMID:24726473	1	0	1	1	1	0	0	0	0	0	0	0	0
+MyGene2_mygene2_818	PMID:22541558	1	0	0	0	1	0	1	1	1	0	0	0	0
+MyGene2_mygene2_821	PMID:22541558	1	0	0	0	0	0	0	1	1	0	0	0	0
+MyGene2_mygene2_823	PMID:22541558	1	0	0	0	1	0	0	0	1	0	0	0	0
+MyGene2_mygene2_824	PMID:22541558	1	0	0	0	0	0	1	1	1	0	0	0	0
+MyGene2_mygene2_825	PMID:22541558	1	0	0	0	0	0	1	1	1	0	0	0	0
+MyGene2_mygene2_826	PMID:22541558	1	0	0	0	1	0	0	1	1	0	0	0	0
+MyGene2_mygene2_827	PMID:22541558	1	0	0	0	1	0	0	1	1	0	0	0	0
+MyGene2_mygene2_829	PMID:22541558	1	0	1	1	1	0	1	1	1	0	0	0	0
+MyGene2_mygene2_830	PMID:22541558	1	0	0	0	0	0	1	1	1	0	0	0	0
+MyGene2_mygene2_831	PMID:22541558	1	0	0	0	0	0	1	1	1	0	0	0	0
+MyGene2_mygene2_832	PMID:22541558	1	0	0	1	1	0	1	1	1	0	0	0	0
+MyGene2_mygene2_833	PMID:22541558	1	0	0	0	1	0	0	1	1	0	0	0	0
+MyGene2_mygene2_834	PMID:22541558	1	0	0	0	0	0	0	0	0	0	0	0	0
+MyGene2_mygene2_835	PMID:22541558	1	0	1	1	1	1	1	1	1	0	0	0	0
+MyGene2_mygene2_836	PMID:22541558	1	0	0	0	0	0	1	1	1	0	0	0	0
+MyGene2_mygene2_838		1	1	1	1	1	0	0	0	0	1	1	1	1
+MyGene2_mygene2_839		1	1	1	1	1	0	0	1	1	1	1	1	1
+MyGene2_mygene2_840	PMID:19915526	1	1	1	1	1	0	0	1	1	1	1	1	1
+MyGene2_mygene2_841	PMID:19915526	1	1	1	1	1	0	0	1	1	1	1	1	1
+MyGene2_mygene2_842	PMID:19915526	1	1	1	1	1	0	0	1	1	1	1	1	1
+MyGene2_mygene2_843	PMID:19915526	1	1	1	1	1	0	1	1	1	1	1	1	1
+MyGene2_mygene2_844	PMID:19915526	1	1	1	1	1	0	0	1	1	1	1	1	1
+MyGene2_mygene2_94		1	0	0	0	0	0	0	0	0	0	0	0	0
