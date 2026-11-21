@@ -280,3 +280,19 @@ role = "evaluation and development: diagnostic laboratories' and clinics' patien
 "cases_train.tsv" = "228a395049da39359ccc3dd867ce622479df696bd7ab00faab46795ef33c27c3"
 "cases_validate.tsv" = "8647f19dd42d0d39d5b18ad57b00a1e2e82cc5218fbc073695ff751d966a5fe3"
 "cases_test.tsv" = "d4ef63304270b02ea95cedcbb23191c07856dec40d98f14690f03738e25cfc95"
+
+# Case reports first public after the model's training cutoff (docs/casereports_plan.md):
+# built by a command from NCBI's services (PubMed, PubTator3, PMC's BioC), not one
+# download. The table evals/casereports-2026-10.tsv names each paper, how many sentences
+# of its case description are kept and the checksum of the kept text; the kept texts
+# themselves stay on this machine (some licences are non-commercial), pinned here.
+[casereports]
+version = "2026-10"
+url = "https://www.ncbi.nlm.nih.gov/research/bionlp/RESTful/pmcoa.cgi/BioC_json/"
+homepage = "https://pmc.ncbi.nlm.nih.gov/tools/openftlist/"
+license = "each paper's own (PMC open access; some non-commercial): texts kept on this machine"
+role = "evaluation and development: reports the model cannot have read, cut before the diagnosis"
+fetched_by = "raredx data casereports"
+
+[casereports.files]
+"texts.jsonl" = "db259851de4a443d5682559a9b5628c6f284e8a07363c99ea5de92fb6ba06251"
