@@ -20,7 +20,7 @@ subtitle: "A tool-using agent for rare-disease diagnosis, tested where its knowl
 | CADA development | 300 | CADA training file, fixed random sample | development |
 | **MyGene2** | 146 | patients shared by families and clinicians | **test of v1.1** |
 | **CADA test** | 577 | CADA test file, patients with an OMIM diagnosis | **test of v1.1** |
-| **Case reports after the cutoff** | 240 built ([[CR-N]] with findings read) | PubMed case reports first public on or after 2025-06-01 | **test of v2** (development side: 300, not used here) |
+| **Case reports after the cutoff** | 240 (all read into HPO terms) | PubMed case reports first public on or after 2025-06-01 | **test of v2** (development side: 300, of which 298 could be read into HPO terms; not used here) |
 
 Data that were considered and not used: the 75 Peking Union Medical College Hospital cases of RareBench (withdrawn from the public archive by its authors in December 2024); MIMIC-IV-Rare (requires credentialed access, and its use policy excludes services whose data handling cannot be verified); the Xinhua and Hunan hospital cohorts of DeepRare (controlled access); the Undiagnosed Diseases Network (controlled access); RareBench's LIRICAL subset (its file names no source papers, so the cases cannot be masked).
 
@@ -104,4 +104,4 @@ The pre-registered primary claim — better than both baselines on the clinical 
 
 ## S6. Runs that were void
 
-A run whose records were incomplete was void and repeated without its score being read. During the tests of Section 3.6 this happened to: the no-model ranking on MyGene2 once (11 of 146 records lost to a locked database; the tests were thereafter recorded in a store of their own); the model asked directly on MyGene2 twice and agent v1.1 on MyGene2 [[PENDING — count]] times (the process was killed with the session, by a kernel panic of the shared machine, or stopped to protect it from memory exhaustion); LIRICAL on MyGene2 once (stopped: too many parallel Java processes). No score of a void run was computed or seen. [[PENDING — final list]]
+A run whose records were incomplete was void and repeated without its score being read. During the tests of Section 3.6 this happened to: the no-model ranking on MyGene2 once (11 of 146 records lost to a locked database; the tests were thereafter recorded in a store of their own); the model asked directly on MyGene2 twice and agent v1.1 on MyGene2 three times (the process was killed with the session, by a kernel panic of the shared machine, or stopped to protect it from memory exhaustion); LIRICAL on MyGene2 once (stopped: too many parallel Java processes). No score of a void run was computed or seen. No case-report run was void: agent v2 and LIRICAL were each paused once by the memory guard (for about one and two minutes, while another job on the machine held 11 GB) and resumed; both recorded all 240 reports and passed the leak audit.

@@ -1,0 +1,1442 @@
+[
+ {
+  "case_id": "CaseReport_40468249",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40550029",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 4
+ },
+ {
+  "case_id": "CaseReport_40550095",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40564774",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40565581",
+  "agent-v2": null,
+  "llm-direct": 4,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40629618",
+  "agent-v2": null,
+  "llm-direct": 4,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40629642",
+  "agent-v2": 3,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40635310",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40638339",
+  "agent-v2": 4,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40642102",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40644985",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40652235",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40655064",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40656152",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40656331",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40662046",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40671141",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40678158",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40686793",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_40688904",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40688972",
+  "agent-v2": 5,
+  "llm-direct": 2,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40694921",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40698257",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40704273",
+  "agent-v2": null,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40709164",
+  "agent-v2": null,
+  "llm-direct": 3,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40713115",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_40718204",
+  "agent-v2": 5,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40718534",
+  "agent-v2": null,
+  "llm-direct": 4,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40718656",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40734191",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40741427",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40747178",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 2
+ },
+ {
+  "case_id": "CaseReport_40755710",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40756593",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40760595",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40777694",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40785134",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40786343",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40786765",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40787043",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40790338",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40797417",
+  "agent-v2": 1,
+  "llm-direct": 2,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40818398",
+  "agent-v2": 1,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40842762",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40842808",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40843876",
+  "agent-v2": 4,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40851007",
+  "agent-v2": 3,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40852472",
+  "agent-v2": 3,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40861589",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40862035",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40869056",
+  "agent-v2": 1,
+  "llm-direct": 2,
+  "one-way-merged": 4
+ },
+ {
+  "case_id": "CaseReport_40877773",
+  "agent-v2": 4,
+  "llm-direct": 5,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40882288",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40894448",
+  "agent-v2": 4,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40895922",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40895935",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40896043",
+  "agent-v2": 2,
+  "llm-direct": 1,
+  "one-way-merged": 5
+ },
+ {
+  "case_id": "CaseReport_40896082",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40904958",
+  "agent-v2": 1,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40913622",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40918767",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40931499",
+  "agent-v2": null,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40933515",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40933633",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40936857",
+  "agent-v2": null,
+  "llm-direct": 3,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40937032",
+  "agent-v2": null,
+  "llm-direct": 3,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40937214",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_40951147",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40951174",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40959364",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40969993",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40978889",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40984932",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40988824",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40988845",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40989047",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_40992904",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_40993082",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41009939",
+  "agent-v2": 3,
+  "llm-direct": 4,
+  "one-way-merged": 3
+ },
+ {
+  "case_id": "CaseReport_41013330",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41016045",
+  "agent-v2": null,
+  "llm-direct": 5,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41025038",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41030620",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_41035049",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_41035746",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41035750",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41040767",
+  "agent-v2": 2,
+  "llm-direct": 4,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41042726",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41058807",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41060453",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41063533",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41084647",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41088075",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41093559",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41112461",
+  "agent-v2": 1,
+  "llm-direct": 2,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41113391",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41120191",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41121342",
+  "agent-v2": 2,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41140551",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41142870",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41146780",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41146793",
+  "agent-v2": 1,
+  "llm-direct": null,
+  "one-way-merged": 5
+ },
+ {
+  "case_id": "CaseReport_41158908",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41163633",
+  "agent-v2": 4,
+  "llm-direct": 2,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41164057",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41164060",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41170015",
+  "agent-v2": 2,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41179045",
+  "agent-v2": 2,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41180701",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41180737",
+  "agent-v2": null,
+  "llm-direct": 5,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41180774",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41181402",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 2
+ },
+ {
+  "case_id": "CaseReport_41181803",
+  "agent-v2": 2,
+  "llm-direct": null,
+  "one-way-merged": 3
+ },
+ {
+  "case_id": "CaseReport_41189138",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41189250",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41194827",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41199191",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_41204139",
+  "agent-v2": 1,
+  "llm-direct": 3,
+  "one-way-merged": 3
+ },
+ {
+  "case_id": "CaseReport_41204533",
+  "agent-v2": 3,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41209864",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41210661",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41212641",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41218819",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41221257",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41225511",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 4
+ },
+ {
+  "case_id": "CaseReport_41244298",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41245176",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41246672",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41255498",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_41257104",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": 4
+ },
+ {
+  "case_id": "CaseReport_41257278",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41260651",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41272489",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41281016",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41281144",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41282428",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41283182",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41283587",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41294897",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41300639",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41311440",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41311788",
+  "agent-v2": 4,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41316694",
+  "agent-v2": 2,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41322872",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41323174",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41333949",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41346890",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41356867",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41356917",
+  "agent-v2": 4,
+  "llm-direct": null,
+  "one-way-merged": 5
+ },
+ {
+  "case_id": "CaseReport_41357051",
+  "agent-v2": 4,
+  "llm-direct": 3,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_41357377",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41362521",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41367461",
+  "agent-v2": 2,
+  "llm-direct": null,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_41368187",
+  "agent-v2": 1,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41373627",
+  "agent-v2": 1,
+  "llm-direct": 4,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41376728",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": 5
+ },
+ {
+  "case_id": "CaseReport_41377310",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41384171",
+  "agent-v2": 1,
+  "llm-direct": 3,
+  "one-way-merged": 4
+ },
+ {
+  "case_id": "CaseReport_41385451",
+  "agent-v2": 1,
+  "llm-direct": 2,
+  "one-way-merged": 5
+ },
+ {
+  "case_id": "CaseReport_41390623",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41393570",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41402833",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41403484",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_41404256",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41416314",
+  "agent-v2": 2,
+  "llm-direct": 3,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_41422250",
+  "agent-v2": 4,
+  "llm-direct": 4,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41425007",
+  "agent-v2": 4,
+  "llm-direct": null,
+  "one-way-merged": 5
+ },
+ {
+  "case_id": "CaseReport_41440766",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41458286",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41466952",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41480058",
+  "agent-v2": 3,
+  "llm-direct": 4,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41497084",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_41503173",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41509784",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41523385",
+  "agent-v2": 4,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41527322",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41527674",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41536871",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41546046",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41550322",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41552126",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41552211",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41561388",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41566471",
+  "agent-v2": 3,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41567321",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41567696",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41578215",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 4
+ },
+ {
+  "case_id": "CaseReport_41666437",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41710795",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_41715899",
+  "agent-v2": 2,
+  "llm-direct": 1,
+  "one-way-merged": 3
+ },
+ {
+  "case_id": "CaseReport_41717174",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41718293",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41725193",
+  "agent-v2": null,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41725862",
+  "agent-v2": 2,
+  "llm-direct": null,
+  "one-way-merged": 4
+ },
+ {
+  "case_id": "CaseReport_41726361",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41728228",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41731448",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41732611",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41763664",
+  "agent-v2": 2,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41769540",
+  "agent-v2": 1,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41777990",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41781005",
+  "agent-v2": 2,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_41783222",
+  "agent-v2": 1,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41783478",
+  "agent-v2": 5,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41785187",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41808134",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41808843",
+  "agent-v2": null,
+  "llm-direct": 4,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41809306",
+  "agent-v2": 2,
+  "llm-direct": 2,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_41810401",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41837092",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41874017",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41892077",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41906181",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41938441",
+  "agent-v2": 3,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41938470",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41957649",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41980014",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_41981535",
+  "agent-v2": 2,
+  "llm-direct": null,
+  "one-way-merged": 2
+ },
+ {
+  "case_id": "CaseReport_42002793",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42029463",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_42116396",
+  "agent-v2": 3,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42131479",
+  "agent-v2": 1,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42200827",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42272221",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42292216",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42330124",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42375337",
+  "agent-v2": 1,
+  "llm-direct": null,
+  "one-way-merged": 1
+ },
+ {
+  "case_id": "CaseReport_42375502",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 3
+ },
+ {
+  "case_id": "CaseReport_42381827",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": 4
+ },
+ {
+  "case_id": "CaseReport_42382907",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42389664",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42396586",
+  "agent-v2": 2,
+  "llm-direct": 4,
+  "one-way-merged": 5
+ },
+ {
+  "case_id": "CaseReport_42399488",
+  "agent-v2": 1,
+  "llm-direct": null,
+  "one-way-merged": 4
+ },
+ {
+  "case_id": "CaseReport_42421086",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42422638",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42428297",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": 2
+ },
+ {
+  "case_id": "CaseReport_42428718",
+  "agent-v2": 1,
+  "llm-direct": 1,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42445189",
+  "agent-v2": null,
+  "llm-direct": null,
+  "one-way-merged": 3
+ },
+ {
+  "case_id": "CaseReport_42445200",
+  "agent-v2": 1,
+  "llm-direct": 2,
+  "one-way-merged": null
+ },
+ {
+  "case_id": "CaseReport_42445864",
+  "agent-v2": 1,
+  "llm-direct": null,
+  "one-way-merged": 3
+ }
+]

@@ -25,10 +25,22 @@ published diagnosis first — for about half a US cent in all.
 
 **These cases all come from one source.** On patients curated elsewhere the
 frozen agent lost to its own model asked directly — 4 : 15 on a clinic's 88
-patients, 47 : 97 on a metabolic registry's 624 — and the revised version is
-not yet better than it on a fresh external set ([below](#outside-the-curated-source)).
-The next version changes how development data is split and the architecture:
-[`docs/roadmap.md`](docs/roadmap.md).
+patients, 47 : 97 on a metabolic registry's 624 ([below](#outside-the-curated-source)).
+Revised, it was tested once more on three sets no system had seen, under one plan
+committed beforehand ([`docs/exam_plan.md`](docs/exam_plan.md), section 7):
+
+| first place, each system run once | cases | revised agent | same model asked directly | paired |
+|---|---|---|---|---|
+| MyGene2: patients shared by families and clinicians | 146 | **52.1%** | 7.5% | 69 : 4 (p < 0.001) |
+| CADA test: diagnostic laboratories' and clinics' patients | 577 | **23.6%** | 14.7% | 73 : 22 (p < 0.001) |
+| case reports published after the model's cutoff (agent v2) | 240 | **19.6%** | 8.8% | 30 : 4 (p < 0.001) |
+
+All three pre-registered claims hold, scored by identifier. Where they are
+weaker: on CADA's 205 collaborating-clinic patients the lead is 4 points and not
+significant (19 : 10, p = 0.14); on the case reports, judged by name, it is
+21.7% against 18.3% (18 : 10, p = 0.19) — the model asked directly often names an
+Orphanet-only disease without its identifier; and GPT-6.1 asked directly matched
+the agent on MyGene2 (54.8%). The paper draft is in [`docs/paper/`](docs/paper/).
 
 Each comparison follows a plan committed before its run, on a fixed version of
 the system; below are the details, the conditions that were not equal, and the
