@@ -135,7 +135,7 @@ On the **CADA test set** (577 patients, 345 diseases) the agent ranked the confi
 
 Pooled over the two sets (723 patients), the agent solved 29.3% at first place and the model 13.3% (142 : 26).
 
-**Scoring by name.** Under DeepRare's name-based judging the model asked directly gains — on MyGene2 it rises from 7.5% to 13.7%, having often named the right disease with a wrong number — while the agent hardly moves (52.1% to 54.1%) and the no-model ranking scores 43.8%. [[CADA-NAME]] The conclusion does not depend on the scoring.
+**Scoring by name.** Under DeepRare's name-based judging the model asked directly gains — on MyGene2 it rises from 7.5% to 13.7%, having often named the right disease with a wrong number — while the agent hardly moves (52.1% to 54.1%) and the no-model ranking scores 43.8%. On the CADA test set the model rises from 14.7% to 18.7% and the agent from 23.6% to 24.8%; paired, the agent's lead narrows from 73 : 22 to 75 : 40 and remains (p = 0.001). The judge was the model inside both systems. The conclusion does not depend on the scoring.
 
 **By number of findings.** The agent's lead over its model grows with what the patient's record holds (Fig. 6). With one or two findings (199 patients) neither does well: 12.6% against 8.5% (10 : 2, p = 0.039). With three to five findings the agent solved 35.9% against 16.7% (45 : 8); with six to ten, 30.3% against 13.2% (34 : 8); with eleven or more, 40.0% against 15.0% (53 : 8).
 
