@@ -417,7 +417,7 @@ def pair_note(rows: list[dict[str, str]], agent: str, model: str) -> str:
     won = sum(r[f"{agent}@1"] == "1" and r[f"{model}@1"] != "1" for r in rows)
     lost = sum(r[f"{model}@1"] == "1" and r[f"{agent}@1"] != "1" for r in rows)
     p = sign_test(won, lost)
-    return f"{won} : {lost}\n" + ("p < 0.001" if p < 0.001 else f"p = {p:.3f}")
+    return f"{won} : {lost}\n" + ("p < 0.001" if p < 0.001 else f"p = {p:.2g}")
 
 
 def fig4() -> None:
@@ -468,12 +468,12 @@ def fig4() -> None:
         if (DOCS / name).exists():
             rows = hits_table(name)
             new.append(row(label.format(n=len(rows)), rows, agent))
-    groups = [
-        ("a   v1.0, prespecified tests", first),
-        ("b   v1.1a, not prespecified (MME not masked)", second),
-    ]
+    del second  # v1.1a, run without a prespecified comparison: Supplementary Table S11
+    groups = [("a   v1.0, prespecified tests", first)]
     if new:
-        groups.append(("c   Prespecified tests: v1.1 (patients), v2 (case reports)", new))
+        groups.append(
+            ("b   Revised agent, prespecified tests: v1.1 (patients), v2 (case reports)", new)
+        )
     heights = [len(g[1]) for g in groups]
     fig, axes = plt.subplots(
         len(groups),

@@ -14,7 +14,7 @@ read into terms in about 5 s, then the agent's answer in about 14 s — the
 published diagnosis first — for about half a US cent in all.
 [Video (MP4)](docs/img/demo-note.mp4).*
 
-| 200 held-out cases, each case's own paper masked | confirmed disease ranked first | paired against the agent (cases each gets right alone) |
+| 200 held-out cases, each case's own paper masked (DeepRare could not be masked) | confirmed disease ranked first | paired against the agent (cases each gets right alone) |
 |---|---|---|
 | **this agent** (`deepseek-flash` with tools) | **43.0%** | |
 | GPT-6.1, asked directly | 33.0% | 37 : 17 (p = 0.009) |
