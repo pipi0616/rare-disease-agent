@@ -20,9 +20,9 @@ arXiv's API. Two entries are standard citations not looked up (Holm 1979; the My
 14. Danis D, Bamshad MJ, Bridges Y, et al. A corpus of GA4GH phenopackets: case-level phenotyping for genomic diagnostics and discovery. HGG Adv. 2025;6(1):100371. doi:10.1016/j.xhgg.2024.100371
 15. Bridges Y, de Souza V, Cortes KG, et al. Towards a standard benchmark for phenotype-driven variant and gene prioritisation algorithms: PhEval — Phenotypic inference Evaluation framework. BMC Bioinformatics. 2025;26:87. doi:10.1186/s12859-025-06105-4
 16. Mao X, Huang Y, Jin Y, et al. A phenotype-based AI pipeline outperforms human experts in differentially diagnosing rare diseases using EHRs. NPJ Digit Med. 2025;8(1):68. doi:10.1038/s41746-025-01452-1
-17. Eiz AlDin Z, Wu J, Fung JP, et al. MIMIC-RD: can LLMs differentially diagnose rare diseases in real-world clinical settings? arXiv:2601.11559 [preprint]. 2025.
+17. Eiz AlDin Z, Wu J, Fung JP, et al. MIMIC-RD: can LLMs differentially diagnose rare diseases in real-world clinical settings? arXiv:2601.11559 [preprint]. 2026.
 18. Alsentzer E, Li MM, Kobren SN, et al. Few shot learning for phenotype-driven diagnosis of patients with rare genetic diseases. NPJ Digit Med. 2025;8(1):380. doi:10.1038/s41746-025-01749-1
-19. MyGene2. NHGRI/NHLBI University of Washington Center for Mendelian Genomics (UW-CMG), Seattle, WA. https://mygene2.org/MyGene2 (as preprocessed in ref. 13; Harvard Dataverse, doi:10.7910/DVN/TZTPFL).
+19. MyGene2. NHGRI/NHLBI University of Washington Center for Mendelian Genomics (UW-CMG), Seattle, WA. https://mygene2.org/MyGene2 (as preprocessed in ref. 18; Harvard Dataverse, doi:10.7910/DVN/TZTPFL).
 20. Peng C, Dieck S, Schmid A, et al. CADA: phenotype-driven gene prioritization based on a case-enriched knowledge graph. NAR Genom Bioinform. 2021;3(3):lqab078. doi:10.1093/nargab/lqab078
 21. Vasilevsky NA, Toro S, Matentzoglu N, et al. Mondo: integrating disease terminology across communities. Genetics. 2026;232(4):iyaf215. doi:10.1093/genetics/iyaf215
 22. Wilson EB. Probable inference, the law of succession, and statistical inference. J Am Stat Assoc. 1927;22(158):209–212. doi:10.1080/01621459.1927.10502953
@@ -32,14 +32,14 @@ arXiv's API. Two entries are standard citations not looked up (Holm 1979; the My
 26. Rath A, Olry A, Dhombres F, et al. Representation of rare diseases in health information systems: the Orphanet approach to serve a wide range of end users. Hum Mutat. 2012;33(5):803–808. doi:10.1002/humu.22078
 27. Wei C-H, Allot A, Lai P-T, et al. PubTator 3.0: an AI-powered literature resource for unlocking biomedical knowledge. Nucleic Acids Res. 2024;52(W1):W540–W546. doi:10.1093/nar/gkae235
 28. Comeau DC, Wei C-H, Islamaj Doğan R, et al. PMC text mining subset in BioC: about three million full-text articles and growing. Bioinformatics. 2019;35(18):3533–3535. doi:10.1093/bioinformatics/btz070
-29. Zhao Z, Jin Q, Chen F, et al. A large-scale dataset of patient summaries for retrieval-based clinical decision support systems. Sci Data. 2023;10(1):909. doi:10.1038/s41597-023-02814-8
-30. Beckwith MA, Danis D, Bridges Y, et al. Leveraging clinical intuition to improve accuracy of phenotype-driven prioritization. Genet Med. 2025;27(1):101292. doi:10.1016/j.gim.2024.101292
+29. Beckwith MA, Danis D, Bridges Y, et al. Leveraging clinical intuition to improve accuracy of phenotype-driven prioritization. Genet Med. 2025;27(1):101292. doi:10.1016/j.gim.2024.101292
+30. Zhao Z, Jin Q, Chen F, et al. A large-scale dataset of patient summaries for retrieval-based clinical decision support systems. Sci Data. 2023;10(1):909. doi:10.1038/s41597-023-02814-8
 
 ## To check by hand before submission
 
 - Ref. 23 (Holm) and Ref. 19 (MyGene2's own citation line) were written from memory, not looked up.
 - Refs. 11, 13 and 17 are still preprints (checked 2026-11-22); ref. 12 (RareAgents) appeared at AAAI 2026 and is cited in that version.
-- Model identifiers and access dates are now in Methods 2.5 (from `docs/comparison_plan_llms.md` and the recorded run parameters).
-- Added after review (2026-11-21) and checked on 2026-11-22: refs. 5 (Phen2Disease; doi 10.1093/bib/bbad172), 9 (Flaharty et al.) and 15 (PhEval; authors from the published record) and 30 (ClintLR).
-- Renumbered in order of first citation on 2026-11-21; Kulmanov and Hoehndorf (2017), no longer cited, was dropped.
+- Model identifiers and access dates are in Supplementary S12 (from `docs/comparison_plan_llms.md` and the recorded run parameters).
+- Added after review (2026-11-21) and checked on 2026-11-22: refs. 5 (Phen2Disease; doi 10.1093/bib/bbad172), 9 (Flaharty et al.) and 15 (PhEval; authors from the published record) and 29 (ClintLR).
+- Renumbered in order of first citation (main text, then supplement) on 2026-11-21 and 2026-11-23; Kulmanov and Hoehndorf (2017), no longer cited, was dropped.
 - Author lists shortened to the first three, then et al., as the journal's instructions ask (2026-11-22).

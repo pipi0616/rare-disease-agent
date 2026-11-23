@@ -27,7 +27,7 @@ published diagnosis first — for about half a US cent in all.
 frozen agent lost to its own model asked directly — 4 : 15 on a clinic's 88
 patients, 47 : 97 on a metabolic registry's 624 ([below](#outside-the-curated-source)).
 Revised, it was tested once more on three sets no system had seen, under one plan
-fixed beforehand ([`docs/exam_plan.md`](docs/exam_plan.md), section 7):
+fixed beforehand ([`docs/exam_plan.md`](docs/exam_plan.md): the plan in sections 1–6, results in section 7):
 
 | first place, each system run once | cases | revised agent | same model asked directly | paired |
 |---|---|---|---|---|
@@ -39,7 +39,7 @@ All three prespecified claims hold, scored by identifier. Where they are
 weaker: on CADA's 205 collaborating-clinic patients the lead is 4 points and not
 significant (19 : 10, p = 0.14); on the case reports, judged by name, it is
 21.7% against 18.3% (18 : 10, p = 0.19) — the model asked directly often names an
-Orphanet-only disease without its identifier, and about half of the agent's lead
+Orphanet-only disease without its identifier, and half to two thirds of the agent's lead
 there is finding the right identifier; and GPT-6.1 asked directly was not
 significantly different from the agent on MyGene2 (54.8%). The paper draft is in [`docs/paper/`](docs/paper/).
 
@@ -48,7 +48,7 @@ the system; below are the details, the conditions that were not equal, and the
 prespecified claims that failed (reading notes; the temporal and external
 tests).
 
-**Status:** the agent, evaluated on a held-out set and against LIRICAL, three frontier models and DeepRare, then on a temporal and two external tests, where it lost to its own model; served over HTTP, reading clinical notes as well as HPO terms; with seven tools and the baselines it is measured against. Tools:
+**Status:** the agent, evaluated on a held-out set and against LIRICAL, three frontier models and DeepRare, then on a temporal test (not established) and two external tests, where it lost to its own model; served over HTTP, reading clinical notes as well as HPO terms; with seven tools and the baselines it is measured against. Tools:
 `rank_diseases` (every OMIM disease ranked against the patient's phenotype),
 `lookup_disease` (one disease's features with their frequencies, inheritance,
 onset, genes and sources, sized for a model to read), `check_match` (the
@@ -61,8 +61,8 @@ retrieval, each passage with its source), and, when the patient has been
 sequenced, `rank_candidate_genes` (candidate genes ranked by how well their
 diseases match the phenotype). The agent gets the four core tools and
 `find_similar_patients` (and `rank_candidate_genes` with sequencing data);
-the text search, which the ablation found worth nothing, is served over MCP
-and given to the agent only with `--with-texts`.
+the text search, which the ablation found worth nothing for v1.0, is served over MCP
+and given to v1.0 only with `--with-texts`; v1.1 and v2 get it by default.
 
 **How the parts fit.** A note is read into HPO terms (`/v1/terms/from-note`), a
 person checks them, and the codes go to the diagnosis service (`/v1/diagnose`),
@@ -142,8 +142,8 @@ strawman. Unmasked, every system measured gains over 30 points at top-1 (LIRICAL
 +33, 278 cases gained and none lost): for 75% of these published cases HPO's
 annotation of the disease cites the patient's own paper, and the whole gain
 comes from those — on the other 25% masking changes not one answer. On these
-published cases the mask halves LIRICAL's first-place accuracy; masking whole
-papers bounds the leak from above.
+published cases the mask halves LIRICAL's first-place accuracy (the paper-level
+mask is not an exact measure of the leak in either direction).
 Per-case outcomes: `docs/comparison_hits.tsv`.
 
 **Against frontier models asked directly.** Each provider's current model,

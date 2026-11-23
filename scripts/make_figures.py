@@ -417,7 +417,16 @@ def pair_note(rows: list[dict[str, str]], agent: str, model: str) -> str:
     won = sum(r[f"{agent}@1"] == "1" and r[f"{model}@1"] != "1" for r in rows)
     lost = sum(r[f"{model}@1"] == "1" and r[f"{agent}@1"] != "1" for r in rows)
     p = sign_test(won, lost)
-    return f"{won} : {lost}\n" + ("p < 0.001" if p < 0.001 else f"p = {p:.2g}")
+    text = (
+        "p < 0.001"
+        if p < 0.001
+        else "p = 1.00"
+        if p > 0.995
+        else f"p = {p:.3f}"
+        if p < 0.01
+        else f"p = {p:.2g}"
+    )
+    return f"{won} : {lost}\n" + text
 
 
 def fig4() -> None:
@@ -455,7 +464,7 @@ def fig4() -> None:
             "agent-v1.1",
         ),
         (
-            "CADA test: laboratories, clinics,\npublished cases (n = {n})",
+            "CADA test, laboratories'\nand clinics' cases (n = {n})",
             "exam_cada-test_hits.tsv",
             "agent-v1.1",
         ),
