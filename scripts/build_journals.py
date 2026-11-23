@@ -46,7 +46,8 @@ AFFILIATIONS = {
     2: "Department of Otorhinolaryngology Head and Neck Surgery, Chengdu Fifth People's Hospital, Chengdu, Sichuan, China",
     3: "Department of Otorhinolaryngology, The Second People's Hospital of Meishan, No. 288 Dongpo Avenue South Section 4, Dongpo District, Meishan 620020, Sichuan Province, China",
 }
-CORRESPONDING = 0  # index into AUTHORS
+CORRESPONDING = 2  # index into AUTHORS: Peng Chen
+EQUAL_FIRST = (0, 1)  # Shaopei Ye and Lan Wang contributed equally (co-first authors)
 
 JOURNALS: list[dict[str, str]] = [
     {
@@ -373,10 +374,21 @@ def place_inline(
 def title_page() -> str:
     names = []
     for k, a in enumerate(AUTHORS):
-        sup = ",".join(str(x) for x in a["aff"]) + ("\\*" if k == CORRESPONDING else "")
+        marks = (
+            [str(x) for x in a["aff"]]
+            + (["†"] if k in EQUAL_FIRST else [])
+            + (["\\*"] if k == CORRESPONDING else [])
+        )
+        sup = ",".join(marks)
         names.append(f"{a['name']}^{sup}^")
     lines = [", ".join(names), ""]
     lines += [f"^{k}^ {v}" for k, v in AFFILIATIONS.items()] + [""]
+    lines.append(
+        "† "
+        + " and ".join(AUTHORS[k]["name"] for k in EQUAL_FIRST)
+        + " contributed equally to this work and are co-first authors."
+    )
+    lines.append("")
     c = AUTHORS[CORRESPONDING]
     lines.append(
         f"\\* Corresponding author: {c['name']}, {AFFILIATIONS[c['aff'][0]]}; email: {c['email']}"
@@ -596,14 +608,15 @@ def checklist(j: dict[str, str]) -> str:
 
 ## 一、必须由你确认的内容（稿子里已按默认写好，不对就告诉我改）
 
-1. **作者顺序和通讯作者**：现在是 Shaopei Ye、Lan Wang、Peng Chen，通讯作者 Shaopei Ye。上一篇 HEARS-LM 的通讯作者是王兰，这篇要不要改，你定。
-2. **单位**：叶：Universitat de Barcelona；王兰：成都市第五人民医院耳鼻咽喉头颈外科；陈鹏：眉山市第二人民医院耳鼻喉科（都照上一篇写的）。
-3. **王兰的 ORCID**：JMIR 要求所有作者在录用时都有 ORCID。王兰还没有，要她在 orcid.org 免费注册一个。
-4. **作者贡献（CRediT）**：稿子里是参照上一篇写的初稿，请三位确认。
-5. **基金**：写的是"没有专门资助"。有的话告诉我。
-6. **利益冲突**：写的是"无"。
-7. **伦理**：写的是"只用公开、去标识的数据，没有申请伦理审查"。如果两家医院的作者单位要求出具豁免说明，告诉我。
-8. **投稿信里的两句声明**："没有发过预印本""和作者已发表或在投的其他论文没有重叠"（HEARS-LM 是另一个题目）。不对就告诉我。
+1. **作者**（2026-11-23 按你的要求）：Shaopei Ye、Lan Wang 共同第一作者（叶排第一），Peng Chen 通讯作者。投稿时在系统里把陈鹏设为 corresponding author，期刊来信会发到他的邮箱 cpeng960@gmail.com；可以由你代投，但要和他说好。
+2. **作者贡献要和共同一作相符**：现在的 CRediT 里王兰只有"临床解读、指导、审改"，共同一作通常要写出相当的贡献（如构思、数据整理、方法）。请按王兰实际做的补上，告诉我改。
+3. **单位**：叶：Universitat de Barcelona；王兰：成都市第五人民医院耳鼻咽喉头颈外科；陈鹏：眉山市第二人民医院耳鼻喉科（都照上一篇写的）。
+4. **王兰的 ORCID**：JMIR 要求所有作者在录用时都有 ORCID。王兰还没有，要她在 orcid.org 免费注册一个。
+5. **作者贡献（CRediT）全文**：稿子里是参照上一篇写的初稿，请三位确认。
+6. **基金**：写的是"没有专门资助"。有的话告诉我。
+7. **利益冲突**：写的是"无"。
+8. **伦理**：写的是"只用公开、去标识的数据，没有申请伦理审查"。如果两家医院的作者单位要求出具豁免说明，告诉我。
+9. **投稿信里的两句声明**："没有发过预印本""和作者已发表或在投的其他论文没有重叠"（HEARS-LM 是另一个题目）。不对就告诉我。
 
 ## 二、投稿前必须完成的
 
