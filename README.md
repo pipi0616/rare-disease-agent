@@ -36,10 +36,10 @@ fixed beforehand ([`docs/exam_plan.md`](docs/exam_plan.md): the plan in sections
 | case reports published after the model's cutoff (agent v2) | 240 | **19.6%** | 8.8% | 30 : 4 (p < 0.001) |
 
 All three prespecified claims hold, scored by identifier. Where they are
-weaker: on CADA's 205 collaborating-clinic patients the lead is 4 points and not
+weaker: on the 205 patients of CADA's collaborators' cohorts the lead is 4 points and not
 significant (19 : 10, p = 0.14); on the case reports, judged by name, it is
-21.7% against 18.3% (18 : 10, p = 0.19) — the model asked directly often names an
-Orphanet-only disease without its identifier, and half to two thirds of the agent's lead
+21.7% against 18.3% (18 : 10, p = 0.18) — the model asked directly often names an
+Orphanet-only disease without its identifier, and roughly half to two thirds of the agent's lead
 there is finding the right identifier; and GPT-6.1 asked directly was not
 significantly different from the agent on MyGene2 (54.8%). The paper draft is in [`docs/paper/`](docs/paper/).
 
