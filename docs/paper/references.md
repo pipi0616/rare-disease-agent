@@ -33,7 +33,6 @@ arXiv's API. Two entries are standard citations not looked up (Holm 1979; the My
 27. Wei C-H, Allot A, Lai P-T, et al. PubTator 3.0: an AI-powered literature resource for unlocking biomedical knowledge. Nucleic Acids Res. 2024;52(W1):W540–W546. doi:10.1093/nar/gkae235
 28. Comeau DC, Wei C-H, Islamaj Doğan R, et al. PMC text mining subset in BioC: about three million full-text articles and growing. Bioinformatics. 2019;35(18):3533–3535. doi:10.1093/bioinformatics/btz070
 29. Beckwith MA, Danis D, Bridges Y, et al. Leveraging clinical intuition to improve accuracy of phenotype-driven prioritization. Genet Med. 2025;27(1):101292. doi:10.1016/j.gim.2024.101292
-30. Zhao Z, Jin Q, Chen F, et al. A large-scale dataset of patient summaries for retrieval-based clinical decision support systems. Sci Data. 2023;10(1):909. doi:10.1038/s41597-023-02814-8
 
 ## To check by hand before submission
 
@@ -41,5 +40,5 @@ arXiv's API. Two entries are standard citations not looked up (Holm 1979; the My
 - Refs. 11, 13 and 17 are still preprints (checked 2026-11-22); ref. 12 (RareAgents) appeared at AAAI 2026 and is cited in that version.
 - Model identifiers and access dates are in Supplementary S12 (from `docs/comparison_plan_llms.md` and the recorded run parameters).
 - Added after review (2026-11-21) and checked on 2026-11-22: refs. 5 (Phen2Disease; doi 10.1093/bib/bbad172), 9 (Flaharty et al.) and 15 (PhEval; authors from the published record) and 29 (ClintLR).
-- Renumbered in order of first citation (main text, then supplement) on 2026-11-21 and 2026-11-23; Kulmanov and Hoehndorf (2017), no longer cited, was dropped.
+- Renumbered in order of first citation (main text, then supplement) on 2026-11-21 and 2026-11-23; Kulmanov and Hoehndorf (2017) and, on 2026-11-23, the PMC-Patients dataset paper (Zhao et al. 2023; DeepRare's case bank is cited as RareArena), no longer cited, were dropped.
 - Author lists shortened to the first three, then et al., as the journal's instructions ask (2026-11-22).

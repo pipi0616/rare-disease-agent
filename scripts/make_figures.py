@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 OUT = DOCS / "paper" / "figures"
 
-AGENT, MODEL, TOOL, OTHER = "#2a78d6", "#eb6834", "#1baf7a", "#8a8984"
+AGENT, MODEL, TOOL, OTHER = "#2a78d6", "#eb6834", "#1baf7a", "#4a4a48"
 INK, INK2, GRID, SURFACE = "#0b0b0b", "#52514e", "#e4e3df", "#ffffff"
 KIND = {"agent": AGENT, "model": MODEL, "tool": TOOL, "other": OTHER}
 KIND_NAME = {
@@ -58,6 +58,9 @@ plt.rcParams.update(
         "axes.facecolor": SURFACE,
         "savefig.facecolor": SURFACE,
         "pdf.fonttype": 42,
+        "mathtext.fontset": "custom",
+        "mathtext.it": "Helvetica:italic",
+        "mathtext.rm": "Helvetica",
     }
 )
 
@@ -104,7 +107,17 @@ def interval_rows(
         rate = 100 * hits / n
         low, high = (100 * v for v in wilson(hits, n))
         ax.plot([low, high], [y, y], color=KIND[kind], lw=2, solid_capstyle="round", zorder=2)
-        ax.plot([rate], [y], "o", ms=6.5, color=KIND[kind], mec=SURFACE, mew=1.4, zorder=3)
+        ax.plot(
+            [rate],
+            [y],
+            "o",
+            ms=6.5,
+            color=KIND[kind],
+            mec=SURFACE,
+            mew=1.4,
+            zorder=3,
+            clip_on=False,
+        )
         ax.text(
             high + xmax * 0.015, y, f"{rate:.1f}", va="center", ha="left", color=INK, fontsize=8
         )
@@ -205,11 +218,11 @@ def fig1() -> None:
         33,
         25,
         14,
-        "3  The agent weighs both\nlists: each candidate with\nevidence and prevalence;\nup to 8 model calls,\ntools on demand",
+        "3  The agent weighs both\nlists: each candidate with\nevidence and prevalence;\nup to eight model calls,\ntools on demand",
         edge=AGENT,
         weight="bold",
     )
-    box(84, 36, 14, 8, "Up to ten\ndiseases, each\nwith a reason")
+    box(84, 35, 14, 10, "Up to ten\ndiseases, each\nwith an identifier\nand a reason")
     arrow(20.4, 42, 25.6, 44.5)
     arrow(20.4, 38, 25.6, 35.5)
     arrow(49.4, 44.5, 53.6, 42)
@@ -230,7 +243,7 @@ def fig1() -> None:
         4,
         72,
         8.5,
-        "Pinned knowledge: HPO disease annotations (OMIM; Orphanet's merged in for v2),\n6,014 published patients, disease descriptions (Orphanet, MedlinePlus Genetics)",
+        "Pinned knowledge: HPO disease annotations (OMIM; Orphanet's merged in for v2), Orphanet prevalence\nclasses, 6,014 published patients, disease descriptions (Orphanet, MedlinePlus Genetics)",
         edge=GRID,
         face=soft,
     )
@@ -244,7 +257,7 @@ def fig1() -> None:
         4,
         18,
         22,
-        "While a case is\nasked, its own source\npaper is masked from\nall that the tools\nread. Afterwards,\nevery tool output\nis audited for it.",
+        "While a case is\nasked, its known\nsource paper is\nmasked from all that\nthe tools read.\nAfterwards, every\ntool output is\naudited for it.",
         edge=INK,
         face=soft,
         style=(0, (3, 2)),
@@ -275,8 +288,11 @@ def fig2() -> None:
             count(rows840, "phenotype-rank"),
             count(rows840, "phenotype-rank (unmasked)"),
         ),
-        # dev-200, top ten: the recorded runs' summaries (README; docs/leakage.md): 98 and 164 of 200
-        ("Phenotype similarity\ntop ten, 200 development cases", (98, 200), (164, 200)),
+        (
+            "Phenotype similarity\ntop ten, 840 held-out cases",
+            count(rows840, "phenotype-rank", 10),
+            count(rows840, "phenotype-rank (unmasked)", 10),
+        ),
     ]
     fig, ax = plt.subplots(figsize=(4.6, 2.5))
     for i, (_, masked, unmasked) in enumerate(pairs):
@@ -315,7 +331,7 @@ def fig2() -> None:
             mec=TOOL,
             mew=1.5,
             lw=0,
-            label="left in the knowledge",
+            label="unmasked (own paper left in)",
         ),
     ]
     ax.legend(
@@ -355,12 +371,12 @@ def fig3() -> None:
         right,
         [
             ("Agent (v1.0)", *count(part200, "agent"), "agent"),
-            ("GPT-6.1", *count(part200, "gpt"), "model"),
+            ("GPT-6.1, asked directly", *count(part200, "gpt"), "model"),
             ("LIRICAL", *count(part200, "lirical"), "tool"),
-            ("Gemini 4", *count(part200, "gemini"), "model"),
-            ("Claude Sonnet 5.5", *count(part200, "claude"), "model"),
-            ("Same model (deepseek-flash)", *count(part200, "llm-direct"), "model"),
-            ("DeepRare, same model", *count(part200, "deeprare"), "other"),
+            ("Gemini 4, asked directly", *count(part200, "gemini"), "model"),
+            ("Claude Sonnet 5.5, asked directly", *count(part200, "claude"), "model"),
+            ("Same model, asked directly", *count(part200, "llm-direct"), "model"),
+            ("DeepRare, same model (unmasked)", *count(part200, "deeprare"), "other"),
         ],
         xmax=60,
         title="b   a fixed random 200 of them",
@@ -392,7 +408,17 @@ def paired_rows(
             ax.plot(
                 [low, high], [y + dy, y + dy], color=color, lw=2, solid_capstyle="round", zorder=2
             )
-            ax.plot([rate], [y + dy], "o", ms=6, color=color, mec=SURFACE, mew=1.3, zorder=3)
+            ax.plot(
+                [rate],
+                [y + dy],
+                "o",
+                ms=6,
+                color=color,
+                mec=SURFACE,
+                mew=1.3,
+                zorder=3,
+                clip_on=False,
+            )
         ax.text(
             xmax * 1.02, y, note, va="center", ha="left", color=INK, fontsize=7.5, linespacing=1.2
         )
@@ -417,16 +443,20 @@ def pair_note(rows: list[dict[str, str]], agent: str, model: str) -> str:
     won = sum(r[f"{agent}@1"] == "1" and r[f"{model}@1"] != "1" for r in rows)
     lost = sum(r[f"{model}@1"] == "1" and r[f"{agent}@1"] != "1" for r in rows)
     p = sign_test(won, lost)
-    text = (
-        "p < 0.001"
-        if p < 0.001
-        else "p = 1.00"
-        if p > 0.995
-        else f"p = {p:.3f}"
-        if p < 0.01
-        else f"p = {p:.2g}"
-    )
-    return f"{won} : {lost}\n" + text
+    return f"{won} : {lost}\n" + p_text(p)
+
+
+def p_text(p: float) -> str:
+    """JMIR style: P<.001; three decimals below .01; otherwise two decimals; P>.99."""
+    if p < 0.001:
+        value = "<.001"
+    elif float(f"{p:.3f}") < 0.01:
+        value = "=" + f"{p:.3f}"[1:]
+    elif float(f"{p:.2f}") >= 1:
+        value = ">.99"
+    else:
+        value = "=" + f"{p:.2f}"[1:]
+    return r"$\it{P}$" + value
 
 
 def fig4() -> None:
@@ -448,7 +478,7 @@ def fig4() -> None:
 
     first = [
         row("Held-out published cases\n(n = 840)", held, "agent"),
-        row("Published after the model's\ncutoff (n = 47)", temporal, "agent"),
+        row("Temporal: published after\nthe model's cutoff (n = 47)", temporal, "agent"),
         row("HMS, a clinic's patients\n(n = 88)", hms, "agent"),
         row("RAMEDIS, a metabolic\nregistry (n = 624)", ramedis, "agent"),
     ]
@@ -487,17 +517,17 @@ def fig4() -> None:
     fig, axes = plt.subplots(
         len(groups),
         1,
-        figsize=(6.4, 0.5 * sum(heights) + 0.62 * len(groups) + 0.3),
+        figsize=(6.0, 0.5 * sum(heights) + 0.62 * len(groups) + 0.3),
         gridspec_kw={"height_ratios": heights, "hspace": 0.62},
     )
     for ax, (title, rows) in zip(list(axes), groups, strict=True):
-        paired_rows(ax, rows, xmax=100)
+        paired_rows(ax, rows, xmax=80)
         ax.set_title(title, loc="left", fontsize=8.5, color=INK, pad=5)
         ax.text(
-            100 * 1.02,
+            80 * 1.02,
             len(rows) - 0.42,
             "agent : model, cases\nonly one gets right",
-            fontsize=6.6,
+            fontsize=7.5,
             color=INK2,
             va="bottom",
             ha="left",
@@ -538,11 +568,15 @@ NEW_TESTS = (
 )
 SHOWN = {
     "llm-direct": ("Same model, asked directly", "model"),
-    "gpt-6.1": ("GPT-6.1, asked directly", "model"),
-    "lirical": ("LIRICAL", "tool"),
+    "one-way-merged": ("One-way similarity (no model)", "tool"),
     "rank-then-check": ("Rank, then check", "tool"),
-    "one-way-merged": ("One-way similarity", "tool"),
+    "lirical": ("LIRICAL", "tool"),
+    "gpt-6.1": ("GPT-6.1, asked directly", "model"),
 }
+OMIM_ONLY = {
+    "rank-then-check",
+    "lirical",
+}  # marked so on the case reports, where many diagnoses are not in OMIM
 
 
 def fig5() -> None:
@@ -551,17 +585,22 @@ def fig5() -> None:
         print("fig5: no test tables yet")
         return
     fig, axes = plt.subplots(
-        1,
         len(present),
-        figsize=(3.55 * len(present), 2.5),
-        gridspec_kw={"wspace": 1.0},
+        1,
+        figsize=(5.2, 1.85 * len(present) + 0.6),
+        gridspec_kw={"hspace": 0.85},
         squeeze=False,
     )
-    for ax, (name, title, agent, agent_label) in zip(axes[0], present, strict=True):
+    for ax, (name, title, agent, agent_label) in zip(axes[:, 0], present, strict=True):
         rows = hits_table(name)
         systems = [c.removesuffix("@1") for c in rows[0] if c.endswith("@1")]
         shown = [(agent_label, *count(rows, agent), "agent")]
-        shown += [(SHOWN[s][0], *count(rows, s), SHOWN[s][1]) for s in SHOWN if s in systems]
+        for s in SHOWN:
+            if s in systems:
+                label = SHOWN[s][0] + (
+                    " (OMIM only)" if agent == "agent-v2" and s in OMIM_ONLY else ""
+                )
+                shown.append((label, *count(rows, s), SHOWN[s][1]))
         letter = "abc"[present.index((name, title, agent, agent_label))]
         interval_rows(ax, shown, xmax=70, title=f"{letter}   {title} (n = {len(rows)})")
     kind_legend(
@@ -569,7 +608,7 @@ def fig5() -> None:
         ["agent", "model", "tool"],
         loc="lower center",
         ncol=3,
-        bbox_to_anchor=(0.5, -0.12),
+        bbox_to_anchor=(0.5, -0.04),
         columnspacing=1.6,
     )
     save(fig, "fig5_new_tests")
@@ -604,7 +643,9 @@ def fig6() -> None:
         gridspec_kw={"hspace": 0.75},
         squeeze=False,
     )
-    for ax, (name, title, agent, agent_label) in zip(axes[:, 0], tables, strict=True):
+    for i, (ax, (name, title, agent, agent_label)) in enumerate(
+        zip(axes[:, 0], tables, strict=True)
+    ):
         rows_all = hits_table(name)
         rows = []
         for b in bands:
@@ -620,12 +661,14 @@ def fig6() -> None:
                 )
             )
         paired_rows(ax, rows, xmax=100)
-        ax.set_title(f"{title} — {agent_label}", loc="left", fontsize=8.5, color=INK, pad=5)
+        ax.set_title(
+            f"{'abc'[i]}   {title} — {agent_label}", loc="left", fontsize=8.5, color=INK, pad=5
+        )
         ax.text(
             100 * 1.02,
             len(rows) - 0.42,
-            "agent : model",
-            fontsize=6.6,
+            "agent : model, cases\nonly one gets right",
+            fontsize=7.5,
             color=INK2,
             va="bottom",
             ha="left",

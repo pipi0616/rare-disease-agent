@@ -26,6 +26,22 @@ PAPER = ROOT / "docs" / "paper"
 SRC = PAPER / "journal_sources"
 OUT = PAPER / "journals"
 
+
+def _build_commit() -> str:
+    head = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True, text=True
+    ).stdout.strip()
+    dirty = subprocess.run(
+        ["git", "status", "--porcelain", "--", "docs/paper", "scripts"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    return head + (" plus uncommitted changes" if dirty else "")
+
+
+BUILD_COMMIT = _build_commit()
+
 AUTHORS: list[dict[str, Any]] = [
     {
         "name": "Shaopei Ye",
@@ -76,14 +92,14 @@ JOURNALS: list[dict[str, str]] = [
             "JMIR AI focuses on the development and rigorous evaluation of artificial intelligence in health. Our "
             "manuscript evaluates a language-model agent with the controls that such evaluations often lack — masking "
             "of each test case's source, prespecified plans and tests outside the development data — and we have "
-            "completed the reporting checklist the journal recommends (Multimedia Appendix 2)."
+            "completed a reporting checklist for machine learning predictive models (Multimedia Appendix 2)."
         ),
         "tier": "最对口：专门发 AI 用于医疗的研究，6.1 分、Q1，文章处理费最低",
     },
     {
         "folder": "03_JMIR_Medical_Informatics",
         "name": "JMIR Medical Informatics",
-        "short": "JMIR Med Inform",
+        "short": "JMIR Medical Informatics",
         "impact": "5.0 (2025 JIF, Journal Citation Reports 2026)",
         "apf": "US $2750",
         "site": "https://medinform.jmir.org",
@@ -97,7 +113,7 @@ JOURNALS: list[dict[str, str]] = [
 ]
 
 TITLE = (
-    "Source-Paper Masking and Prespecified External Tests of a Low-Cost Tool-Using Agent for "
+    "Source-Paper Masking and Prespecified Tests of a Low-Cost Tool-Using Agent for "
     "Rare Disease Diagnosis: Evaluation Study"
 )
 KEYWORDS = (
@@ -141,15 +157,33 @@ SPELLING = {
     "favourable": "favorable",
     "favour": "favor",
     "de-identified": "deidentified",
+    "leukaemia": "leukemia",
+    "hypertyrosinaemia": "hypertyrosinemia",
+    "liquorice": "licorice",
+    "tumours": "tumors",
     "Acknowledgements": "Acknowledgments",
 }
 ABBREVIATIONS = [
+    ("AI", "artificial intelligence"),
+    ("API", "application programming interface"),
     ("CI", "confidence interval"),
+    ("HMS", "Hannover Medical School"),
     ("HPO", "Human Phenotype Ontology"),
     ("LIRICAL", "Likelihood Ratio Interpretation of Clinical Abnormalities"),
     ("LLM", "large language model"),
     ("OMIM", "Online Mendelian Inheritance in Man"),
     ("PEDIA", "Prioritization of Exome Data by Image Analysis"),
+    ("PMC", "PubMed Central"),
+]
+FIRST_USE = {  # expanded where the body first uses them
+    "OMIM": "Online Mendelian Inheritance in Man (OMIM)",
+    "LIRICAL": "LIRICAL (Likelihood Ratio Interpretation of Clinical Abnormalities)",
+    "PEDIA": "PEDIA (Prioritization of Exome Data by Image Analysis)",
+}
+MONTHS = "January|February|March|April|May|June|July|August|September|October|November|December"
+EXTRA_REFERENCES = [  # cited only in the JMIR end matter
+    "rare-disease-agent: code, plans and per-case outcomes. GitHub. Accessed November 23, 2026. https://github.com/pipi0616/rare-disease-agent",
+    "Luo W, Phung D, Tran T, et al. Guidelines for developing and reporting machine learning predictive models in biomedical research: a multidisciplinary view. J Med Internet Res. 2016;18(12):e323. doi:10.2196/jmir.5870",
 ]
 FIGURES = [
     "fig1_design",
@@ -222,6 +256,12 @@ def american(text: str) -> str:
 
 
 def appendix_refs(text: str) -> str:
+    text = re.sub(
+        r"Supplementary sections (S\d+) and (S\d+)",
+        r"sections \1 and \2 of Multimedia Appendix 1",
+        text,
+    )
+    text = re.sub(r"Supplementary section (S\d+)", r"section \1 of Multimedia Appendix 1", text)
     text = re.sub(r"Supplementary Tables? (S\d+)", r"Table \1 in Multimedia Appendix 1", text)
     text = re.sub(r"Supplementary (S\d+)", r"Multimedia Appendix 1, section \1", text)
     text = text.replace("Supplementary material", "Multimedia Appendix 1")
@@ -254,7 +294,18 @@ def references() -> list[str]:
         older = full.get(rest[:50])
         if older and "et al" not in older and _named(older) > _named(authors):
             authors = older
+        authors = re.sub(r"\b([A-Z])-([A-Z])\b", r"\1\2", authors)  # initials without hyphens
+        rest = re.sub(r"(?<=\d)–(?=[A-Z]?\d)", "-", rest)  # page ranges with hyphens
+        rest = re.sub(
+            r"arXiv:(\S+) \[preprint\]\. (\d{4})\.",
+            r"arXiv. Preprint posted online \2. arXiv:\1",
+            rest,
+        )
+        rest = rest.replace("as preprocessed in ref. ", "as preprocessed in reference ")
+        rest = re.sub(r"\. (\d{4})\. p\. (\d+)[–-](\d+)\.", r". ACM; \1:\2-\3.", rest)
         out.append(f"{num}. {authors}. {rest}")
+    for extra in EXTRA_REFERENCES:
+        out.append(f"{len(out) + 1}. {extra}")
     return out
 
 
@@ -289,7 +340,7 @@ def restructure(body: str) -> str:
         "### Ethical Considerations\n\n"
         "This study used only publicly available, deidentified data: published case reports and research datasets "
         "released for reuse. No patient was contacted, no clinical record was accessed, and no new data were "
-        "collected from humans; ethics review was therefore not sought.\n\n"
+        "collected from humans. The study involved no human participants and was not submitted for ethics review.\n\n"
     )
     body = body.replace("## Results\n", ethics + "## Results\n", 1)
     # discussion and conclusion into JMIR's subsections
@@ -310,8 +361,8 @@ def restructure(body: str) -> str:
     prior = (
         "Accuracies reported for language models and agents on published cases [7,10] are best read with these "
         "conditions in mind: how answers were judged, whether the system could search the web, and whether each "
-        "case's source was masked. One recent study removed the leakage pathway before its evaluation [13]; our "
-        "results suggest that, where it is not removed, it favors tools that read the annotations."
+        "case's source was masked. Our results suggest that, where the leakage pathway is not removed, it favors "
+        "tools that read the annotations."
     )
     new = (
         "## Discussion\n\n### Principal Results\n\n"
@@ -417,7 +468,7 @@ None declared.
 
 ## Data Availability
 
-The code, the frozen case lists, the evaluation plans with their commit history, and per-case outcomes of most reported runs are available in the project repository [https://github.com/pipi0616/rare-disease-agent]. Every dataset used is public and pinned by version and checksum in the repository. The texts of the post-cutoff case reports are not redistributed, because some licenses are noncommercial; the repository lists each paper, the sentences kept and a checksum of the kept text, from which the set can be rebuilt.
+The code, the frozen case lists, the evaluation plans with their commit history, and per-case outcomes of most reported runs are available in the project repository [{len(refs) - 1}]. Every dataset used is public and pinned by version and checksum in the repository. The texts of the post-cutoff case reports are not redistributed, because some licenses are noncommercial; the repository lists each paper, the sentences kept and a checksum of the kept text, from which the set can be rebuilt.
 
 ## Authors' Contributions
 
@@ -433,7 +484,7 @@ Supplementary methods and results (sections S1–S13).
 
 ## Multimedia Appendix 2
 
-Completed reporting checklist (Luo et al, 2016).
+Completed reporting checklist (Luo et al [{len(refs)}]).
 
 ## Multimedia Appendix 3
 
@@ -461,9 +512,36 @@ def manuscript(journal: dict[str, str]) -> str:
         + end_matter(journal)
     )
     text = appendix_refs(text)
+    text = text.replace(
+        "under the authors' direction (Multimedia Appendix 1, section S9).",
+        "under the authors' direction (Multimedia Appendix 3).",
+    )
     text = text.replace("p-values", "P values").replace("p-value", "P value")
     text = convert_p(text)
-    return american(text)
+    text = first_use(text)
+    return style(american(text))
+
+
+def first_use(text: str) -> str:
+    """Expand an abbreviation where the body (from the Introduction on) first uses it."""
+    head, sep, body = text.partition("## Introduction")
+    for abbr, full in FIRST_USE.items():
+        m = re.search(rf"(?<![\w(]){abbr}(?![\w)])", body)
+        if m:
+            body = body[: m.start()] + full + body[m.end() :]
+    return head + sep + body
+
+
+def style(text: str) -> str:
+    """AMA details: US dates, currency spacing."""
+    text = re.sub(
+        rf"\b(\d{{1,2}}) ({MONTHS}) and (\d{{1,2}}) ({MONTHS}) (\d{{4}})\b",
+        r"\2 \1 and \4 \3, \5",
+        text,
+    )
+    text = re.sub(rf"\b(\d{{1,2}}) ({MONTHS}) (\d{{4}})\b", r"\2 \1, \3", text)
+    text = re.sub(rf"\b(\d{{1,2}}) ({MONTHS})\b", r"\2 \1", text)
+    return text.replace("US$", "US $")
 
 
 def supplement() -> str:
@@ -475,11 +553,12 @@ def supplement() -> str:
         count=1,
     )
     t = re.sub(r'subtitle: ".*?"', f'subtitle: "{TITLE}"', t, count=1)
-    t = t.replace("Sections 3.4–3.5", "the sections on the prespecified tests")
+    t = t.replace(" (Sections 3.4–3.5)", "").replace("Fig. ", "Figure ")
+    t = t.replace("p-values", "P values").replace("Methods (Cases)", "the Cases section")
     t = t.replace("Section 2.4", "the Agent section").replace("Section 3.3", "the held-out results")
     t = t.replace("(p from 0.23 to 0.89)", "(*P* from .23 to .89)")
     t = convert_p(t)
-    return american(t)
+    return style(american(t))
 
 
 def cover_letter(journal: dict[str, str]) -> str:
@@ -492,7 +571,7 @@ Dear Editor,
 
 We submit for your consideration the Original Paper **"{TITLE}"**.
 
-Language-model agents are now reported to name a rare disease from a patient's phenotype with striking accuracy. Three things make such reports hard to read: the public test cases are case reports that phenotype knowledge bases were curated from; a model may have memorized a public benchmark; and published cases are not patients as a clinic or a laboratory records them. Our manuscript measures one such agent with these 3 problems in view, and reports what the measurement shows, with analyses that locate where the agent's lead comes from.
+Language-model agents are now reported to name a rare disease from a patient's phenotype with striking accuracy. Three things make such reports hard to read: the public test cases are case reports that phenotype knowledge bases were curated from; a model may have memorized a public benchmark; and published cases are not patients as a clinic or a laboratory records them. Our manuscript evaluates an agent of this kind that we built, with these 3 problems in view, and reports what the measurement shows, with analyses that locate where the agent's lead comes from.
 
 {journal["why"]}
 
@@ -502,7 +581,7 @@ What we believe is useful to your readers:
 2. **External tests catch what held-out tests miss.** The agent's first version passed its held-out test and then lost to its own model on a clinic's and a registry's patients; its traces showed a ranking blind to prevalence. Of 12 prespecified primary claims, 9 held and 3 failed, and all are reported.
 3. **Three prespecified tests on cases never used in development.** Scored by identifier, the agent ranked the confirmed disease first more often than its own model asked directly on 146 MyGene2 patients (52.1% vs 7.5%), 577 CADA cases (23.6% vs 14.7%) and 240 case reports published after the model's training cutoff (19.6% vs 8.8%). We report where the lead is not established: on the case reports when judged by disease name, for the 205 patients of CADA's collaborators' cohorts, and against GPT-6.1 asked directly on MyGene2.
 
-The manuscript is original, has not been published, and is not under consideration elsewhere; it has not been posted as a preprint. It does not overlap with other published or submitted work by the authors. All authors have approved the manuscript and meet the criteria for authorship. Only public, deidentified data were used, and no ethics review was required.
+The manuscript is original, has not been published, and is not under consideration elsewhere; it has not been posted as a preprint. It does not overlap with other published or submitted work by the authors. All authors have approved the manuscript and meet the criteria for authorship. Only public, deidentified data were used; the study involved no human participants and was not submitted for ethics review.
 
 A generative AI assistant (Claude, Anthropic) was used to write software, run analyses and draft text under the authors' direction; this is declared in the Acknowledgments and described in Multimedia Appendix 3, and the authors take full responsibility for the content. A completed reporting checklist is provided as Multimedia Appendix 2.
 
@@ -583,7 +662,7 @@ def readme(j: dict[str, str]) -> str:
 - Journal: {j["name"]} ({j["site"]}); Impact Factor {j["impact"]}
 - Article type: Original Paper
 - Article processing fee: {j["apf"]}, payable on acceptance
-- Built by `scripts/build_journals.py` from `docs/paper/` (commit recorded in git); do not edit the .docx by hand — change the sources and rebuild.
+- Built by `scripts/build_journals.py` from `docs/paper/` (from commit {BUILD_COMMIT}); do not edit the .docx by hand — change the sources and rebuild.
 
 | folder | file | what it is |
 |---|---|---|
@@ -617,6 +696,8 @@ def checklist(j: dict[str, str]) -> str:
 7. **利益冲突**：写的是"无"。
 8. **伦理**：写的是"只用公开、去标识的数据，没有申请伦理审查"。如果两家医院的作者单位要求出具豁免说明，告诉我。
 9. **投稿信里的两句声明**："没有发过预印本""和作者已发表或在投的其他论文没有重叠"（HEARS-LM 是另一个题目）。不对就告诉我。
+
+10. **报告清单（JMIR AI 尤其相关）**：附件 2 填的是 Luo 等 2016 年的机器学习预测模型报告规范。JMIR AI 的须知推荐的是另一份：Klement 和 El Emam 2023 年的《Consolidated Reporting Guidelines for Prognostic and Diagnostic Machine Learning Modeling Studies》（JMIR 2023;25:e48763），它的清单在那篇文章的附件文件里，需要下载。你同意的话，我下载下来按它补填一份。
 
 ## 二、投稿前必须完成的
 

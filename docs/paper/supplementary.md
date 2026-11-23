@@ -26,7 +26,7 @@ Data that were considered and not used: the 75 Peking Union Medical College Hosp
 
 ## S2. Choosing between the two revisions
 
-**Table S2.** Agent v2 against v1.1 on the development sets, first place; paired counts are cases only the first-named system solved against cases only the second solved (two-sided exact sign test).
+**Table S2.** Agent v2 against v1.1 on the development sets, first place and top ten (the v1.1 column holds v1.1a's recorded answers on HMS, MME and dev-200; see below); paired counts are cases only the first-named system solved against cases only the second solved (two-sided exact sign test).
 
 | development set | cases | v2, top-1 / top-10 | v1.1, top-1 / top-10 | v2 : v1.1 | v2 : model asked directly |
 |---|---|---|---|---|---|
@@ -36,7 +36,7 @@ Data that were considered and not used: the 75 Peking Union Medical College Hosp
 | dev-200 | 200 | 38.5% / 61.5% | 41.5% / 64.0% | 10 : 16 (p = 0.33) | 49 : 1 (p < 0.001) |
 | RAMEDIS (200) | 200 | voided after 38 cases (funds) | — | — | — |
 
-The rule, which the plan states was written before v2's development results were seen (it was first committed, in 644abfe on 20 November 2026, together with the results of four development sets): v2 is the system to test if it is significantly worse than v1.1 on no development set and solves at least as many cases in total; otherwise v1.1. Pooled over the four sets that were run, v2 solved 207 cases and v1.1 216 (paired 34 : 43), so v1.1 was tested on MyGene2 and CADA. On HMS, MME and dev-200 the v1.1 column holds the recorded answers of v1.1a, the earlier form whose prompts still asked for a Mendelian disease and an OMIM number; on the CADA development cases it is v1.1 itself. That v2 would be the system for the case-report test although the rule chose v1.1 was added after the four sets had been run, because many case-report diagnoses are diseases that v1.1's knowledge does not contain; v2 had not been run on case reports before the test (the planned run on the development side of the case reports was dropped for cost). The fifth set was stopped after 38 cases when funds ran out, voided, and not rerun; the guard in v2 was expected to help most there, so the comparison is, if anything, unfavourable to v2. On the same CADA development cases v1.1 solved 23.7%, the model asked directly 16.0%, the no-model ranking 14.0% and LIRICAL 13.3% (v1.1 against the model: 35 : 12, p = 0.001).
+The rule, which the plan states was written before v2's development results were seen (it was first committed, in 644abfe on 20 November 2026, together with the results of four development sets): v2 is the system to test if it is significantly worse than v1.1 on no development set and solves at least as many cases in total; otherwise v1.1. Pooled over the four sets that were run, v2 solved 207 cases and v1.1 216 (paired 34 : 43), so v1.1 was tested on MyGene2 and CADA. On HMS, MME and dev-200 the v1.1 column holds the recorded answers of v1.1a, the earlier form whose prompts still asked for a Mendelian disease and an OMIM number; on the CADA development cases it is v1.1 itself. That v2 would be the system for the case-report test although the rule chose v1.1 was added after the four sets had been run, because many case-report diagnoses are diseases that v1.1's knowledge does not contain; v2 had not been run on case reports before the test (the planned run on the development side of the case reports was dropped for cost). The fifth set was stopped after 38 cases when funds ran out, voided, and not rerun; the guard in v2 was expected to help most there, so the comparison is, if anything, unfavourable to v2. On the same CADA development cases v1.1 solved 23.7%, the model asked directly 16.0%, rank-then-check 14.0% and LIRICAL 13.3% (v1.1 against the model: 35 : 12, p = 0.001).
 
 **Versions and prompts.** v1.0: agent prompt agent-v3 (seeded-v1), five tools. v1.1a: hypotheses-v2, code 788e56e (2026-10-18). v1.1: hypotheses-v4, which differs from v1.1a in asking for a rare (not only Mendelian) disease and allowing an Orphanet code for a disease with no OMIM entry; the model asked directly was changed the same way (direct-v1 to direct-v2). v2: hypotheses-v4 with the changes of Section 2.4. All tests of v1.1 and v2 ran on code 2cea0e9.
 
@@ -94,23 +94,23 @@ The user message lists the patient's sex ("unknown" when not recorded) and each 
 
 ## S5. Reading a clinical note into HPO terms
 
-Tested once under a plan committed beforehand, against hand-annotated public text; document-level micro F1.
+**Table S5.** Reading clinical notes and abstracts into HPO terms: document-level micro F1 against hand-annotated public text. Tested once under a plan committed beforehand.
 
 | reader | ID-68 (68 clinical notes) | GSC-2024 (206 abstracts) |
 |---|---|---|
 | this reader | 71.7% (precision 64.7, recall 80.3) | 71.5% |
 | a dictionary of HPO names | 72.3% (precision 89.9, recall 60.5) | 58.6% |
-| the model writing HPO identifiers itself | 55.3% | 47.3% |
+| the model writing HPO identifiers itself | 55.3% (precision 50.7, recall 60.8) | 47.3% |
 
 The prespecified primary claim — better than both baselines on the clinical notes — failed: paired per note, the reader beat the model writing identifiers (58 notes to 5, p < 0.001) but not the dictionary (29 to 38, p = 0.33). On the abstracts it beat both (122 to 31; 160 to 11).
 
 ## S6. Runs that were void
 
-A run whose records were incomplete was void and repeated without its score being read. In October: LIRICAL on HMS once (its process ended mid-run); v1.0 on MME once (11 of 40 records, probably because another run was writing to MLflow); LIRICAL on MME and v1.1a on the fixed 200 held-out cases once each (interrupted with the session). During the tests of Sections 3.4–3.5 this happened to: the no-model ranking on MyGene2 once (11 of 146 records lost to a locked database; the tests were thereafter recorded in a store of their own; a later duplicate complete run of it, bd5bc3c5, was discarded unread); the model asked directly on MyGene2 twice and agent v1.1 on MyGene2 three times (the process was killed with the session, by a kernel panic of the shared machine, or stopped to protect it from memory exhaustion); LIRICAL on MyGene2 once (stopped: too many parallel Java processes). No score of a void run was computed or seen. No case-report run was void: agent v2 and LIRICAL were each paused once by the memory guard (for about one minute and one and a half minutes, while another job on the machine held 11 GB) and resumed; both recorded all 240 reports and passed the leak audit.
+A run whose records were incomplete was void and repeated without its score being read. In October: LIRICAL on HMS once (its process ended mid-run); v1.0 on MME once (11 of 40 records, probably because another run was writing to MLflow); LIRICAL on MME and v1.1a on the fixed 200 held-out cases once each (interrupted with the session). During the three prespecified tests of the revised agent (Sections 3.4–3.5) this happened to: the no-model ranking on MyGene2 once (11 of 146 records lost to a locked database; the tests were thereafter recorded in a store of their own; a later duplicate complete run of it, bd5bc3c5, was discarded unread); the model asked directly on MyGene2 twice and agent v1.1 on MyGene2 three times (the process was killed with the session, by a kernel panic of the shared machine, or stopped to protect it from memory exhaustion); LIRICAL on MyGene2 once (stopped: too many parallel Java processes). No score of a void run was computed or seen. No case-report run was void: agent v2 and LIRICAL were each paused once by the memory guard (for about one minute and one and a half minutes, while another job on the machine held 11 GB) and resumed; both recorded all 240 reports and passed the leak audit.
 
 ## S7. The plans, and when each was committed
 
-Each plan is a Markdown file in `docs/` of the repository, written in Chinese. Together they state twelve primary claims; nine held and three failed. Primary claims were not adjusted across plans; within the last plan the three were Holm-adjusted. Its sections before "results" were committed before the first run of the test it governs and were not changed afterwards, with two exceptions: `comparison_plan_llms.md` carries a dated change, made after part of its results had been seen, by which questions lost to API failures were asked again instead of the run being voided; and `comparison_plan_deeprare.md` gained a dated note on how DeepRare writes disease names (0b7ca25, 18:51 on 14 October), two minutes after its held-out run had started and before any result, which did not change the primary claim. Results, and anything added later, are in later sections marked as such. Some pre-test commits were later squashed when their branch was merged; they are kept under the tags given below. Commit times come from the authors' git client and are not independently time-stamped; the repository will be public with the submission.
+Each plan is a Markdown file in `docs/` of the repository, written in Chinese. Together they state twelve primary claims; nine held and three failed. Primary claims were not adjusted across plans; within the last plan the three were Holm-adjusted. Its sections before "results" were committed before the first run of the test it governs and were not changed afterwards, with these exceptions: `comparison_plan_llms.md` carries a dated change, made after part of its results had been seen, by which questions lost to API failures were asked again instead of the run being voided; and `comparison_plan_deeprare.md` gained a dated note on how DeepRare writes disease names (0b7ca25, 18:51 on 14 October), two minutes after its held-out run had started and before any result, which did not change the primary claim; and `casereports_plan.md` had a file name in its section 7 corrected after it became final (1ee3370, cosmetic). Results, and anything added later, are in later sections marked as such. Some pre-test commits were later squashed when their branch was merged; every commit cited here is kept under a tag in the repository (`v1.0`, `plan/*`, `code/v1.1a-2026-10-18`). Commit times come from the authors' git client and are not independently time-stamped; the repository will be public with the submission.
 
 | plan (file) | first committed | tests it governs | primary claim | outcome |
 |---|---|---|---|---|
@@ -121,7 +121,7 @@ Each plan is a Markdown file in `docs/` of the repository, written in Chinese. T
 | `phenotyping_plan.md` | 62eaf7e, 2026-10-14 19:32 | the note reader on ID-68 and GSC-2024 | reader > both baselines on clinical notes | failed (S5) |
 | `temporal_plan.md` | 56ef8c2, 2026-10-15 13:07 | v1.0 on the 47 temporal cases | v1.0 > model asked directly | failed (9 : 2, p = 0.065) |
 | `external_plan.md` | 56ef8c2, 2026-10-15 13:07 | v1.0 on HMS and RAMEDIS | v1.0 > fixed pipeline | failed (54 : 45) |
-| `casereports_plan.md` | 1c87c92, 2026-11-20 18:52; amended once before the final build, in three commits (71b190f 20:09, 8e99ed0 20:10, 2cea0e9 20:44; the last adds the confirming-test cut) | how the case-report set is built and cut | — | Section 2.2, S3 |
+| `casereports_plan.md` | 1c87c92, 2026-11-20 18:52; amended once before the final build, in three commits (71b190f 20:09, 8e99ed0 20:10, 2cea0e9 20:44; the last adds the confirming-test cut) | how the case-report set is built and cut | — | Methods (Cases); S3 |
 | `exam_plan.md` | draft 644abfe 19:55; final 5ed1379, 2026-11-20 20:46 | v1.1 on MyGene2 and CADA; v2 on the case reports | on each set, agent > model asked directly at first place; Holm over the sets tested (three claims) | held on all three (by identifier) |
 
 **The plan for the three tests, in English (summary of `exam_plan.md`, sections 1–6).** *Sets:* MyGene2 (146 patients with an OMIM diagnosis), the CADA test file (577 patients with an OMIM diagnosis), the case-report test side (at most 240 reports). No system had been run on them and no one had read their cases. *Systems:* v1.1 on MyGene2 and CADA, chosen by the rule of S2; v2 on the case reports; model `deepseek-flash`, reasoning off, temperature 0; code frozen for the duration of the tests. *Primary question, one per set:* does the main system rank the confirmed disease first more often than the same model asked directly on the same findings — two-sided exact sign test on the discordant cases, α = 0.05, Holm-corrected over the number of sets actually tested; a set not built for budget is reported as not tested. *Secondary questions, numbers and intervals only, no claims:* the top ten; against rank-then-check and LIRICAL, and on the case reports against the one-way list v2 starts from; by number of findings (1–2, 3–5, 6–10, 11+) and, for CADA, by source; the two patient sets pooled; MyGene2 beside DeepRare's published figure; name-based judging with DeepRare's prompt (judge `deepseek-flash`); GPT-6.1 asked directly on MyGene2 only. *Scoring:* by identifier with Mondo identity; the primary question by identifier only. *Rules:* each system scored once on each set; cases lost to API failures asked again; a run with incomplete records or a failed leak audit void and repeated without reading its score; no change to a system after its test; every result reported, failures included. Analyses outside this list are marked as unplanned in the paper.
@@ -134,7 +134,7 @@ Each plan is a Markdown file in `docs/` of the repository, written in Chinese. T
 |---|---|---|---|
 | central model | DeepSeek-R1 (reasoning) | `deepseek-flash`, reasoning off — the agent's model | the comparison is of designs on one model; cost |
 | text embeddings | OpenAI text-embedding-3-small | the same, through OpenRouter | its case bank was embedded with it |
-| case bank | six sources | the public PubMed cases only (about 10,000) [25,30] | the other five are not public |
+| case bank | six sources | the public PubMed cases only (about 10,000; RareArena [25]) | the other five are not public |
 | web search | Bing, Google or DuckDuckGo | DuckDuckGo | no key required |
 | summarising web pages | gpt-4o-mini | `deepseek-flash` | one model for the whole system |
 | code | — | one bug fixed (an argument passed in the wrong position in the DuckDuckGo tool); the similar-case search computed in one batch (same results) | it did not run otherwise |
@@ -143,11 +143,11 @@ DeepRare searches the web and its case bank and could not be masked. Its reading
 
 ## S9. Use of an AI assistant
 
-An AI coding and writing assistant (Claude, Anthropic; Claude Code) was used throughout under the authors' direction: it wrote most of the software in the repository, ran the evaluations and analyses, drafted the plans and the manuscript, and checked numbers in the manuscript against the per-case outcome files. Three independent reviews of the manuscript by separate instances of the assistant (methods and statistics, domain, editorial) were used before submission; the changes they led to are in the repository's history. The authors decided the questions, approved each plan before its test, reviewed the code, results and text, and take full responsibility for them. Most numbers in the paper can be recomputed from the per-case files in the repository; those that cannot are recorded in the plan documents: Table 2's nearest-patients row, the simulated-sequencing result (S11), Table S2's development results, the note-reader results (S5), the unmasked development-set figure in Fig. 2, the costs and run times, and the case-report build counts (S3).
+An AI coding and writing assistant (Claude, Anthropic; Claude Code) was used throughout under the authors' direction: it wrote most of the software in the repository, ran the evaluations and analyses, drafted the plans and the manuscript, and checked numbers in the manuscript against the per-case outcome files. Separate review passes of the manuscript by other instances of the assistant were used before submission — methods and statistics, domain, editorial, presentation, results and claims, independent number audits, and final checks of the figures, the documents and the tables; the changes they led to are in the repository's history. The authors decided the questions, approved each plan before its test, reviewed the code, results and text, and take full responsibility for them. Most numbers in the paper can be recomputed from the per-case files in the repository; those that cannot are recorded in the plan documents: Table 2's nearest-patients row, the simulated-sequencing result (S11), Table S2's development results, the note-reader results (S5), the costs and run times, and the case-report build counts (S3).
 
 ## S10. Results by number of findings
 
-**Table S10.** First place, by how many findings the case has, on each prespecified test (secondary analysis named in the plan; p-values unadjusted). Agent: v1.1 on MyGene2 and CADA, v2 on the case reports.
+**Table S10.** First place, by how many findings the case has, on each prespecified test (secondary analysis named in the plan; P values unadjusted). Agent: v1.1 on MyGene2 and CADA, v2 on the case reports.
 
 | set | findings | cases | agent | same model, asked directly | agent : model |
 |---|---|---|---|---|---|
@@ -166,35 +166,35 @@ An AI coding and writing assistant (Claude, Anthropic; Claude Code) was used thr
 
 ## S11. Further results of v1.0 and of v1.1a
 
-**Table S11.** First place, with 95% Wilson intervals where given; paired counts are cases only the agent named first and only the other system solved (two-sided exact sign test, unadjusted). From `temporal_plan.md` and `external_plan.md`, sections 8–9.
+**Table S11.** First place, with 95% Wilson intervals where given; paired counts are cases only the reference system of each block solved and only the system in the row solved (two-sided exact sign test, unadjusted). The reference system is v1.0 in the temporal (v1.0), HMS and RAMEDIS blocks, and v1.1a in the v1.1a rows and the MME block. From `temporal_plan.md` and `external_plan.md`, sections 8–9.
 
 | set | system | top-1 | paired with the agent |
 |---|---|---|---|
 | Temporal (47; prespecified, v1.0) | v1.0 | 23.4% [13.6–37.2] | |
 | | Same model, asked directly | 8.5% [3.4–19.9] | 9 : 2 (p = 0.065) |
-| | Fixed pipeline | 21.3% [12.0–34.9] | |
+| | Fixed pipeline | 21.3% [12.0–34.9] | 1 : 0 (p = 1.00) |
 | | LIRICAL | 14.9% [7.4–27.7] | 6 : 2 (p = 0.29) |
 | | GPT-6.1, asked directly | 23.4% [13.6–37.2] | 3 : 3 (p = 1.00) |
 | | Claude Sonnet 5.5, asked directly | 23.4% [13.6–37.2] | 4 : 4 (p = 1.00) |
 | | Gemini 4, asked directly | 23.4% [13.6–37.2] | 4 : 4 (p = 1.00) |
 | | DeepRare, by identifier / by name | 10.6% / 21.3% | 10 : 4 (p = 0.18) / 8 : 7 (p = 1.00) |
 | Temporal (47; v1.1a, a second test of the set, no prespecified comparison) | v1.1a | 25.5% [15.3–39.5] | against the model asked directly 10 : 2 (p = 0.039); against v1.0 2 : 1; against GPT-6.1, Claude Sonnet 5.5 and Gemini 4 3 : 2, 5 : 4 and 4 : 3 |
-| HMS (88; prespecified, v1.0) | v1.0 | 19.3% | |
+| HMS (88; prespecified, v1.0) | v1.0 | 19.3% [12.4–28.8] | |
 | | Same model, asked directly | 31.8% [23.0–42.1] | 4 : 15 (p = 0.019) |
-| | Fixed pipeline | 12.5% [7.1–21.0] | |
+| | Fixed pipeline | 12.5% [7.1–21.0] | 12 : 6 (p = 0.24) |
 | | LIRICAL | 3.4% [1.2–9.5] | 15 : 1 (p < 0.001) |
 | | GPT-6.1, asked directly | 18.2% [11.5–27.5] | 9 : 8 (p = 1.00) |
 | | Claude Sonnet 5.5, asked directly | 22.7% [15.2–32.5] | 5 : 8 (p = 0.58) |
 | | Gemini 4, asked directly | 14.8% [8.8–23.7] | 13 : 9 (p = 0.52) |
 | | DeepRare, by identifier | 15.9% [9.7–25.0] | 11 : 8 (p = 0.65) |
 | | DeepRare and v1.0, judged by name | 38.6% and 20.5% | **8 : 24 (p = 0.007)** |
-| RAMEDIS (624; prespecified, v1.0) | v1.0 | 24.7% | |
+| RAMEDIS (624; prespecified, v1.0) | v1.0 | 24.7% [21.5–28.2] | |
 | | Same model, asked directly | 32.7% [29.1–36.5] | 47 : 97 (p < 0.001) |
-| | Fixed pipeline | 24.2% [21.0–27.7] | |
+| | Fixed pipeline | 24.2% [21.0–27.7] | 42 : 39 (p = 0.82); with HMS, the prespecified claim 54 : 45 (p = 0.42) |
 | | LIRICAL | 14.3% [11.7–17.2] | 87 : 22 (p < 0.001) |
 | RAMEDIS, fixed 200 (DeepRare only) | DeepRare and v1.0, by identifier | 17.5% and 29.0% | 39 : 16 (p = 0.003) |
 | | DeepRare and v1.0, judged by name | 34.0% and 30.0% | 19 : 27 (p = 0.30) |
-| Held-out, fixed 200 (v1.1a, no prespecified comparison) | v1.1a | 45.0% | against v1.0 (43.0%) 12 : 8 (p = 0.50); against the fixed pipeline 19 : 5 (p = 0.007); against the model asked directly 61 : 1 |
+| Held-out, fixed 200 (v1.1a, no prespecified comparison) | v1.1a | 45.0% [38.3–51.9] | against v1.0 (43.0%) 12 : 8 (p = 0.50); against the fixed pipeline 19 : 5 (p = 0.007); against the model asked directly 61 : 1 |
 | MME (40; source not given, not masked; no prespecified comparison) | v1.1a | 72.5% [57.2–83.9] | |
 | | v1.0 | 80.0% [65.2–89.5] | 1 : 4 (p = 0.38) |
 | | Fixed pipeline | 75.0% | 4 : 5 (p = 1.00) |
@@ -208,12 +208,12 @@ On HMS, judged by name, DeepRare was ahead of v1.0; with the model asked directl
 
 ## S12. Models and dates
 
-`deepseek-flash` was called through DeepSeek's API (api.deepseek.com) with reasoning mode off and temperature 0, between 13 October and 21 November 2026; its training data are reported to end in mid-2025. GPT-6.1 (`openai/gpt-6.1-sol`), Claude Sonnet 5.5 (`anthropic/claude-sonnet-5.5`) and Gemini 4 (`google/gemini-4-argon`) were called through OpenRouter at temperature 0 and the lowest reasoning effort it offers (`minimal`; none of the three allowed reasoning to be switched off): in October 2026 on the held-out, temporal and HMS cases (HMS on 15–16 October) and, for GPT-6.1, on 21 November 2026 on MyGene2. Each run records the model, prompt version, code commit and knowledge release among its MLflow parameters.
+`deepseek-flash` was called through DeepSeek's API (api.deepseek.com) with reasoning mode off and temperature 0, for the runs reported here between 13 October and 21 November 2026; its training data are reported to end in mid-2025. GPT-6.1 (`openai/gpt-6.1-sol`), Claude Sonnet 5.5 (`anthropic/claude-sonnet-5.5`) and Gemini 4 (`google/gemini-4-argon`) were called through OpenRouter at temperature 0 and the lowest reasoning effort it offers (`minimal`; none of the three allowed reasoning to be switched off): in October 2026 on the held-out, temporal and HMS cases (HMS on 15–16 October) and, for GPT-6.1, on 21 November 2026 on MyGene2. Each run records the model, prompt version, code commit and knowledge release among its MLflow parameters.
 
 ## S13. Further secondary analyses not shown in the main text
 
 - **Top ten, agent against its model asked directly** (planned for the three later tests; for the held-out, HMS and RAMEDIS sets computed afterwards; first-place results in the main text): held-out cases 304 : 27; HMS 6 : 9; RAMEDIS 31 : 94; MyGene2 64 : 7; CADA 88 : 36; case reports 59 : 3.
-- **Held-out cases by year of publication** (`heldout_plan.md`, exploratory): accuracy fell for newer papers for every system, including the phenotype similarity without a model (on answerable cases, from 26.5% at first place for papers up to and including 2010 to 7.3% for papers from 2024); v1.0's lead over the fixed pipeline was 4–8 points in every period.
+- **Held-out cases by year of publication** (`heldout_plan.md`, exploratory): accuracy fell for newer papers for every system, including the phenotype similarity without a model (on answerable cases, from 26.5% at first place for papers up to and including 2010 to 7.3% for papers from 2024 onward); v1.0's lead over the fixed pipeline was 3.6–7.5 points in every period.
 - **Memory, on the temporal set** (`temporal_plan.md`, exploratory): taking rank-then-check as the reference, v1.0 led it by 10.5 points on the 819 held-out cases published before June 2025 and by 8.5 on the 47 temporal cases; the model asked directly was 18.2 and 6.4 points below it. The agent's lead shrank by two points; with 47 cases this is weak evidence.
 - **Frontier models against LIRICAL** on the fixed 200 held-out cases: none of the three differed significantly from LIRICAL (p from 0.23 to 0.89).
 - **Not run, for budget** (stated in the plans): the frontier models on the 200 RAMEDIS cases; on the three later tests, v2 on the patient sets, v1.1 on the case reports, Claude Sonnet 5.5 and Gemini 4, GPT-6.1 beyond MyGene2, and judges from other providers.
