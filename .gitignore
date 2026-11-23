@@ -31,3 +31,6 @@ third_party/
 
 # built by scripts/build_paper.py
 docs/paper/submission/
+
+# built by scripts/build_journals.py
+docs/paper/journals/
