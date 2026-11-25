@@ -91,8 +91,8 @@ JOURNALS: list[dict[str, str]] = [
 ]
 
 TITLE = (
-    "Source-Paper Masking and Prespecified Tests of a Low-Cost Tool-Using Agent for "
-    "Rare Disease Diagnosis: Evaluation Study"
+    "Source-Paper Masking and Prespecified Tests of a Low-Cost Tool-Using Large Language Model "
+    "Agent for Rare Disease Diagnosis: Evaluation Study"
 )
 KEYWORDS = (
     "rare diseases; differential diagnosis; large language models; artificial intelligence; clinical decision "
@@ -113,9 +113,9 @@ HEADINGS = {
 }
 RESULT_HEADINGS = {
     "3.1": "Masking Halves a Published Tool's First-Place Accuracy",
-    "3.2": "The First Version on Masked Held-Out Cases",
-    "3.3": "A Failure That External Patients Exposed",
-    "3.4": "Prespecified Tests of the Revised Agent",
+    "3.2": "The First Version Led on Masked Held-Out Cases",
+    "3.3": "The First Version Lost to Its Own Model on External Patients",
+    "3.4": "Two Revisions Led Their Own Model in All Three Prespecified Tests",
     "3.5": "What the Lead Is Made Of",
     "3.6": "Comparison With a Frontier Model, and Cost",
 }
@@ -123,7 +123,7 @@ CROSS_REFS = {
     "Section 2.4": "the Agent section",
     "Section 2.5": "the Comparators section",
     "Section 2.6": "the Plans and Records section",
-    "Section 3.4": "the Prespecified Tests of the Revised Agent section",
+    "Section 3.4": "the Results section on the three prespecified tests",
 }
 SPELLING = {
     "labelled": "labeled",
@@ -350,6 +350,8 @@ def restructure(body: str) -> str:
         + "\n\n"
         + pick("Retrieving the right entry")
         + "\n\n"
+        + pick("Memorisation")
+        + "\n\n"
         + pick("Frontier models")
         + "\n\n"
         + "### Comparison With Prior Work\n\n"
@@ -555,7 +557,7 @@ Language-model agents are now reported to name a rare disease from a patient's p
 
 What we believe is useful to your readers:
 
-1. **The size of the leak.** Hiding each test case's own source paper from the knowledge base halves the first-place accuracy of LIRICAL, a published and maintained tool, on 840 held-out published cases (63.2% to 30.1%).
+1. **The size of the leak, for everything an agent reads.** Hiding each test case's own source paper from everything the agent's tools read, similar patients included, halves the first-place accuracy of LIRICAL, a published and maintained tool, on 840 held-out published cases (63.2% to 30.1%), a fall of the size a recent preprint reported for the same tool on another sample of the same corpus.
 2. **External tests catch what held-out tests miss.** The agent's first version passed its held-out test and then lost to its own model on a clinic's and a registry's patients; its traces showed a ranking blind to prevalence. Of 12 prespecified primary claims, 9 held and 3 failed, and all are reported.
 3. **Three prespecified tests on cases never used in development.** Scored by identifier, two revisions of the agent (v1.1 on the patient sets, v2 on the case reports) ranked the confirmed disease first more often than their own model asked directly on 146 MyGene2 patients (52.1% vs 7.5%), 577 CADA cases (23.6% vs 14.7%) and 240 case reports published after the model's training cutoff (19.6% vs 8.8%). We report where the lead is not established: on the case reports when judged by disease name, and for the 205 patients of CADA's collaborators' cohorts; and GPT-6.1 asked directly on MyGene2 was not significantly different from the agent (54.8% vs 52.1%; a deficit of up to 12 points is not excluded).
 
@@ -703,8 +705,8 @@ def checklist(j: dict[str, str]) -> str:
 # Journal of Medical Systems (Springer Nature) and BMJ Health & Care Informatics (BMJ)
 # =============================================================================================
 SHORT_TITLE = (
-    "Source-paper masking and prespecified tests of a low-cost tool-using agent for rare "
-    "disease diagnosis"
+    "Source-paper masking and prespecified tests of a low-cost tool-using large language model "
+    "agent for rare disease diagnosis"
 )
 REPO_URL = "https://github.com/pipi0616/rare-disease-agent"
 FIG_PLAIN = OUT / "_figures_plain"  # the same figures with p values written as in the text
@@ -839,16 +841,15 @@ def ai_use_paragraph(fmt: dict[str, Any]) -> str:
             "An AI assistant (Claude, Anthropic: Claude Fable 5.1 and 5.2 and Claude Opus 5.5, used through the "
             "Claude Code command-line tool with default settings between October and November 2026) wrote most of "
             "the software, ran the analyses and drafted the plans and the text under the authors' direction; "
-            "separate sessions of it reviewed the manuscript and checked its numbers against the per-case outcome "
-            "files by script. It worked in interactive sessions rather than from fixed prompts; the authors approved "
-            f"each plan before its test and reviewed the code, results and text ({ref}, with representative "
-            "instructions)."
+            "separate sessions checked the manuscript's numbers against the per-case outcome files by script. "
+            "It worked interactively rather than from fixed prompts; the authors approved each plan before its "
+            f"test and reviewed the code, results and text ({ref}, with representative instructions)."
         )
     return (
         "An AI assistant (Claude Fable 5.1 and 5.2 and Claude Opus 5.5, Anthropic, via Claude Code, "
         "October–November 2026) wrote most of the software, ran "
-        "the analyses and drafted the text under the authors' direction; separate sessions checked the numbers by "
-        f"script, and the authors approved each plan and reviewed all output ({ref})."
+        "the analyses and drafted the text under the authors' direction; the authors approved each plan and "
+        f"reviewed all output ({ref})."
     )
 
 
@@ -990,8 +991,8 @@ ARXIV_RE = re.compile(
 def master_references() -> dict[int, str]:
     current = (PAPER / "references.md").read_text().split("## To check by hand")[0]
     refs = {int(n): e for n, e in re.findall(r"^(\d+)\. (.+)$", current, flags=re.M)}
-    assert 30 not in refs, "references.md has grown: move TRIPOD_REF to a free number"
-    refs[30] = TRIPOD_REF
+    assert 31 not in refs, "references.md has grown: move TRIPOD_REF to a free number"
+    refs[31] = TRIPOD_REF  # cited as [31] in joms_body.md and bmj_body.md
     return refs
 
 
@@ -1015,8 +1016,10 @@ def format_reference(num: int, entry: str, style: str, mapping: dict[int, int]) 
     authors, _, rest = entry.partition(". ")
     if style == "springer":
         older = _fuller_authors().get(rest[:50])
-        if num == 30:
+        if num == 31:
             older = TRIPOD_AUTHORS_FULL
+        if rest.startswith("Auditing evaluation artifacts"):  # arXiv 2610.33592, 2026-11-25
+            older = "Yang J, Liu P, Li X, Li S, Cao Y, Feng Y, Li H"
         if rest.startswith(
             "Towards a standard benchmark for phenotype-driven"
         ):  # Crossref, 2026-11-25
@@ -1025,8 +1028,11 @@ def format_reference(num: int, entry: str, style: str, mapping: dict[int, int]) 
             authors = older
         authors = re.sub(r",? et al\.?$", " et al", authors)
     if entry.startswith("MyGene2."):
-        ref18 = mapping[18]
-        text = entry.replace("as preprocessed in ref. 18", f"as preprocessed in reference {ref18}")
+        text = re.sub(
+            r"as preprocessed in ref\. (\d+)",
+            lambda m: f"as preprocessed in reference {mapping[int(m.group(1))]}",
+            entry,
+        )
         if style == "springer":
             text = text.replace("doi:", "https://doi.org/").rstrip(".")
         return text
@@ -1427,7 +1433,12 @@ def cover_letter_other(fmt: dict[str, Any], facts: dict[str, Any]) -> str:
             f"The completed TRIPOD+AI checklist is uploaded as {s2}. Use of generative AI is described in the Methods "
             f"(tool, models, dates, access, human verification) and in {s3}."
         )
-        fee = "We do not request open access publication at this stage."
+        fee = (
+            "The study does not deploy the agent; it shows what evidence a health system should ask for before "
+            "deploying one. The agent costs about one US cent and a median of 17 seconds per case on pinned public "
+            "knowledge and records the evidence behind each candidate, so the same protocol can be applied to any "
+            "comparable system. We do not request open access publication at this stage."
+        )
     else:
         why = (
             "BMJ Health & Care Informatics publishes evaluations of informatics that supports health and care, and "
@@ -1460,7 +1471,7 @@ Language-model agents are now reported to name a rare disease from a patient's p
 
 What we believe is useful to your readers:
 
-1. **The size of the leak.** Hiding each test case's own source paper from the knowledge base halves the first-place accuracy of LIRICAL, a published and maintained tool, on 840 held-out published cases (63.2% to 30.1%).
+1. **The size of the leak, for everything an agent reads.** Hiding each test case's own source paper from everything the agent's tools read, similar patients included, halves the first-place accuracy of LIRICAL, a published and maintained tool, on 840 held-out published cases (63.2% to 30.1%), a fall of the size a recent preprint reported for the same tool on another sample of the same corpus.
 2. **External tests catch what held-out tests miss.** The agent's first version passed its held-out test and then lost to its own model on a clinic's and a registry's patients; its traces showed a ranking blind to prevalence. Of twelve prespecified primary claims, nine held and three failed, and all are reported.
 3. **Three prespecified tests on cases never used in development.** Scored by identifier, two revisions of the agent (v1.1 on the patient sets, v2 on the case reports) ranked the confirmed disease first more often than their own model asked directly on 146 MyGene2 patients (52.1% vs 7.5%), 577 CADA cases (23.6% vs 14.7%) and 240 case reports published after the model's training cutoff (19.6% vs 8.8%). We report where the lead is not established: on the case reports when judged by disease name, and for the 205 patients of CADA's collaborators' cohorts; and GPT-6.1 asked directly on MyGene2 was not significantly different from the agent (54.8% vs 52.1%; a deficit of up to 12 points is not excluded).
 

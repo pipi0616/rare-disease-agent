@@ -248,7 +248,7 @@ def fig1() -> None:
         4,
         72,
         8.5,
-        "Pinned knowledge: HPO disease annotations (OMIM; Orphanet's merged in for v2), Orphanet prevalence\nclasses, 6,014 published patients, disease descriptions (Orphanet, MedlinePlus Genetics)",
+        "Pinned knowledge: HPO disease annotations (OMIM; Orphanet's merged in for v2),\nOrphanet prevalence classes, 6,014 published patients,\ndisease descriptions (Orphanet, MedlinePlus Genetics)",
         edge=GRID,
         face=soft,
     )
