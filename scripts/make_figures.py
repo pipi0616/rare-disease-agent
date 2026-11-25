@@ -4,7 +4,10 @@
     uv run python scripts/make_figures.py            # every figure whose data exists
     uv run python scripts/make_figures.py fig3 fig5  # some of them
 
-Each figure is written to docs/paper/figures/ as PNG (300 dpi) and PDF. Nothing is typed
+Each figure is written to docs/paper/figures/ as PNG (300 dpi) and PDF, with p values in
+JMIR style (P<.001, P=.07). FIG_P_STYLE=plain writes them as the manuscript's text does
+(p < 0.001, p = 0.065), and FIG_OUT=<dir> writes elsewhere; build_journals.py uses both for
+the Springer and BMJ packages. Nothing is typed
 in by hand that a table holds: rates and their 95% Wilson intervals are computed here
 from the same hits tables the text quotes. The few numbers that exist only as recorded
 runs' summaries (the unmasked development run) are named where they are used.
@@ -15,6 +18,7 @@ the marks, so no reading depends on colour.
 """
 
 import csv
+import os
 import sys
 from pathlib import Path
 
@@ -27,7 +31,8 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
-OUT = DOCS / "paper" / "figures"
+OUT = Path(os.environ["FIG_OUT"]) if os.environ.get("FIG_OUT") else DOCS / "paper" / "figures"
+P_STYLE = os.environ.get("FIG_P_STYLE", "jmir")
 
 AGENT, MODEL, TOOL, OTHER = "#2a78d6", "#eb6834", "#1baf7a", "#4a4a48"
 INK, INK2, GRID, SURFACE = "#0b0b0b", "#52514e", "#e4e3df", "#ffffff"
@@ -447,7 +452,12 @@ def pair_note(rows: list[dict[str, str]], agent: str, model: str) -> str:
 
 
 def p_text(p: float) -> str:
-    """JMIR style: P<.001; three decimals below .01; otherwise two decimals; P>.99."""
+    """JMIR style: P<.001; three decimals below .01; otherwise two decimals; P>.99.
+    Plain style, as the manuscript's text: p < 0.001; three decimals below 0.1; else two."""
+    if P_STYLE == "plain":
+        if p < 0.001:
+            return "p < 0.001"
+        return f"p = {p:.{3 if p < 0.1 else 2}f}"
     if p < 0.001:
         value = "<.001"
     elif float(f"{p:.3f}") < 0.01:

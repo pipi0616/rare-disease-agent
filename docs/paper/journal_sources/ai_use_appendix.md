@@ -4,7 +4,7 @@ title: "Multimedia Appendix 3. Use of generative AI in this work"
 
 ## Tool
 
-Claude (Anthropic), used through the Claude Code command-line assistant, in sessions between October and November 2026. The models were Claude Opus and Claude Fable versions current at the time (recorded in each commit's trailer in the project repository).
+Claude (Anthropic), used through the Claude Code command-line assistant with its default settings, in interactive sessions between October and November 2026. The models were Claude Fable 5.1, Claude Fable 5.2 and Claude Opus 5.5, as recorded in the commit trailers of the project repository.
 
 ## What it was used for
 
@@ -16,6 +16,14 @@ Under the authors' direction, the assistant:
 4. checked the numbers in the manuscript against the per-case outcome files with scripts, and ran separate review passes of the manuscript by other instances of the assistant — methods and statistics, domain, editorial, presentation, results and claims, independent number audits, and final checks of the figures, the documents and the tables — whose corrections are recorded in the repository's commit history.
 
 The agent evaluated in the paper also uses a language model (deepseek-flash); that use is part of the method and is described in the Methods section, not here.
+
+## Representative instructions
+
+The assistant worked in interactive sessions, not from fixed prompts. The authors' instructions were given in Chinese; three representative ones, translated and paraphrased:
+
+1. "Write the evaluation plan for the three new test sets and commit it before any system is run on them: the cases, the systems and their versions, the primary comparison and the scoring."
+2. "Run each system once on the case-report test set, record every call in MLflow, and report the first-place rates, the paired counts and the exact sign tests."
+3. "Have independent reviewers check every number in the manuscript against the per-case outcome files and report what differs; do not change a result to make it look better."
 
 ## Human oversight
 

@@ -7,7 +7,7 @@ arXiv's API. Two entries are standard citations not looked up (Holm 1979; the My
 1. Gargano MA, Matentzoglu N, Coleman B, et al. The Human Phenotype Ontology in 2024: phenotypes around the world. Nucleic Acids Res. 2024;52(D1):D1333–D1346. doi:10.1093/nar/gkad1005
 2. Köhler S, Schulz MH, Krawitz P, et al. Clinical diagnostics in human genetics with semantic similarity searches in ontologies. Am J Hum Genet. 2009;85(4):457–464. doi:10.1016/j.ajhg.2009.09.003
 3. Robinson PN, Ravanmehr V, Jacobsen JOB, et al. Interpretable clinical genomics with a likelihood ratio paradigm. Am J Hum Genet. 2020;107(3):403–417. doi:10.1016/j.ajhg.2020.06.021
-4. Smedley D, Jacobsen JO, Jäger M, et al. Next-generation diagnostics and disease-gene discovery with the Exomiser. Nat Protoc. 2015;10(12):2004–2015. doi:10.1038/nprot.2015.124
+4. Smedley D, Jacobsen JOB, Jäger M, et al. Next-generation diagnostics and disease-gene discovery with the Exomiser. Nat Protoc. 2015;10(12):2004–2015. doi:10.1038/nprot.2015.124
 5. Zhai W, Huang X, Shen N, et al. Phen2Disease: a phenotype-driven model for disease and gene prioritization by bidirectional maximum matching semantic similarities. Brief Bioinform. 2023;24(4):bbad172. doi:10.1093/bib/bbad172
 6. Chen X, Mao X, Guo Q, et al. RareBench: can LLMs serve as rare diseases specialists? In: Proceedings of the 30th ACM SIGKDD Conference on Knowledge Discovery and Data Mining. 2024. p. 4850–4861. doi:10.1145/3637528.3671576
 7. Reese JT, Chimirri L, Bridges Y, et al. Systematic benchmarking demonstrates large language models have not reached the diagnostic accuracy of traditional rare-disease decision support tools. Eur J Hum Genet. 2026;34(4):498–504. doi:10.1038/s41431-026-02054-5
@@ -15,7 +15,7 @@ arXiv's API. Two entries are standard citations not looked up (Holm 1979; the My
 9. Flaharty KA, Hu P, Hanchard SL, et al. Evaluating large language models on medical, lay-language, and self-reported descriptions of genetic conditions. Am J Hum Genet. 2024;111(9):1819–1833. doi:10.1016/j.ajhg.2024.07.011
 10. Zhao W, Wu C, Fan Y, et al. An agentic system for rare disease diagnosis with traceable reasoning. Nature. 2026;651(8106):775–784. doi:10.1038/s41586-025-10097-9
 11. Nguyen M-H, Gray E, Schuler BA, et al. Teaching agentic AI to generalize expert diagnostic reasoning in rare diseases. arXiv:2606.16149 [preprint]. 2026.
-12. Chen X, Jin Y, Mao X, et al. RareAgents: autonomous multi-disciplinary team for rare disease diagnosis and treatment. In: Proceedings of the AAAI Conference on Artificial Intelligence. 2026;40(1):101–109.
+12. Chen X, Jin Y, Mao X, et al. RareAgents: autonomous multi-disciplinary team for rare disease diagnosis and treatment. In: Proceedings of the AAAI Conference on Artificial Intelligence. 2026;40(1):101–109. doi:10.1609/aaai.v40i1.36969
 13. Jiang Z, Fu Z, Kim Y, et al. Learning to fuse LLMs with ontology rankers for rare-disease diagnosis. arXiv:2609.02473 [preprint]. 2026.
 14. Danis D, Bamshad MJ, Bridges Y, et al. A corpus of GA4GH phenopackets: case-level phenotyping for genomic diagnostics and discovery. HGG Adv. 2025;6(1):100371. doi:10.1016/j.xhgg.2024.100371
 15. Bridges Y, de Souza V, Cortes KG, et al. Towards a standard benchmark for phenotype-driven variant and gene prioritisation algorithms: PhEval — Phenotypic inference Evaluation framework. BMC Bioinformatics. 2025;26:87. doi:10.1186/s12859-025-06105-4
