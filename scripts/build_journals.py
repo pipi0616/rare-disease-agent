@@ -56,7 +56,12 @@ AUTHORS: list[dict[str, Any]] = [
         "email": "shaopeiye55@gmail.com",
         "orcid": "0009-0006-3598-0469",
     },
-    {"name": "Lan Wang", "aff": [2], "email": None, "orcid": None},
+    {
+        "name": "Lan Wang",
+        "aff": [2],
+        "email": None,
+        "orcid": None,
+    },  # e-mail kept out of the repository
     {
         "name": "Peng Chen",
         "aff": [3],
@@ -65,7 +70,7 @@ AUTHORS: list[dict[str, Any]] = [
     },
 ]
 AFFILIATIONS = {
-    1: "Universitat de Barcelona, Barcelona, Spain",
+    1: "Faculty of Biology, Universitat de Barcelona, Barcelona, Spain",
     2: "Department of Otorhinolaryngology Head and Neck Surgery, Chengdu Fifth People's Hospital, Chengdu, Sichuan, China",
     3: "Department of Otorhinolaryngology, The Second People's Hospital of Meishan, No. 288 Dongpo Avenue South Section 4, Dongpo District, Meishan 620020, Sichuan Province, China",
 }
@@ -91,8 +96,8 @@ JOURNALS: list[dict[str, str]] = [
 ]
 
 TITLE = (
-    "Source-Paper Masking and Prespecified Tests of a Low-Cost Tool-Using Large Language Model "
-    "Agent for Rare Disease Diagnosis: Evaluation Study"
+    "Evaluating a Tool-Using Large Language Model Agent for Rare Disease Diagnosis With Masked Case "
+    "Sources and External Patients: Prespecified Evaluation Study"
 )
 KEYWORDS = (
     "rare diseases; differential diagnosis; large language models; artificial intelligence; clinical decision "
@@ -452,7 +457,7 @@ The code, the frozen case lists, the evaluation plans with their commit history,
 
 ## Authors' Contributions
 
-Conceptualization: SY, PC. Methodology: SY. Software: SY. Formal analysis: SY. Data curation: SY. Visualization: SY. Investigation (clinical interpretation): PC, LW. Supervision: LW, PC. Writing – original draft: SY. Writing – review & editing: SY, LW, PC.
+Conceptualization: SY, PC. Methodology: SY. Software: SY. Formal analysis: SY. Investigation: LW (data collection), PC and LW (clinical interpretation). Data curation: SY, LW. Visualization: SY. Supervision: LW, PC. Writing – original draft: SY. Writing – review & editing: SY, LW, PC.
 
 ## Abbreviations
 
@@ -668,8 +673,8 @@ def checklist(j: dict[str, str]) -> str:
 ## 一、必须由你确认的内容（稿子里已按默认写好，不对就告诉我改）
 
 1. **作者**（2026-11-23 按你的要求）：Shaopei Ye、Lan Wang 共同第一作者（叶排第一），Peng Chen 通讯作者。投稿时在系统里把陈鹏设为 corresponding author，期刊来信会发到他的邮箱 cpeng960@gmail.com；可以由你代投，但要和他说好。
-2. **作者贡献要和共同一作相符**：现在的 CRediT 里王兰只有"临床解读、指导、审改"，共同一作通常要写出相当的贡献（如构思、数据整理、方法）。请按王兰实际做的补上，告诉我改。
-3. **单位**：叶：Universitat de Barcelona；王兰：成都市第五人民医院耳鼻咽喉头颈外科；陈鹏：眉山市第二人民医院耳鼻喉科（都照上一篇写的）。
+2. **作者贡献**（2026-11-26 按你的要求）：王兰加了数据收集（Investigation: data collection；Data curation）。三位再确认一遍全文。
+3. **单位**：叶：Faculty of Biology, Universitat de Barcelona；王兰：成都市第五人民医院耳鼻咽喉头颈外科；陈鹏：眉山市第二人民医院耳鼻喉科（都照上一篇写的）。
 4. **王兰的 ORCID**：JMIR 要求所有作者在录用时都有 ORCID。王兰还没有，要她在 orcid.org 免费注册一个。
 5. **作者贡献（CRediT）全文**：稿子里是参照上一篇写的初稿，请三位确认。
 6. **基金**：写的是"没有专门资助"。有的话告诉我。
@@ -705,8 +710,8 @@ def checklist(j: dict[str, str]) -> str:
 # Journal of Medical Systems (Springer Nature) and BMJ Health & Care Informatics (BMJ)
 # =============================================================================================
 SHORT_TITLE = (
-    "Source-paper masking and prespecified tests of a low-cost tool-using large language model "
-    "agent for rare disease diagnosis"
+    "Masking case sources and testing on external patients: a prespecified evaluation of a tool-using "
+    "large language model agent for rare disease diagnosis"
 )
 REPO_URL = "https://github.com/pipi0616/rare-disease-agent"
 FIG_PLAIN = OUT / "_figures_plain"  # the same figures with p values written as in the text
@@ -768,9 +773,9 @@ DATA_AVAILABILITY = (
     "kept and a checksum of the kept text, from which the set can be rebuilt."
 )
 CREDIT = (
-    "Conceptualization: SY, PC. Methodology: SY. Software: SY. Formal analysis: SY. Data curation: SY. "
-    "Visualization: SY. Investigation (clinical interpretation): PC, LW. Supervision: LW, PC. Writing – original "
-    "draft: SY. Writing – review & editing: SY, LW, PC."
+    "Conceptualization: SY, PC. Methodology: SY. Software: SY. Formal analysis: SY. Investigation: LW (data "
+    "collection), PC and LW (clinical interpretation). Data curation: SY, LW. Visualization: SY. Supervision: LW, "
+    "PC. Writing – original draft: SY. Writing – review & editing: SY, LW, PC."
 )
 ETHICS = (
     "Not applicable. This study used only publicly available, de-identified data: published case reports and "
@@ -792,13 +797,23 @@ OTHER: list[dict[str, Any]] = [
         "keywords": "Rare diseases; Differential diagnosis; Large language models; Clinical decision support; Data leakage; Benchmarking",
         "word_limit": 4000,
         "abstract_limit": 250,
-        "main": None,  # every figure and table in the main text
+        # all tables; the figures that repeat a table's numbers go to Online Resource 1, S14
+        "main": {
+            "T:sets",
+            "T:heldout",
+            "T:tests",
+            "T:cada",
+            "T:idkind",
+            "F:design",
+            "F:mask",
+            "F:agentmodel",
+        },
         "fig": "Fig. {n}",
         "tab": "Table {n}",
         "figs_plural": "Figs. {a} and {b}",
         "tabs_plural": "Tables {a} and {b}",
-        "sfig": "",
-        "stab": "",
+        "sfig": "Online Resource 1, Fig. {n}",
+        "stab": "Online Resource 1, Table {n}",
         "supp": "Online Resource {n}",
         "supp_sec": "Online Resource 1, {s}",
         "supp_secs": "Online Resource 1, sections {a} and {b}",
@@ -812,7 +827,10 @@ OTHER: list[dict[str, Any]] = [
         "publisher": "BMJ",
         "impact": "6.2 (Impact Factor; CiteScore 6.6; acceptance rate 24%; median 90 days to first decision with review), as shown on the journal's pages on 24 November 2026",
         "site": "https://informatics.bmj.com",
-        "title": SHORT_TITLE + ": a retrospective evaluation study",
+        "title": (
+            "Masking case sources and testing on external patients: a prespecified retrospective "
+            "evaluation of a tool-using large language model agent for rare disease diagnosis"
+        ),
         "body": "bmj_body.md",
         "abstract": "bmj_abstract.md",
         "keywords": "Rare Diseases; Diagnosis, Differential; Artificial Intelligence; Decision Support Systems, Clinical; Benchmarking",
@@ -1126,8 +1144,11 @@ def check_figure_p(name: str, txt: str) -> list[str]:
     lines = txt.split("\n")
     for i, line in enumerate(lines[:-1]):
         for m in PAIR.finditer(line):
+            same = line[m.end() : m.end() + 16]
             below = lines[i + 1][max(0, m.start() - 4) : m.end() + 12]
-            pm = re.search(r"p ([=<]) ([0-9.]+)", below)
+            pm = re.match(r",? ?p ([=<]) ([0-9.]+)", same) or re.search(
+                r"p ([=<]) ([0-9.]+)", below
+            )
             if not pm:
                 bad.append(f"figure {name}: no p value under {m.group(0)}")
                 continue
@@ -1217,9 +1238,12 @@ def supplement_other(fmt: dict[str, Any], lab: dict[str, str], order: list[str])
     t = t.replace("P values", "p-values").replace("P value", "p-value")
     if fmt["main"] is not None:  # BMJ: the figures and tables that do not fit the main text
         caps, files, tabs = legends_and_tables(fmt, lab)
-        parts = [
-            "## S14. Figures and tables cited in the main text as online supplemental material"
-        ]
+        moved = [k for k in order if k not in fmt["main"]]
+        what = "Figures and tables" if any(k.startswith("T") for k in moved) else "Figures"
+        where = (
+            "online supplemental material" if fmt["key"] == "bmj" else "part of Online Resource 1"
+        )
+        parts = [f"## S14. {what} cited in the main text as {where}"]
         for key in order:
             if key in fmt["main"]:
                 continue
@@ -1229,7 +1253,7 @@ def supplement_other(fmt: dict[str, Any], lab: dict[str, str], order: list[str])
             else:
                 parts.append(tabs[key])
         s14 = "\n\n".join(parts).replace(" in online supplemental file 1", "")
-        s14 = s14.replace("online supplemental file 1, S", "S")
+        s14 = s14.replace("online supplemental file 1, S", "S").replace("Online Resource 1, ", "")
         t = t.rstrip() + "\n\n" + s14 + "\n"
     return t
 
@@ -1533,7 +1557,7 @@ def readme_other(fmt: dict[str, Any], facts: dict[str, Any], figs: list[str]) ->
 
 def checklist_other(fmt: dict[str, Any], facts: dict[str, Any]) -> str:
     common = f"""1. **作者**：Shaopei Ye、Lan Wang 共同第一作者（叶排第一），Peng Chen 通讯作者。投稿时在系统里把陈鹏设为 corresponding author，期刊来信会发到 cpeng960@gmail.com。
-2. **作者贡献要和共同一作相符**：现在王兰只写了"临床解读、指导、审改"，请按她实际做的补上，告诉我改（三个文件夹都会一起改）。
+2. **作者贡献**（2026-11-26 按你的要求）：王兰加了数据收集（Investigation: data collection；Data curation）。投稿时系统里也要按这个填。王兰的邮箱没有写进仓库（仓库是公开的），投稿系统要填作者邮箱时请手动填。
 3. **王兰的 ORCID**：还没有，建议在 orcid.org 免费注册一个。
 4. **基金**写"没有专门资助"，**利益冲突**写"无"，**伦理**写"只用公开、去标识的数据，没有申请伦理审查"。不对就告诉我。
 5. **投稿信里的声明**："没有发过预印本""和作者其他论文没有重叠"。不对就告诉我。
@@ -1552,7 +1576,6 @@ def checklist_other(fmt: dict[str, Any], facts: dict[str, Any]) -> str:
 
 {common}
 9. **作者贡献和利益冲突要在投稿系统里再填一遍**：期刊写明"只用系统里填的内容"，按稿子末尾 Statements and Declarations 照抄。
-10. **叶的单位要写到系/所**：Springer 要求单位写"机构、（系所）、城市、国家"，现在只有 Universitat de Barcelona（上一篇也是这么写的）。告诉我系所名称我就补上。
 
 ## 二、这本期刊的特别要求（已按要求做了）
 

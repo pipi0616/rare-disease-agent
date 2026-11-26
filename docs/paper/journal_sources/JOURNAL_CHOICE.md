@@ -1,4 +1,4 @@
-# 选刊说明（2026-11-24 改：三家出版社、三个投稿系统）
+# 选刊说明（2026-11-24 改：三家出版社、三个投稿系统；2026-11-26 换了标题）
 
 要求：影响因子 > 3，分越高越好，同时要好中、内容对口；三本要在**三个不同的投稿系统**（2026-11-24 用户要求）。
 
@@ -23,7 +23,7 @@
 
 - 内容一样，结论一样，数字全部出自同一份母稿（脚本逐个核对）。
 - JMIR：全文版（约 4,550 词），6 图 5 表都在正文。
-- Journal of Medical Systems：删掉约 600 词重复和次要的话，6 图 5 表都在正文，图注按 Springer 要求，补充材料是 PDF（Online Resource 1–3）。
+- Journal of Medical Systems：删掉约 600 词重复和次要的话；正文 3 图 5 表，和表格重复的 3 张图移到 Online Resource 1 的 S14；图注按 Springer 要求，补充材料是 PDF（Online Resource 1–3）。
 - BMJ Health & Care Informatics：压缩到 2,980 词；正文只放 5 个图表（表 1、图 1–3、表 2），其余 3 图 3 表放补充材料 1 的 S14；加了 Key messages 和 Patient and public involvement。
 - 预先登记的 12 条主要结论（9 条成立、3 条不成立）在三个版本里都完整保留。
 - 报告规范：JMIR 版附 Luo 2016 机器学习报告清单；另两本附 TRIPOD+AI（BMJ 2024）清单。

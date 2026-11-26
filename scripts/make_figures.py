@@ -18,6 +18,7 @@ the marks, so no reading depends on colour.
 """
 
 import csv
+import json
 import os
 import sys
 from pathlib import Path
@@ -401,12 +402,29 @@ def fig3() -> None:
 
 
 def paired_rows(
-    ax: plt.Axes, rows: list[tuple[str, tuple[int, int], tuple[int, int], str]], xmax: float
+    ax: plt.Axes,
+    rows: list[tuple[str, tuple[int, int], tuple[int, int], str]],
+    xmax: float,
+    by_name: list[tuple[float, float]] | None = None,
 ) -> None:
     """One row per test: the agent's rate and the model's, each with its interval; the
-    paired result written at the right. rows: (label, agent, model, note)."""
+    paired result written at the right. rows: (label, agent, model, note). by_name: the two
+    rates judged by disease name, drawn as open circles without intervals."""
     for i, (_, agent, model, note) in enumerate(rows):
         y = len(rows) - 1 - i
+        if by_name is not None:
+            for rate, color, dy in ((by_name[i][0], AGENT, 0.16), (by_name[i][1], MODEL, -0.16)):
+                ax.plot(
+                    [rate],
+                    [y + dy],
+                    "o",
+                    ms=6,
+                    mfc=SURFACE,
+                    mec=color,
+                    mew=1.4,
+                    zorder=4,
+                    clip_on=False,
+                )
         for (hits, n), color, dy in ((agent, AGENT, 0.16), (model, MODEL, -0.16)):
             rate = 100 * hits / n
             low, high = (100 * v for v in wilson(hits, n))
@@ -497,6 +515,7 @@ def fig4() -> None:
         row("MME, published cases\n(n = 40)", mme, "hypothesis-agent"),
     ]
     new = []
+    by_name: list[tuple[float, float]] = []
     for label, name, agent in (
         (
             "MyGene2, patients shared by\nfamilies and clinicians (n = {n})",
@@ -516,7 +535,20 @@ def fig4() -> None:
     ):
         if (DOCS / name).exists():
             rows = hits_table(name)
-            new.append(row(label.format(n=len(rows)), rows, agent))
+            lenient = DOCS / name.replace("exam_", "exam_lenient_", 1).replace("_hits.tsv", ".json")
+            judged = json.loads(lenient.read_text())
+            a_hits = sum(r.get(agent) == 1 for r in judged)
+            m_hits = sum(r.get("llm-direct") == 1 for r in judged)
+            won = sum(r.get(agent) == 1 and r.get("llm-direct") != 1 for r in judged)
+            lost = sum(r.get("llm-direct") == 1 and r.get(agent) != 1 for r in judged)
+            by_name.append((100 * a_hits / len(judged), 100 * m_hits / len(judged)))
+            lab, a, m, note = row(label.format(n=len(rows)), rows, agent)
+            note = (
+                note.replace("\n", ", ")
+                + f"\nby name {won} : {lost}, "
+                + p_text(sign_test(won, lost))
+            )
+            new.append((lab, a, m, note))
     del second  # v1.1a, run without a prespecified comparison: Supplementary Table S11
     groups = [("a   v1.0, prespecified tests", first)]
     if new:
@@ -530,8 +562,8 @@ def fig4() -> None:
         figsize=(6.0, 0.5 * sum(heights) + 0.62 * len(groups) + 0.3),
         gridspec_kw={"height_ratios": heights, "hspace": 0.62},
     )
-    for ax, (title, rows) in zip(list(axes), groups, strict=True):
-        paired_rows(ax, rows, xmax=80)
+    for k, (ax, (title, rows)) in enumerate(zip(list(axes), groups, strict=True)):
+        paired_rows(ax, rows, xmax=80, by_name=by_name if k == 1 else None)
         ax.set_title(title, loc="left", fontsize=8.5, color=INK, pad=5)
         ax.text(
             80 * 1.02,
@@ -557,13 +589,25 @@ def fig4() -> None:
             mew=1.2,
             label="the same model asked directly",
         ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            ms=6,
+            color=INK2,
+            lw=0,
+            mfc=SURFACE,
+            mec=INK2,
+            mew=1.4,
+            label="open: judged by disease name (b)",
+        ),
     ]
     fig.legend(
         handles=handles,
         frameon=False,
         fontsize=7.5,
         loc="lower center",
-        ncol=2,
+        ncol=3,
         bbox_to_anchor=(0.45, -0.045),
     )
     save(fig, "fig4_agent_vs_model")
