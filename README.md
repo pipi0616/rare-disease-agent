@@ -14,7 +14,7 @@ read into terms in about 5 s, then the agent's answer in about 14 s — the
 published diagnosis first — for about half a US cent in all.
 [Video (MP4)](docs/img/demo-note.mp4).*
 
-| 200 held-out cases, each case's own paper masked | confirmed disease ranked first | paired against the agent (cases each gets right alone) |
+| 200 held-out cases, each case's own paper masked (DeepRare could not be masked) | confirmed disease ranked first | paired against the agent (cases each gets right alone) |
 |---|---|---|
 | **this agent** (`deepseek-flash` with tools) | **43.0%** | |
 | GPT-6.1, asked directly | 33.0% | 37 : 17 (p = 0.009) |
@@ -25,17 +25,30 @@ published diagnosis first — for about half a US cent in all.
 
 **These cases all come from one source.** On patients curated elsewhere the
 frozen agent lost to its own model asked directly — 4 : 15 on a clinic's 88
-patients, 47 : 97 on a metabolic registry's 624 — and the revised version is
-not yet better than it on a fresh external set ([below](#outside-the-curated-source)).
-The next version changes how development data is split and the architecture:
-[`docs/roadmap.md`](docs/roadmap.md).
+patients, 47 : 97 on a metabolic registry's 624 ([below](#outside-the-curated-source)).
+Revised, it was tested once more on three sets no system had seen, under one plan
+fixed beforehand ([`docs/exam_plan.md`](docs/exam_plan.md): the plan in sections 1–6, results in section 7):
+
+| first place, each system run once | cases | revised agent | same model asked directly | paired |
+|---|---|---|---|---|
+| MyGene2: patients shared by families and clinicians | 146 | **52.1%** | 7.5% | 69 : 4 (p < 0.001) |
+| CADA test: diagnostic laboratories' and clinics' patients | 577 | **23.6%** | 14.7% | 73 : 22 (p < 0.001) |
+| case reports published after the model's cutoff (agent v2) | 240 | **19.6%** | 8.8% | 30 : 4 (p < 0.001) |
+
+All three prespecified claims hold, scored by identifier. Where they are
+weaker: on the 205 patients of CADA's collaborators' cohorts the lead is 4 points and not
+significant (19 : 10, p = 0.14); on the case reports, judged by name, it is
+21.7% against 18.3% (18 : 10, p = 0.18) — the model asked directly often names an
+Orphanet-only disease without its identifier, and roughly half to two thirds of the agent's lead
+there is finding the right identifier; and GPT-6.1 asked directly was not
+significantly different from the agent on MyGene2 (54.8%). The paper draft is in [`docs/paper/`](docs/paper/).
 
 Each comparison follows a plan committed before its run, on a fixed version of
 the system; below are the details, the conditions that were not equal, and the
-pre-registered claims that failed (reading notes; the temporal and external
+prespecified claims that failed (reading notes; the temporal and external
 tests).
 
-**Status:** the agent, evaluated on a held-out set and against LIRICAL, three frontier models and DeepRare, then on a temporal and two external tests, where it lost to its own model; served over HTTP, reading clinical notes as well as HPO terms; with seven tools and the baselines it is measured against. Tools:
+**Status:** the agent, evaluated on a held-out set and against LIRICAL, three frontier models and DeepRare, then on a temporal test (not established) and two external tests, where it lost to its own model; served over HTTP, reading clinical notes as well as HPO terms; with seven tools and the baselines it is measured against. Tools:
 `rank_diseases` (every OMIM disease ranked against the patient's phenotype),
 `lookup_disease` (one disease's features with their frequencies, inheritance,
 onset, genes and sources, sized for a model to read), `check_match` (the
@@ -48,8 +61,8 @@ retrieval, each passage with its source), and, when the patient has been
 sequenced, `rank_candidate_genes` (candidate genes ranked by how well their
 diseases match the phenotype). The agent gets the four core tools and
 `find_similar_patients` (and `rank_candidate_genes` with sequencing data);
-the text search, which the ablation found worth nothing, is served over MCP
-and given to the agent only with `--with-texts`.
+the text search, which the ablation found worth nothing for v1.0, is served over MCP
+and given to v1.0 only with `--with-texts`; v1.1 and v2 get it by default.
 
 **How the parts fit.** A note is read into HPO terms (`/v1/terms/from-note`), a
 person checks them, and the codes go to the diagnosis service (`/v1/diagnose`),
@@ -97,7 +110,7 @@ of the confirmed disease, 95% intervals:
 | *with simulated sequencing:* **final agent** | **65.9%** [62.6–69.0] | **81.4%** [78.6–83.9] |
 | *with simulated sequencing:* gene ranking (no model) | 59.5% [56.1–62.7] | 80.0% [77.1–82.5] |
 
-The pre-registered primary question — is the agent better than the fixed
+The prespecified primary question — is the agent better than the fixed
 pipeline at first place — holds: paired on the same cases, 57 to 10
 (sign test p = 4 × 10⁻⁹); in the top ten, 94 to 6. With sequencing, 59 to 5
 against the gene ranking. All eight runs were valid on the first attempt (no
@@ -128,8 +141,9 @@ strongest no-model baseline (rank, then check: 32.1%), which was therefore no
 strawman. Unmasked, every system measured gains over 30 points at top-1 (LIRICAL
 +33, 278 cases gained and none lost): for 75% of these published cases HPO's
 annotation of the disease cites the patient's own paper, and the whole gain
-comes from those — on the other 25% masking changes not one answer. A
-benchmark on public case reports that does not mask is about half leakage.
+comes from those — on the other 25% masking changes not one answer. On these
+published cases the mask halves LIRICAL's first-place accuracy (the paper-level
+mask is not an exact measure of the leak in either direction).
 Per-case outcomes: `docs/comparison_hits.tsv`.
 
 **Against frontier models asked directly.** Each provider's current model,
@@ -209,7 +223,7 @@ once each, under plans committed beforehand
 | external: HMS, one clinic's patients (RareBench) | 88 | 19.3% | **31.8%** | 4 : 15 (p = 0.019) |
 | external: RAMEDIS, a metabolic registry (RareBench) | 624 | 24.7% | **32.7%** | 47 : 97 (p < 0.001) |
 
-Both pre-registered claims failed: on the temporal cases the agent over the
+Both prespecified claims failed: on the temporal cases the agent over the
 model asked directly (p = 0.065 against 0.05), and on the external ones the
 agent over the fixed pipeline (54 : 45, p = 0.42). Three frontier models asked
 directly scored below `deepseek-flash` on HMS (14.8–22.7%), the reverse of the
@@ -253,7 +267,7 @@ document-level micro F1:
 | the model writing HPO ids itself | 55.3% | 47.3% |
 | AutoPCR, published (HPO 2024) | 80.3% | 83.5% |
 
-The pre-registered primary claim — better than both baselines on the clinical
+The prespecified primary claim — better than both baselines on the clinical
 notes — **failed**: paired per note, the reader beats the model writing ids
 (58 notes to 5, p < 0.001) but not the dictionary (29 to 38, p = 0.33). On the
 abstracts it beats both (122 to 31, 160 to 11). The two trade recall for

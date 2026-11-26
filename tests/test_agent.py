@@ -16,6 +16,7 @@ from raredx.agent import (
     FILLED,
     FILLED_BOTH,
     FUSED,
+    GUARDED,
     LAST_TURN,
     MAX_MODEL_CALLS,
     Agent,
@@ -473,3 +474,67 @@ def test_without_prevalence_neither_the_prompt_nor_the_lists_mention_it(
     )
     hypothesis(hpo, moves).predict(question_of(case))
     assert "prevalence" not in str(RECEIVED[1][0].content) + str(RECEIVED[1][1].content)
+
+
+# ── agent v2: the one-way list in its own order, and the guard on the final order ──
+
+
+def v2(hpo: HPO, moves: Iterator[AIMessage], prevalence: dict[str, str]) -> Agent:
+    return Agent(
+        ScriptedModel(messages=moves),
+        "deepseek-flash",
+        hpo,
+        hypotheses=True,
+        prevalence=prevalence,
+        oneway=True,
+        guard=True,
+        name="agent-v2",
+    )
+
+
+def test_the_guard_keeps_a_common_first_answer_the_agent_dropped(hpo: HPO, case: Case) -> None:
+    moves = iter(
+        [
+            first_answer(("Hearing-retina syndrome", "OMIM:690002")),
+            answer(
+                ("OMIM:690001", "Hearing-ovarian syndrome", "explains more"),
+                ("OMIM:690002", "Hearing-retina syndrome", "second thoughts"),
+            ),
+        ]
+    )
+    answers = v2(hpo, moves, {"OMIM:690002": "1-9 / 100 000"}).predict(question_of(case))
+    assert [c.disease_id for c in answers[:2]] == ["OMIM:690002", "OMIM:690001"]
+    assert answers[0].reason == GUARDED and answers[1].reason == "explains more"
+    assert len({c.disease_id for c in answers}) == len(answers) <= 10
+
+
+def test_the_guard_leaves_a_rarer_first_answer_where_the_agent_put_it(hpo: HPO, case: Case) -> None:
+    def moves() -> Iterator[AIMessage]:
+        return iter(
+            [
+                first_answer(("Hearing-retina syndrome", "OMIM:690002")),
+                answer(("OMIM:690001", "Hearing-ovarian syndrome", "explains more")),
+            ]
+        )
+
+    rare = v2(hpo, moves(), {"OMIM:690002": "<1 / 1 000 000"}).predict(question_of(case))
+    unclassed = v2(hpo, moves(), {}).predict(question_of(case))
+    assert rare[0].disease_id == unclassed[0].disease_id == "OMIM:690001"
+
+
+def test_the_guard_needs_the_first_answer_among_the_tools_top_thirty(hpo: HPO, case: Case) -> None:
+    system = v2(hpo, iter([]), {"OMIM:690002": "1-9 / 100 000"})
+    ranked = [Candidate(disease_name="x", disease_id="OMIM:690001")]
+    assert system._guarded(ranked, "OMIM:690002", ["OMIM:690001"]) == ranked
+    kept = system._guarded(ranked, "OMIM:690002", ["OMIM:690001", "OMIM:690002"])
+    assert [c.disease_id for c in kept] == ["OMIM:690002", "OMIM:690001"]
+
+
+def test_agent_v2_records_its_ranking_and_guard_and_lists_the_tools_order(hpo: HPO) -> None:
+    system = v2(hpo, iter([]), {})
+    params = system.params()
+    assert system.name == "agent-v2" and "oneway" in params["ranking"]
+    assert "1 in 100,000 or more" in params["guard"]
+    assert system.seed.reorder is False and system.seed.rank.combine == "oneway"
+    with pytest.raises(ValueError, match="guard needs"):
+        Agent(ScriptedModel(messages=iter([])), "deepseek-flash", hpo, guard=True)

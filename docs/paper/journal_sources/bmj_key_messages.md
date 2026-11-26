@@ -1,0 +1,5 @@
+**What is already known on this topic** Language-model agents are reported to diagnose rare diseases from a patient's phenotype with high accuracy, on published cases that phenotype knowledge bases were curated from and that the models may have read; removing each case's source paper from the knowledge base has been reported to cut a ranking tool's accuracy sharply.
+
+**What this study adds** An agent that passed a held-out test from its development source lost to its own model on clinic and registry patients; two revisions then led their own model in three prespecified tests on cases never used in development, although on case reports published after the model's cutoff much of the lead was retrieval of the correct knowledge-base entry rather than diagnosis.
+
+**How this study might affect research, practice or policy** Evaluations of diagnostic decision support should mask case sources for everything a system reads, test on patients outside the development source, fix the analysis plan before the run, and score by name as well as by identifier.

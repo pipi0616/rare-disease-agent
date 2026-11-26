@@ -39,6 +39,8 @@ _BAND_OF_CLASS: dict[str, Band] = {
 }
 # Orphanet's classes, most common first
 CLASSES = tuple(_BAND_OF_CLASS)
+# The classes of a relatively common rare disease: one patient in 100,000 or more.
+COMMON_CLASSES = frozenset(c for c, band in _BAND_OF_CLASS.items() if band == BANDS[0])
 CASE_REPORTS = "<1 / 1 000 000"  # a disorder known only by counting its published cases
 # Orphanet's measures, in the order they are preferred (the names as the file writes them)
 _TYPES = ("Point prevalence", "Prevalence at birth", "Lifetime Prevalence", "Annual incidence")

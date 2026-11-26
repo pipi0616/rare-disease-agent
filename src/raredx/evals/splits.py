@@ -11,13 +11,20 @@ forever. Six come from the pinned release:
     heldout-papers      one case per held-out paper     the final run, once
     heldout-papers-200  200 of heldout-papers           comparisons billed per case
 
-and five come from outside it:
+and eleven come from outside it:
 
     temporal-2026-10       one case per paper first public on or after CUTOFF   temporal test
     rarebench-hms          every HMS patient of RareBench                        practice
     rarebench-ramedis      every RAMEDIS patient of RareBench                    practice
     rarebench-ramedis-200  200 of rarebench-ramedis                              practice
     rarebench-mme          every MME patient of RareBench                        practice
+    mygene2                every MyGene2 patient (SHEPHERD's file)               clinical test
+    cada-test              CADA's test patients that have an OMIM diagnosis      clinical test
+    cada-test-200          200 of cada-test, for systems billed per case         clinical test
+    cada-dev               300 of CADA's training patients                       development
+    casereports-exam       case reports first public after CUTOFF, cut before    test
+                           the diagnosis; diseases on this side only
+    casereports-dev        the same, the other diseases                          development
 
 HMS and RAMEDIS tested v1.0 once, after it was frozen; it lost to the bare model
 there, and they have been practice sets since (PRACTICE). MME tested v1.0 and v1.1
@@ -252,12 +259,77 @@ PRACTICE = frozenset(
 # Development manifests drawn from other datasets (v2.0): developed on from the start,
 # never a test; written by the command that reads their cases.
 RAREARENA = "rarearena-dev"  # RareArena's case reports, read into HPO terms
-DEVELOPMENT: dict[str, str] = {RAREARENA: "rarearena-rds"}
+
+# Real patients, not published case reports (data/clinical.py): what v2.0 is tested on.
+# MyGene2 whole and CADA's own test file are tests, run once on the frozen system and
+# never read before; a fixed sample of CADA's own training file is developed on, so the
+# agent meets a diagnostic laboratory's patients before it is tested on others.
+MYGENE2 = "mygene2"
+CADA_TEST = "cada-test"
+CADA_TEST_SAMPLE = "cada-test-200"  # a fixed random part, for other providers' models
+CADA_DEV = "cada-dev"
+CADA_DEV_SIZE = 300
+CADA_SAMPLE_SIZE = 200
+CADA_SEED = SEED + 5
+CLINICAL_TESTS: dict[str, str] = {MYGENE2: "mygene2", CADA_TEST: "cada", CADA_TEST_SAMPLE: "cada"}
+CLINICAL_MANIFESTS = (MYGENE2, CADA_TEST, CADA_TEST_SAMPLE, CADA_DEV)
+
+# Case reports first public after the model's training cutoff, each cut before the
+# sentence that gives its diagnosis away (data/casereports.py, docs/casereports_plan.md).
+# A disease is on one side only; the test side is read by no one before the test.
+CASEREPORTS_EXAM = "casereports-exam"
+CASEREPORTS_DEV = "casereports-dev"
+CASEREPORT_TESTS: dict[str, str] = {CASEREPORTS_EXAM: "casereports"}
+
+DEVELOPMENT: dict[str, str] = {
+    RAREARENA: "rarearena-rds",
+    CADA_DEV: "cada",
+    CASEREPORTS_DEV: "casereports",
+}
+# development manifests that list a report per paper
+ONE_PER_PAPER = frozenset({RAREARENA, CASEREPORTS_DEV})
 
 
 def dataset_of(manifest: str, default: str) -> str:
     """The dataset whose processed cases a manifest lists."""
-    return EXTERNAL.get(manifest) or DEVELOPMENT.get(manifest) or default
+    return (
+        EXTERNAL.get(manifest)
+        or CLINICAL_TESTS.get(manifest)
+        or CASEREPORT_TESTS.get(manifest)
+        or DEVELOPMENT.get(manifest)
+        or default
+    )
+
+
+def is_test(manifest: str) -> bool:
+    """A manifest outside the pinned release that tests a frozen system: run once."""
+    return (
+        (manifest in EXTERNAL and manifest not in PRACTICE)
+        or manifest in CLINICAL_TESTS
+        or manifest in CASEREPORT_TESTS
+    )
+
+
+def check_casereports(splits_dir: Path) -> list[str]:
+    """Rules the two case-report manifests keep, when they exist: each case once, one per
+    paper, and no paper on both sides."""
+    paths = {n: splits_dir / f"{n}.tsv" for n in (CASEREPORTS_EXAM, CASEREPORTS_DEV)}
+    present = {n: read(path) for n, path in paths.items() if path.exists()}
+    if not present:
+        return []
+    if len(present) < len(paths):
+        return [f"missing manifest: {n}.tsv" for n in paths if n not in present]
+    problems = []
+    for name, rows in present.items():
+        papers = [pmid for _, pmid in rows]
+        if len({r[0] for r in rows}) != len(rows):
+            problems.append(f"{name}: a case is listed twice")
+        if len(set(papers)) != len(papers) or "" in papers:
+            problems.append(f"{name}: not exactly one case per paper")
+    exam, dev = present[CASEREPORTS_EXAM], present[CASEREPORTS_DEV]
+    if {pmid for _, pmid in exam} & {pmid for _, pmid in dev}:
+        problems.append("a paper is in both case-report manifests")
+    return problems
 
 
 def check_development(splits_dir: Path) -> list[str]:
@@ -272,9 +344,74 @@ def check_development(splits_dir: Path) -> list[str]:
         if len({r[0] for r in rows}) != len(rows):
             problems.append(f"{name}: a case is listed twice")
         papers = [pmid for _, pmid in rows]
-        if len(set(papers)) != len(papers) or "" in papers:
+        if name in ONE_PER_PAPER and (len(set(papers)) != len(papers) or "" in papers):
             problems.append(f"{name}: not exactly one case per paper")
     return problems
+
+
+def build_clinical(mygene2: list[Case], cada: list[Case]) -> dict[str, list[Row]]:
+    """The three manifests of real patients, from their processed cases."""
+    train = sorted(c.id for c in cada if c.id.startswith("CADA_train_"))
+    dev = random.Random(CADA_SEED).sample(train, min(CADA_DEV_SIZE, len(train)))
+    test = sorted(c.id for c in cada if c.id.startswith("CADA_test_"))
+    sample = random.Random(CADA_SEED + 1).sample(test, min(CADA_SAMPLE_SIZE, len(test)))
+    return {
+        MYGENE2: sorted((c.id, c.pmid or "") for c in mygene2),
+        CADA_TEST: [(case_id, "") for case_id in test],
+        CADA_TEST_SAMPLE: sorted((case_id, "") for case_id in sample),
+        CADA_DEV: sorted((case_id, "") for case_id in dev),
+    }
+
+
+def make_clinical(
+    mygene2: list[Case], cada: list[Case], splits_dir: Path, *, force: bool = False
+) -> dict[str, str]:
+    """Write the three manifests of real patients, or confirm they are unchanged; frozen
+    like the rest."""
+    built = build_clinical(mygene2, cada)
+    return _write_frozen({n: render(rows) for n, rows in built.items()}, splits_dir, force)
+
+
+def check_clinical(splits_dir: Path) -> list[str]:
+    """Rules the manifests of real patients keep on their own, when they exist: each case
+    once, from its own source and part — no training patient is tested on, no test
+    patient developed on."""
+    present = [n for n in CLINICAL_MANIFESTS if (splits_dir / f"{n}.tsv").exists()]
+    if not present:
+        return []
+    if len(present) < len(CLINICAL_MANIFESTS):
+        return [f"missing manifest: {n}.tsv" for n in CLINICAL_MANIFESTS if n not in present]
+    m = {n: read(splits_dir / f"{n}.tsv") for n in CLINICAL_MANIFESTS}
+    problems = [
+        f"{n}: a case is listed twice"
+        for n, rows in m.items()
+        if len({r[0] for r in rows}) != len(rows)
+    ]
+    prefixes = {
+        MYGENE2: "MyGene2_",
+        CADA_TEST: "CADA_test_",
+        CADA_TEST_SAMPLE: "CADA_test_",
+        CADA_DEV: "CADA_train_",
+    }
+    for name, prefix in prefixes.items():
+        if any(not case_id.startswith(prefix) for case_id, _ in m[name]):
+            problems.append(f"{name}: a case from another source or part")
+    if len(m[CADA_DEV]) > CADA_DEV_SIZE:
+        problems.append(f"{CADA_DEV} has {len(m[CADA_DEV])} cases, at most {CADA_DEV_SIZE}")
+    if not set(m[CADA_TEST_SAMPLE]) <= set(m[CADA_TEST]):
+        problems.append(f"{CADA_TEST_SAMPLE} contains cases that are not in {CADA_TEST}")
+    if len(m[CADA_TEST_SAMPLE]) != min(CADA_SAMPLE_SIZE, len(m[CADA_TEST])):
+        problems.append(f"{CADA_TEST_SAMPLE} has {len(m[CADA_TEST_SAMPLE])} cases")
+    return problems
+
+
+def check_clinical_against(mygene2: list[Case], cada: list[Case], splits_dir: Path) -> list[str]:
+    """Rules that need the data: built again from it, each manifest is the same."""
+    return [
+        f"{name}.tsv is not what its data and rules give"
+        for name, rows in build_clinical(mygene2, cada).items()
+        if read(splits_dir / f"{name}.tsv") != rows
+    ]
 
 
 def temporal(

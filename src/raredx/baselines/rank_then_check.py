@@ -22,23 +22,30 @@ POOL = 30
 class RankThenCheck:
     name = "rank-then-check"
 
-    def __init__(self, rank: RankDiseases, check: CheckMatch, pool: int = POOL) -> None:
+    def __init__(
+        self, rank: RankDiseases, check: CheckMatch, pool: int = POOL, *, reorder: bool = True
+    ) -> None:
+        """`reorder=False` keeps the pool in the ranking's own order, each candidate still
+        with its match report: what the one-way similarity does best with (chapter 32)."""
         self.rank = rank
         self.check = check
         self.pool = pool
+        self.reorder = reorder
 
     def params(self) -> dict[str, str]:
         return {
             "hpo_release": self.rank.hpo.release,
             "similarity": f"{self.rank.method}/{self.rank.combine}",
             "pool": str(self.pool),
-            "order": "findings explained, then similarity",
+            "order": "findings explained, then similarity" if self.reorder else "as ranked",
         }
 
     def ordered(self, question: Question) -> list[tuple[Match, MatchReport]]:
         """The whole pool, reordered: each candidate with its match report."""
         pool = self.rank(question.hpo_ids, top_k=self.pool).matches
         reports = [self.check(question.hpo_ids, m.disease_id) for m in pool]
+        if not self.reorder:
+            return list(zip(pool, reports, strict=True))
         order = sorted(range(len(pool)), key=lambda i: (-len(reports[i].explained), i))
         return [(pool[i], reports[i]) for i in order]
 

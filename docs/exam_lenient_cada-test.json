@@ -1,0 +1,3464 @@
+[
+ {
+  "case_id": "CADA_test_107824",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_107845",
+  "agent-v1.1": null,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_111768",
+  "agent-v1.1": 3,
+  "llm-direct": 4,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_116550",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_121642",
+  "agent-v1.1": 4,
+  "llm-direct": null,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "CADA_test_121659",
+  "agent-v1.1": 2,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_127056",
+  "agent-v1.1": 2,
+  "llm-direct": 3,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "CADA_test_127059",
+  "agent-v1.1": 1,
+  "llm-direct": 3,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_128546",
+  "agent-v1.1": 3,
+  "llm-direct": 3,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_128547",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_128548",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_130006",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_130011",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_130024",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_131420",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_131424",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_131461",
+  "agent-v1.1": 1,
+  "llm-direct": 2,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_131469",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_131482",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_131483",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_131484",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_140807",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_140811",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_140813",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_144380",
+  "agent-v1.1": 1,
+  "llm-direct": 5,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_144415",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_144417",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_144439",
+  "agent-v1.1": 3,
+  "llm-direct": 1,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_144440",
+  "agent-v1.1": null,
+  "llm-direct": 3,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_144473",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_144491",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "CADA_test_146436",
+  "agent-v1.1": null,
+  "llm-direct": 5,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_152237",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_153462",
+  "agent-v1.1": 5,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_155433",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_159039",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_16038",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_161702",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_163171",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_163720",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_19272",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_201635",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_203815",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_203816",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_203817",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_203823",
+  "agent-v1.1": 2,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_204541",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_207545",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_207554",
+  "agent-v1.1": 1,
+  "llm-direct": 5,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_208664",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_208673",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_208691",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_208814",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "CADA_test_208818",
+  "agent-v1.1": 2,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_209456",
+  "agent-v1.1": 4,
+  "llm-direct": null,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "CADA_test_209689",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_210210",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_212544",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_212560",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_212652",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_213177",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_213195",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_213308",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_213314",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_213319",
+  "agent-v1.1": 1,
+  "llm-direct": 3,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_213322",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_216930",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_216971",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_219063",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_220142",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_220507",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "CADA_test_221660",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_222242",
+  "agent-v1.1": 4,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_222306",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_222415",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "CADA_test_222521",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_222694",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_222707",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_222736",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "CADA_test_222970",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_224391",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_224396",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_224399",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_225209",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_225548",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_226354",
+  "agent-v1.1": null,
+  "llm-direct": 3,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_226356",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_227413",
+  "agent-v1.1": null,
+  "llm-direct": 5,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_227433",
+  "agent-v1.1": 4,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_227435",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_227452",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_229201",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_229693",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_231317",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_23535",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_235423",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_236099",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_236280",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_237944",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_239745",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "CADA_test_239848",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_240021",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_240074",
+  "agent-v1.1": 2,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_240355",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_240466",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_240522",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_240531",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_240537",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_240586",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_241787",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_243778",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_243849",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_243857",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "CADA_test_243952",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_244992",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_245149",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_245514",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_24608",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_246184",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_246245",
+  "agent-v1.1": 1,
+  "llm-direct": 5,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_247325",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_247597",
+  "agent-v1.1": 1,
+  "llm-direct": 5,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_247606",
+  "agent-v1.1": null,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_247650",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_247666",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_247921",
+  "agent-v1.1": 3,
+  "llm-direct": 1,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_247983",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_248296",
+  "agent-v1.1": null,
+  "llm-direct": 4,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_248304",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_248314",
+  "agent-v1.1": 1,
+  "llm-direct": 3,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_249118",
+  "agent-v1.1": 1,
+  "llm-direct": 2,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_249136",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_249155",
+  "agent-v1.1": 4,
+  "llm-direct": 5,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "CADA_test_249162",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_249179",
+  "agent-v1.1": 1,
+  "llm-direct": 4,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_249706",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_249763",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_249845",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_252723",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_253282",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_253941",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_254230",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_255918",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_258978",
+  "agent-v1.1": 4,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_260224",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_263778",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_263899",
+  "agent-v1.1": 4,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_264292",
+  "agent-v1.1": 1,
+  "llm-direct": 3,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "CADA_test_265443",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_265604",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_268515",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_269339",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_273375",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_273937",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_275729",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_276197",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_277818",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_278454",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_278486",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_279146",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_279410",
+  "agent-v1.1": 3,
+  "llm-direct": 4,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_283730",
+  "agent-v1.1": 4,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_284460",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_284465",
+  "agent-v1.1": 1,
+  "llm-direct": 5,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_284467",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_285146",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_285198",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_285558",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_28786",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_28827",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_289329",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_290076",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_291800",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_291954",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_292107",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_293604",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_294064",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_296182",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_297235",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_298826",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_299596",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_29999",
+  "agent-v1.1": 4,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_300649",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_300650",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_301179",
+  "agent-v1.1": 4,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_301807",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_304384",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_307296",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_308818",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_308835",
+  "agent-v1.1": 3,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_308850",
+  "agent-v1.1": 5,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_309802",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_311295",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_311599",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_313046",
+  "agent-v1.1": 1,
+  "llm-direct": 3,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_31445",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_316071",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_316075",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_316077",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_316079",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_316127",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_316491",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_325719",
+  "agent-v1.1": null,
+  "llm-direct": 3,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_326873",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_33746",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_33878",
+  "agent-v1.1": null,
+  "llm-direct": 5,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_34958",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_364254",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_400259",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_401866",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_401910",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_401927",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_401960",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_401980",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_42112",
+  "agent-v1.1": 2,
+  "llm-direct": 4,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_44646",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "CADA_test_44896",
+  "agent-v1.1": 4,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_45135",
+  "agent-v1.1": null,
+  "llm-direct": 5,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_45136",
+  "agent-v1.1": null,
+  "llm-direct": 5,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_45142",
+  "agent-v1.1": null,
+  "llm-direct": 5,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_45147",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_45148",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_47450",
+  "agent-v1.1": 1,
+  "llm-direct": 2,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_474996",
+  "agent-v1.1": 3,
+  "llm-direct": 5,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_475984",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_476014",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_476061",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_482573",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_482621",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_482626",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_482800",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_482812",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_51702",
+  "agent-v1.1": 3,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_52015",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_52108",
+  "agent-v1.1": 5,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_52823",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_52837",
+  "agent-v1.1": 2,
+  "llm-direct": 5,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_52841",
+  "agent-v1.1": 1,
+  "llm-direct": 5,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_79547",
+  "agent-v1.1": 2,
+  "llm-direct": 3,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_79551",
+  "agent-v1.1": 2,
+  "llm-direct": 5,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_79866",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_79867",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_84237",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_88419",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_88425",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_88428",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_88434",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_97176",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_97814",
+  "agent-v1.1": null,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000196161",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "CADA_test_SCV000206669",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000206686",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000247164",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000256745",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000257555",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000258542",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000258549",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000259178",
+  "agent-v1.1": 3,
+  "llm-direct": 2,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_SCV000262557",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000263111",
+  "agent-v1.1": 4,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000265508",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000265530",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000265536",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000265561",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000265594",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000265596",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000265608",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000267150",
+  "agent-v1.1": 2,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000267591",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000282045",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000282204",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000282515",
+  "agent-v1.1": null,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000292300",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000297718",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000297793",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000299379",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000323246",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "CADA_test_SCV000328693",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000329041",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000484418",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000484431",
+  "agent-v1.1": null,
+  "llm-direct": 3,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000484445",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000484449",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000485007",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000485020",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000492557",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000492569",
+  "agent-v1.1": null,
+  "llm-direct": 3,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000492576",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000492603",
+  "agent-v1.1": 1,
+  "llm-direct": 2,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000492622",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000492675",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000492713",
+  "agent-v1.1": null,
+  "llm-direct": 3,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000492717",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000492812",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000492845",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000492862",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "CADA_test_SCV000492874",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000492878",
+  "agent-v1.1": null,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000492932",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000492945",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000492968",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000492974",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000493026",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000493035",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_SCV000493037",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "CADA_test_SCV000494029",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000494160",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000494224",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000537923",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000537954",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000537967",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000537972",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000537974",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000537975",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000537994",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000537999",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000538002",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000538004",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000579500",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000579501",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000583456",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000583530",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000584208",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000584209",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000586704",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000586707",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000586708",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000586710",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000586711",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000586723",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000586738",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_SCV000588236",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000588404",
+  "agent-v1.1": 5,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000598655",
+  "agent-v1.1": 1,
+  "llm-direct": 2,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000598678",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000598743",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000598880",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000598928",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000599028",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000599129",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000599180",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000599715",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000599980",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000606730",
+  "agent-v1.1": 1,
+  "llm-direct": 2,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000611087",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000611566",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000611881",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000612175",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000622146",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000622157",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000622159",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000622164",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000622165",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000622174",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000678253",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000678259",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000678271",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000680013",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000680015",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000680026",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000680455",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000692469",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000693450",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000746555",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000746557",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000746579",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000746648",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000746656",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000746673",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "CADA_test_SCV000747096",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747195",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747356",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747360",
+  "agent-v1.1": 1,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747367",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747423",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747436",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747449",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747454",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_SCV000747465",
+  "agent-v1.1": 3,
+  "llm-direct": 4,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747481",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747489",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747499",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747520",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747543",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747573",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747594",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747614",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747615",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747655",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747681",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747684",
+  "agent-v1.1": 4,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747688",
+  "agent-v1.1": 3,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747694",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747715",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000747883",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_SCV000747915",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000778311",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000778803",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000778866",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000778871",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000783116",
+  "agent-v1.1": 5,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000786648",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000786653",
+  "agent-v1.1": 3,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000788354",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000788366",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000788367",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000788373",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "CADA_test_SCV000788376",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000803188",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000804240",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "CADA_test_SCV000804429",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000804445",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000837695",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000837716",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000837722",
+  "agent-v1.1": null,
+  "llm-direct": 5,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000840082",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000844950",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_SCV000844955",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000844974",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000845777",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000852009",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000852056",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000853073",
+  "agent-v1.1": 2,
+  "llm-direct": 2,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "CADA_test_SCV000854439",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000854460",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000854467",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000854484",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000854576",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000854577",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000854650",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000863408",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000863412",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000863419",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000863976",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000864390",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000882478",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000882820",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000887491",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "CADA_test_SCV000891709",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000891753",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000891773",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000897641",
+  "agent-v1.1": 2,
+  "llm-direct": 3,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000897740",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000897745",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000897999",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000899257",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000899305",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000899307",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000899315",
+  "agent-v1.1": null,
+  "llm-direct": 4,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000899316",
+  "agent-v1.1": null,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000899329",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000899414",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000899450",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_SCV000899785",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000899791",
+  "agent-v1.1": 1,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000899928",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000899986",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000902241",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000914182",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000920611",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000924300",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000924637",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000924644",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000925592",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000926980",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000926989",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000929972",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000930554",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000930569",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000930584",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000965704",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000987207",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000992209",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000992579",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000992590",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000993614",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000994569",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000994607",
+  "agent-v1.1": null,
+  "llm-direct": 5,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000999002",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000999277",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000999284",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000999290",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000999324",
+  "agent-v1.1": 1,
+  "llm-direct": 5,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000999362",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV000999363",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV001142589",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV001142591",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_SCV001142592",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_berlin-17",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_berlin-18",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_berlin-5",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_berlin-6",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_berlin-8",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen108",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen114",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen126",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen13",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen149",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen170",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen196",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen210",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen216",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen217",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen22",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen221",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen225",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen246",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen254",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen260",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen264",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen268",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen274",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen285",
+  "agent-v1.1": 5,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen299",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen3",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen309",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen313",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen328",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen342",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen35",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen360",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen364",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen367",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen380",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen384",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen386",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen396",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen408",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen41",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen430",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen439",
+  "agent-v1.1": 2,
+  "llm-direct": 3,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen452",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen466",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen470",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen471",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen50",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen502",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen508",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen513",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen522",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen560",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen571",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen584",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen599",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "CADA_test_tubingen625",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen633",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen637",
+  "agent-v1.1": 3,
+  "llm-direct": 2,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_tubingen649",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "CADA_test_tubingen654",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen656",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen657",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen668",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen681",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen709",
+  "agent-v1.1": 5,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen71",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen722",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen730",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen731",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen736",
+  "agent-v1.1": 5,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen743",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen750",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen773",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen778",
+  "agent-v1.1": 1,
+  "llm-direct": 2,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "CADA_test_tubingen782",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen786",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen810",
+  "agent-v1.1": 4,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen824",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen83",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen865",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen873",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen874",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen879",
+  "agent-v1.1": null,
+  "llm-direct": 3,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen88",
+  "agent-v1.1": 4,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen898",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen914",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen949",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "CADA_test_tubingen960",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ }
+]

@@ -1,0 +1,878 @@
+[
+ {
+  "case_id": "MyGene2_mygene2_1261",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1262",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1263",
+  "agent-v1.1": 5,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1264",
+  "agent-v1.1": 2,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1276",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1280",
+  "agent-v1.1": 2,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1291",
+  "agent-v1.1": 5,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1292",
+  "agent-v1.1": null,
+  "llm-direct": 4,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1293",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1294",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1359",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1388",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1391",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1408",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1476",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1484",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1510",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "MyGene2_mygene2_1541",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_1553",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1559",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "MyGene2_mygene2_1562",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_1569",
+  "agent-v1.1": 3,
+  "llm-direct": 5,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_16",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_1639",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_17",
+  "agent-v1.1": 1,
+  "llm-direct": 5,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_172",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_20",
+  "agent-v1.1": 3,
+  "llm-direct": 3,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_225",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_2373",
+  "agent-v1.1": 5,
+  "llm-direct": null,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "MyGene2_mygene2_2378",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_2379",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_2383",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_2408",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_2409",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_2519",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_2541",
+  "agent-v1.1": 4,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_28",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_312",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_380",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_382",
+  "agent-v1.1": 1,
+  "llm-direct": 3,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "MyGene2_mygene2_383",
+  "agent-v1.1": 5,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_384",
+  "agent-v1.1": null,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_385",
+  "agent-v1.1": 3,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_386",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "MyGene2_mygene2_387",
+  "agent-v1.1": 3,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_390",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "MyGene2_mygene2_4099",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_459",
+  "agent-v1.1": 5,
+  "llm-direct": null,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "MyGene2_mygene2_46",
+  "agent-v1.1": 2,
+  "llm-direct": null,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "MyGene2_mygene2_460",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_464",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_470",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_471",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_472",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_473",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_474",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_480",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_481",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_499",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_506",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_507",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_508",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_509",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_510",
+  "agent-v1.1": 3,
+  "llm-direct": 1,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "MyGene2_mygene2_52",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_571",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_572",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_573",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_574",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_575",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_576",
+  "agent-v1.1": 1,
+  "llm-direct": 3,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_577",
+  "agent-v1.1": 1,
+  "llm-direct": 4,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_578",
+  "agent-v1.1": 1,
+  "llm-direct": 4,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_579",
+  "agent-v1.1": 1,
+  "llm-direct": 4,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_580",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_581",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_582",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_583",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_584",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_585",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_59",
+  "agent-v1.1": null,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_591",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_592",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_593",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_594",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_595",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_596",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_597",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_598",
+  "agent-v1.1": 2,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "MyGene2_mygene2_599",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 4
+ },
+ {
+  "case_id": "MyGene2_mygene2_6",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_67",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_7",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_770",
+  "agent-v1.1": 1,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_789",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_79",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_790",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_791",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_793",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_794",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_795",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_796",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "MyGene2_mygene2_798",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "MyGene2_mygene2_799",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_8",
+  "agent-v1.1": 4,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_800",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_801",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "MyGene2_mygene2_802",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "MyGene2_mygene2_803",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": 5
+ },
+ {
+  "case_id": "MyGene2_mygene2_804",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_805",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_806",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "MyGene2_mygene2_807",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_808",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "MyGene2_mygene2_809",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 3
+ },
+ {
+  "case_id": "MyGene2_mygene2_810",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "MyGene2_mygene2_811",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_812",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 2
+ },
+ {
+  "case_id": "MyGene2_mygene2_813",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_814",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_815",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_816",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_817",
+  "agent-v1.1": 3,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_818",
+  "agent-v1.1": null,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_821",
+  "agent-v1.1": null,
+  "llm-direct": 4,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_823",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_824",
+  "agent-v1.1": null,
+  "llm-direct": 3,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_825",
+  "agent-v1.1": null,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_826",
+  "agent-v1.1": null,
+  "llm-direct": 4,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_827",
+  "agent-v1.1": null,
+  "llm-direct": 4,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_829",
+  "agent-v1.1": 3,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_830",
+  "agent-v1.1": null,
+  "llm-direct": 3,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_831",
+  "agent-v1.1": null,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_832",
+  "agent-v1.1": 5,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_833",
+  "agent-v1.1": null,
+  "llm-direct": 4,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_834",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_835",
+  "agent-v1.1": 2,
+  "llm-direct": 1,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_836",
+  "agent-v1.1": null,
+  "llm-direct": 2,
+  "rank-then-check": null
+ },
+ {
+  "case_id": "MyGene2_mygene2_838",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_839",
+  "agent-v1.1": 1,
+  "llm-direct": 5,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_840",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_841",
+  "agent-v1.1": 1,
+  "llm-direct": 5,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_842",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_843",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_844",
+  "agent-v1.1": 1,
+  "llm-direct": null,
+  "rank-then-check": 1
+ },
+ {
+  "case_id": "MyGene2_mygene2_94",
+  "agent-v1.1": null,
+  "llm-direct": null,
+  "rank-then-check": null
+ }
+]

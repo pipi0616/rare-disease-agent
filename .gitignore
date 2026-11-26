@@ -28,3 +28,9 @@ third_party/
 .DS_Store
 .vscode/
 .idea/
+
+# built by scripts/build_paper.py
+docs/paper/submission/
+
+# built by scripts/build_journals.py
+docs/paper/journals/
